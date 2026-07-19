@@ -1,0 +1,29 @@
+<!-- @dsCard group="Brand" viewport="700x180" name="Identicon de clan" subtitle="SVG 5×5 mirroré · couleur HSL depuis hash du nom" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--bg-1);font-family:var(--font-ui);padding:20px;display:flex;gap:26px;align-items:center}
+  .item{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .item svg{border-radius:var(--r-md);background:var(--bg-2);border:1px solid var(--border-1)}
+  .item b{font-size:12px;color:var(--text-1);font-weight:600}
+  .note{max-width:30ch;color:var(--text-3);font-size:12px;line-height:1.5}
+</style></head><body>
+  <div id="row" style="display:flex;gap:26px"></div>
+  <p class="note">Hash 32-bit du nom → teinte HSL. Les bits pilotent une grille 3×5 mirrorée en 5×5. Déterministe, sans collision visuelle pour des noms distincts.</p>
+<script>
+function hash(str){let h=2166136261>>>0;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function identicon(name,size){
+  const h=hash(name), hue=h%360, sat=58+(h>>9)%18, lig=52+(h>>17)%10;
+  const fg=`hsl(${hue} ${sat}% ${lig}%)`, cell=size/5;
+  let rects='';
+  for(let x=0;x<3;x++)for(let y=0;y<5;y++){
+    if((h>>(x*5+y))&1){
+      for(const cx of (x===2?[2]:[x,4-x]))
+        rects+=`<rect x="${cx*cell}" y="${y*cell}" width="${cell}" height="${cell}" rx="1.5" fill="${fg}"/>`;
+    }
+  }
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${rects}</svg>`;
+}
+const names=['Les Atouts','Pique & Coeur','Clan Belote','Capot City'];
+document.getElementById('row').innerHTML=names.map(n=>`<div class="item">${identicon(n,72)}<b>${n}</b></div>`).join('');
+</script>
+</body></html>

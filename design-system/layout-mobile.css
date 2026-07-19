@@ -1,0 +1,176 @@
+/* ============================================================================
+   CONTRÉE — LAYOUT MOBILE  (fichier livrable #6)
+   Surface 100% séparée du web. Écran 390px de référence. Tab bar fixe en bas,
+   contenu scrollable au milieu, safe-areas iOS via env(). Pas de hover.
+   Toujours appliqué sous [data-surface="mobile"].
+   ========================================================================= */
+
+[data-surface="mobile"] {
+  /* renseigne les safe-areas réelles */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.app-mobile {
+  margin: 0;
+  width: 100%;
+  min-height: 100dvh;
+  background: var(--bg-1);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* ---- Squelette d'écran : top bar + scroll + tab bar ------------------ */
+.m-screen {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  background: var(--bg-1);
+}
+.m-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--sp-3);
+  height: calc(var(--topbar-h) + var(--safe-top));
+  padding: var(--safe-top) var(--sp-screen-x) 0;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-1);
+}
+.m-topbar__title { font-family: var(--font-display); font-weight: var(--fw-600,600); font-size: var(--fs-h2); color: var(--text-1); }
+
+.m-content {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--sp-screen-y) var(--sp-screen-x);
+  padding-bottom: calc(var(--sp-12) + var(--safe-bottom));
+  display: flex; flex-direction: column; gap: var(--sp-4);
+}
+
+/* =====================================================================
+   TAB BAR — fixe en bas, 5 onglets max, icône + label court
+   ===================================================================== */
+.m-tabbar {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  height: calc(var(--tabbar-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--bg-2);
+  border-top: 1px solid var(--border-1);
+}
+.m-tab {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  background: none; border: 0;
+  min-height: var(--tap-min);
+}
+.m-tab[aria-selected="true"] { color: var(--accent); }
+.m-tab__icon { width: 24px; height: 24px; }
+.m-tab-indicator { position: absolute; top: 0; left: 0; height: 2px; width: 20%; background: var(--accent); border-radius: var(--r-full); }
+
+/* =====================================================================
+   .m-layout-game — bandeau score fixe + tapis + drawer cartes
+   ===================================================================== */
+.m-layout-game {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  background: var(--felt-edge);
+}
+.m-score-band {
+  position: sticky; top: 0;
+  height: calc(var(--score-band-h) + var(--safe-top));
+  padding-top: var(--safe-top);
+  display: flex; align-items: center; justify-content: space-between;
+  padding-inline: var(--sp-screen-x);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border-1);
+  z-index: var(--z-sticky);
+}
+.m-felt { position: relative; min-height: 0; overflow: hidden; }
+.m-hand-drawer {
+  /* main du joueur : ruban scrollable horizontalement, jamais coupé */
+  display: flex; gap: var(--sp-2);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: var(--sp-3) var(--sp-screen-x) calc(var(--sp-3) + var(--safe-bottom));
+  background: linear-gradient(to top, var(--bg-0), transparent);
+}
+.m-hand-drawer > * { scroll-snap-align: center; flex: 0 0 auto; }
+
+/* =====================================================================
+   .m-layout-list — liste scrollable + FAB
+   ===================================================================== */
+.m-layout-list { position: relative; }
+.m-list { display: flex; flex-direction: column; gap: var(--sp-3); }
+.m-fab {
+  position: fixed;
+  right: var(--sp-screen-x);
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--sp-4));
+  width: var(--fab-size); height: var(--fab-size);
+  border-radius: var(--r-full);
+  background: var(--accent); color: var(--text-on-accent);
+  display: grid; place-items: center;
+  border: 0; box-shadow: var(--shadow-2);
+  z-index: var(--z-sticky);
+}
+
+/* Cartes de partie en défilement horizontal (accueil) */
+.m-cardrail { display: flex; gap: var(--sp-3); overflow-x: auto; scroll-snap-type: x mandatory; margin-inline: calc(-1 * var(--sp-screen-x)); padding-inline: var(--sp-screen-x); }
+.m-cardrail > * { scroll-snap-align: start; flex: 0 0 78%; }
+
+/* =====================================================================
+   .m-layout-profile — entête + sections empilées
+   ===================================================================== */
+.m-layout-profile .m-content { gap: var(--sp-5); }
+.m-profile-head { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); padding: var(--sp-5) 0; }
+
+/* =====================================================================
+   BOTTOM SHEET — actions contextuelles (rejoindre / observer / créer)
+   ===================================================================== */
+.m-scrim {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  z-index: var(--z-overlay);
+}
+.m-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: var(--bg-3);
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+  box-shadow: var(--shadow-sheet);
+  padding: var(--sp-3) var(--sp-screen-x) calc(var(--sp-5) + var(--safe-bottom));
+  z-index: var(--z-modal);
+  max-height: 88dvh; overflow-y: auto;
+}
+.m-sheet__grip { width: 40px; height: 4px; border-radius: var(--r-full); background: var(--border-strong); margin: 6px auto var(--sp-4); }
+
+/* =====================================================================
+   TOAST — pile en bas, au-dessus de la tab bar
+   ===================================================================== */
+.m-toast-host {
+  position: fixed; left: 0; right: 0;
+  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + var(--sp-3));
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  align-items: center;
+  padding-inline: var(--sp-screen-x);
+  pointer-events: none;
+  z-index: var(--z-toast);
+}
+.m-toast { pointer-events: auto; width: 100%; max-width: 360px; }
+
+/* Pull-to-refresh : zone révélée en haut de la liste */
+.m-ptr { display: grid; place-items: center; height: 0; overflow: hidden; color: var(--text-3); transition: height var(--dur-base) var(--ease-out); }
+.m-ptr[data-pulling] { height: 48px; }
+
+/* Garde-fou : si on dépasse 520px (tablette), on borne la largeur "téléphone" */
+@media (min-width: 520px) {
+  .app-mobile, .m-screen, .m-layout-game { max-width: 420px; margin-inline: auto; border-inline: 1px solid var(--border-1); }
+}

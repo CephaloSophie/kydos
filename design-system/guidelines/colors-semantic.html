@@ -1,0 +1,16 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Sémantiques" subtitle="success · warning · error · info (+ fonds atténués)" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--bg-1);font-family:var(--font-ui);padding:18px;display:flex;gap:12px}
+  .cell{flex:1;border-radius:var(--r-md);border:1px solid var(--border-1);overflow:hidden}
+  .top{height:42px}
+  .bot{padding:9px 10px}
+  .bot b{display:block;color:var(--text-1);font-size:13px;font-weight:600}
+  .bot i{font-family:var(--font-mono);font-size:10.5px;font-style:normal;color:var(--text-3)}
+  .pill{display:inline-block;margin-top:6px;font-size:11px;padding:3px 8px;border-radius:var(--r-full)}
+</style></head><body>
+  <div class="cell"><div class="top" style="background:var(--success)"></div><div class="bot"><b>success</b><i>#3ddc8a</i><span class="pill" style="background:var(--success-ghost);color:var(--success)">contrat réussi</span></div></div>
+  <div class="cell"><div class="top" style="background:var(--warning)"></div><div class="bot"><b>warning</b><i>#e8b13b</i><span class="pill" style="background:var(--warning-ghost);color:var(--warning)">capot risqué</span></div></div>
+  <div class="cell"><div class="top" style="background:var(--error)"></div><div class="bot"><b>error</b><i>#f0616d</i><span class="pill" style="background:var(--error-ghost);color:var(--error)">dedans</span></div></div>
+  <div class="cell"><div class="top" style="background:var(--info)"></div><div class="bot"><b>info</b><i>#56b0f0</i><span class="pill" style="background:var(--info-ghost);color:var(--info)">spectateur</span></div></div>
+</body></html>

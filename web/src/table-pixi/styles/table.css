@@ -1,0 +1,19 @@
+/* Root + canvas + phone rotate screen. */
+.px-table {
+  position: absolute; inset: 0; overflow: hidden;
+  background: #0b1116;
+  color: var(--table-text, #f6f7f9);
+  font-family: var(--font-ui);
+  touch-action: manipulation;
+}
+.px-canvas-host { position: absolute; inset: 0; }
+.px-canvas-host canvas { display: block; width: 100%; height: 100%; }
+.px-rotate { display: none; }
+@media (orientation: portrait) and (max-width: 820px) {
+  .px-rotate { display: flex; position: absolute; inset: 0; z-index: 50;
+    background: #0b1116; align-items: center; justify-content: center; text-align: center; flex-direction: column; gap: 16px; }
+  .px-rotate__icon { font-size: 56px; animation: px-shake 1.6s ease-in-out infinite; }
+  .px-rotate p { margin: 0; font-size: 16px; color: var(--table-text-dim); max-width: 260px; }
+  .px-hud { display: none; }
+}
+@keyframes px-shake { 0%,100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }

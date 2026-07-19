@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x150" name="Texte & accents" subtitle="3 niveaux de texte + gold atout + cyan esport" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--bg-1);font-family:var(--font-ui);padding:18px;display:flex;gap:22px;align-items:center}
+  .txt span{display:block;margin-bottom:6px}
+  .t1{color:var(--text-1);font-size:18px;font-weight:700}
+  .t2{color:var(--text-2);font-size:15px}
+  .t3{color:var(--text-3);font-size:13px}
+  .chips{display:flex;gap:10px;flex-wrap:wrap}
+  .chip{height:54px;width:96px;border-radius:var(--r-md);display:flex;flex-direction:column;justify-content:flex-end;padding:7px;border:1px solid var(--border-1)}
+  .chip b{font-size:11.5px}.chip i{font-family:var(--font-mono);font-size:10px;font-style:normal;opacity:.8}
+</style></head><body>
+  <div class="txt">
+    <span class="t1">Texte 1 · titres</span>
+    <span class="t2">Texte 2 · corps</span>
+    <span class="t3">Texte 3 · muet</span>
+  </div>
+  <div class="chips">
+    <div class="chip" style="background:var(--accent);color:var(--text-on-accent)"><b>accent</b><i>gold · atout</i></div>
+    <div class="chip" style="background:var(--accent-dim);color:var(--accent-strong)"><b>accent-dim</b><i>fond gold</i></div>
+    <div class="chip" style="background:var(--spark);color:#06212c"><b>spark</b><i>cyan esport</i></div>
+  </div>
+</body></html>

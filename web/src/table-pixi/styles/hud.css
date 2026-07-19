@@ -1,0 +1,141 @@
+/* HUD overlay — anchored to the felt via --px-felt-*. DS component classes. */
+.px-hud { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.px-hud > * { pointer-events: auto; }
+
+/* Top-right chrome (score + menu) — rides on the rail, top-right (DS .top-toolbar) */
+.px-toolbar {
+  position: absolute; top: 18px; right: 24px; z-index: 30;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.px-toolbar .ky-score { transform: rotate(-2deg) translateY(6px); }
+
+/* Menu ☰ — DS MenuButton */
+.ky-menu { position: relative; display: inline-block; }
+.ky-menu__btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: rgba(0,0,0,0.35); border: 1px solid var(--table-border);
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.ky-menu__btn span { display: block; width: 16px; height: 2px; background: var(--table-text); margin: 1.5px 0; border-radius: 2px; }
+.ky-menu__btn:hover { background: rgba(0,0,0,0.5); }
+.ky-menu__panel {
+  position: absolute; top: 44px; right: 0; min-width: 200px; padding: 6px;
+  background: var(--table-surface-2); border: 1px solid var(--table-border);
+  border-radius: 10px; box-shadow: var(--shadow-dialog); z-index: 20;
+}
+.ky-menu__item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px;
+  background: transparent; color: var(--table-text); border: none; border-radius: 6px;
+  font: 500 13px var(--font-ui); cursor: pointer; text-align: left;
+}
+.ky-menu__item:hover { background: rgba(255,255,255,0.06); }
+.ky-menu__ico { width: 16px; text-align: center; opacity: 0.85; }
+
+/* Bottom-left stack: toast ABOVE the announcements recap (never over the north seat) */
+.px-bl-stack {
+  position: absolute; z-index: 25;
+  left: calc(var(--px-felt-x, 0px) + 24px);
+  bottom: calc(100% - var(--px-felt-y, 0px) - var(--px-felt-h, 100vh) + 20px);
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.ky-toast {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px;
+  border-radius: 999px; background: rgba(11,17,22,0.88); color: var(--table-text);
+  font: 600 14px/1.3 var(--font-ui); box-shadow: var(--shadow-toast);
+  border: 1px solid var(--table-border); backdrop-filter: blur(10px);
+  border-left: 3px solid var(--table-accent); padding-left: 14px;
+  animation: ky-toast-in var(--dur-3) var(--ease-back); white-space: nowrap;
+}
+@keyframes ky-toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Last trick — DS LastTrick (top-left of felt: 20px/24px) */
+.px-last-slot {
+  position: absolute; z-index: 15;
+  top: calc(var(--px-felt-y, 0px) + 20px);
+  left: calc(var(--px-felt-x, 0px) + 24px);
+}
+.ky-lasttrick {
+  padding: 8px 10px 10px; border-radius: 12px; background: rgba(0,0,0,0.32);
+  backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--table-text); display: inline-flex; flex-direction: column; gap: 6px;
+}
+.ky-lasttrick__label { font: 700 10px var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--table-text-dim); }
+.ky-lasttrick__row { display: flex; gap: 4px; }
+.ky-lasttrick__cell { padding: 3px; border-radius: 8px; }
+.ky-lasttrick__cell.is-winner { background: rgba(240,196,106,0.22); box-shadow: 0 0 0 1px rgba(240,196,106,0.5); }
+.ky-lasttrick__cell.is-mine .ky-minicard { box-shadow: 0 0 0 2px #6b78ea, 0 2px 8px rgba(107,120,234,0.55); }
+.ky-lasttrick__cell.is-winner .ky-minicard { box-shadow: 0 0 0 2px rgba(240,196,106,0.9), 0 0 10px rgba(240,196,106,0.6); }
+.ky-lasttrick__cell.is-winner.is-mine .ky-minicard { box-shadow: 0 0 0 2px rgba(240,196,106,0.9), 0 0 10px rgba(240,196,106,0.6), 0 4px 10px rgba(107,120,234,0.6); }
+/* mini card inside the last trick (sm card look, scaled down) */
+.ky-minicard {
+  width: 30px; height: 42px; border-radius: 5px; background: #fff; position: relative;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  display: grid; place-items: center;
+  font: 800 12px var(--font-ui);
+}
+.ky-minicard .s { font-family: var(--font-display); font-weight: 900; font-size: 15px; line-height: 1; }
+.ky-minicard.is-red { color: var(--suit-red); } .ky-minicard.is-black { color: var(--suit-black); }
+
+/* Announcements recap — rendered inside .px-bl-stack */
+.ky-recap { display: flex; flex-direction: column; gap: 4px; font-family: var(--font-ui); }
+.ky-recap__row {
+  display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px;
+  border-radius: 999px; background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08); border-left-width: 3px;
+  color: var(--table-text); font: 500 12px var(--font-ui); width: max-content;
+}
+.ky-recap__row--us   { border-left-color: var(--team-yellow); }
+.ky-recap__row--them { border-left-color: var(--suit-red); }
+.ky-recap__name  { font-weight: 700; }
+.ky-recap__value { color: var(--table-text-dim); }
+.ky-recap__who   { color: var(--table-text-dim); margin-left: auto; font-size: 11px; }
+.ky-recap__head { font: 700 10px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--table-text-dim); margin-bottom: 2px; }
+
+/* Contrer button — bottom-right of felt */
+.px-contre-slot {
+  position: absolute; z-index: 16;
+  right: calc(100% - var(--px-felt-x, 0px) - var(--px-felt-w, 100vw) + 24px);
+  bottom: calc(100% - var(--px-felt-y, 0px) - var(--px-felt-h, 100vh) + 20px);
+}
+.ky-contrer__btn {
+  height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid #d94f4f;
+  background: linear-gradient(180deg, #c8272a, #7a1116); color: #fff;
+  font: 700 13px var(--font-ui); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform var(--dur-1) var(--ease-out);
+}
+.ky-contrer__btn:hover { box-shadow: 0 4px 12px rgba(217,79,79,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
+.ky-contrer__btn:active { transform: scale(0.97); }
+.ky-contrer__ico { font-weight: 900; font-size: 14px; }
+
+/* Bottom-right actions column (belote toggle + smileys), stacked ABOVE the Coincher slot */
+.px-actions-slot {
+  position: absolute; z-index: 16;
+  right: calc(100% - var(--px-felt-x, 0px) - var(--px-felt-w, 100vw) + 24px);
+  bottom: calc(100% - var(--px-felt-y, 0px) - var(--px-felt-h, 100vh) + 64px);
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+}
+.ky-belote {
+  height: 32px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  font: 700 12px var(--font-ui);
+  background: rgba(11,17,22,0.85); color: var(--table-text);
+  border: 1px solid var(--table-border);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.ky-belote.is-on { background: var(--table-accent); color: #1a0f00; border-color: var(--table-accent-2); }
+.ky-emotes { display: inline-flex; gap: 4px; background: rgba(11,17,22,0.72);
+  border: 1px solid var(--table-border); border-radius: 999px; padding: 3px 6px; }
+.ky-emotes__btn { background: transparent; border: none; font-size: 17px; cursor: pointer;
+  padding: 2px 4px; border-radius: 8px; transition: transform var(--dur-1) var(--ease-out); }
+.ky-emotes__btn:hover:not(:disabled) { transform: scale(1.2); }
+.ky-emotes__btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Modal scrim (DS .modal-scrim) */
+.px-scrim {
+  position: absolute; inset: 0; z-index: 40;
+  background: var(--scrim-70);
+  display: grid; place-items: center;
+  animation: px-fade var(--dur-3) both;
+}
+@keyframes px-fade { from { opacity: 0 } to { opacity: 1 } }

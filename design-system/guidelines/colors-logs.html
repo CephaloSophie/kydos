@@ -1,0 +1,15 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Niveaux de log" subtitle="console devtools : error → trace" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--log-bg);font-family:var(--font-mono);font-size:12.5px;padding:14px 16px;color:var(--log-debug)}
+  .ln{display:flex;gap:10px;padding:3px 0;align-items:baseline}
+  .lvl{width:74px;font-weight:700;text-transform:uppercase;font-size:10.5px;letter-spacing:.06em}
+  .ts{color:var(--log-trace)}
+  .e{color:var(--log-error)} .w{color:var(--log-warning)} .i{color:var(--log-info)} .d{color:var(--log-debug)} .t{color:var(--log-trace)}
+</style></head><body>
+  <div class="ln"><span class="ts">12:04:01</span><span class="lvl e">error</span><span>contrat non rempli — équipe A · −160</span></div>
+  <div class="ln"><span class="ts">12:04:01</span><span class="lvl w">warning</span><span>annonce capot à risque (concentration 0.4)</span></div>
+  <div class="ln"><span class="ts">12:04:02</span><span class="lvl i">info</span><span>pli 3 remporté par Sud (R♥)</span></div>
+  <div class="ln"><span class="ts">12:04:02</span><span class="lvl d">debug</span><span>eval main Ouest = 0.62</span></div>
+  <div class="ln"><span class="ts">12:04:02</span><span class="lvl t">trace</span><span>ws → state.tick #482</span></div>
+</body></html>

@@ -1,0 +1,12 @@
+<svg width="300" height="84" viewBox="0 0 300 84" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Contrée">
+  <defs>
+    <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4c95a"></stop>
+      <stop offset="1" stop-color="#d69a26"></stop>
+    </linearGradient>
+  </defs>
+  <path d="M42 8 72 25 72 59 42 76 12 59 12 25Z" fill="#161922" stroke="#2e3648" stroke-width="1.6"></path>
+  <path d="M42 14 66 28 66 56 42 70 18 56 18 28Z" fill="#0f1115"></path>
+  <path d="M42 26 C50 35 58 39 58 48 C58 54 53 57 49 56 C47.6 55.4 46 54.6 45 53.4 C45.6 58 47 60.6 49.6 63.4 L34.4 63.4 C37 60.6 38.4 58 39 53.4 C38 54.6 36.4 55.4 35 56 C31 57 26 54 26 48 C26 39 34 35 42 26Z" fill="url(#gl)"></path>
+  <text x="92" y="54" font-family="&#39;Chakra Petch&#39;,&#39;Segoe UI&#39;,sans-serif" font-size="40" font-weight="700" letter-spacing="-0.5" fill="#eef1f6">Contr<tspan fill="#eab23a">é</tspan>e</text>
+</svg>

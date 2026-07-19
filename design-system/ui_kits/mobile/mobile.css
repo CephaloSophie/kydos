@@ -1,0 +1,169 @@
+/* UI Kit Mobile — styles propres à la surface mobile (vanilla).
+   S'appuie sur les tokens + layout-mobile.css. Aucun composant web partagé. */
+
+.kit-stage {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(120% 80% at 50% 0%, #14171f, var(--bg-0));
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  font-family: var(--font-ui);
+}
+
+/* Châssis téléphone */
+.device {
+  position: relative;
+  width: 390px;
+  height: 820px;
+  background: #000;
+  border-radius: 44px;
+  padding: 10px;
+  box-shadow: 0 40px 90px rgba(0,0,0,.6), inset 0 0 0 2px #23262e;
+}
+.device__notch {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 150px; height: 26px; background: #000; border-radius: 0 0 18px 18px; z-index: 50;
+}
+.device .app-mobile {
+  width: 100%; height: 100%; border-radius: 36px; overflow: hidden; position: relative;
+}
+.device .m-screen { height: 100%; }
+
+/* La barre de statut iOS simulée dans la topbar */
+.m-statusbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 24px 2px; font-size: 13px; font-weight: 700; color: var(--text-1);
+}
+.m-statusbar .right { display: flex; gap: 6px; align-items: center; }
+
+/* Topbar app */
+#topbar { flex-direction: column; align-items: stretch; gap: 0; padding-top: 6px; height: auto; }
+.m-topbar__bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 12px; }
+.m-topbar__bar h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--text-1); }
+.m-topbar__bar .accent { color: var(--accent); }
+
+/* Tab bar */
+.m-tab { gap: 4px; }
+.m-tab svg { width: 24px; height: 24px; }
+
+/* Cartes génériques */
+.card { background: var(--bg-2); border: 1px solid var(--border-1); border-radius: var(--r-lg); padding: 16px; }
+.card--pad0 { padding: 0; overflow: hidden; }
+.lab { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin: 0 0 10px; }
+.row { display: flex; align-items: center; gap: 12px; }
+.between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--text-3); }
+.t1 { color: var(--text-1); }
+
+/* Hero score équipe */
+.hero {
+  background: linear-gradient(150deg, var(--bg-3), var(--bg-2));
+  border: 1px solid var(--border-2); border-radius: var(--r-xl); padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+}
+.hero .big { font-family: var(--font-display); font-weight: 700; font-size: 38px; line-height: 1; color: var(--text-1); }
+.hero .pts { display: flex; align-items: baseline; gap: 6px; }
+.hero .pts .u { font-size: 13px; color: var(--text-3); }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: var(--r-full); font-size: 12px; font-weight: 600; }
+.badge--spark { background: var(--spark-ghost); color: var(--spark); }
+.badge--accent { background: var(--accent-dim); color: var(--accent-strong); }
+.badge--rank { background: var(--accent); color: var(--text-on-accent); font-family: var(--font-display); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+/* Boutons mobiles */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: var(--control-h); padding: 0 18px; border: 0; border-radius: var(--r-md);
+  font-family: var(--font-ui); font-size: 15px; font-weight: 600; cursor: pointer;
+  background: var(--bg-3); color: var(--text-1); border: 1px solid var(--border-2);
+}
+.btn--primary { background: var(--accent); color: var(--text-on-accent); border-color: transparent; }
+.btn--spark { background: var(--spark); color: #06212c; border-color: transparent; }
+.btn--ghost { background: transparent; border-color: transparent; color: var(--text-2); }
+.btn--danger { background: var(--error); color: #1a0a0c; border-color: transparent; }
+.btn--full { width: 100%; }
+.btn--lg { height: var(--control-h-lg); font-size: 16px; }
+.btn svg { width: 20px; height: 20px; }
+
+/* Grille de raccourcis */
+.shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.shortcut {
+  display: flex; flex-direction: column; gap: 10px; padding: 16px;
+  background: var(--bg-2); border: 1px solid var(--border-1); border-radius: var(--r-lg);
+  color: var(--text-1); cursor: pointer; text-align: left;
+}
+.shortcut svg { width: 26px; height: 26px; color: var(--accent); }
+.shortcut span { font-weight: 600; font-size: 15px; }
+.shortcut small { color: var(--text-3); font-size: 12px; font-weight: 500; }
+
+/* Carte partie (rail + liste) */
+.gcard { background: var(--bg-2); border: 1px solid var(--border-1); border-radius: var(--r-lg); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.gcard .teams { display: flex; align-items: center; justify-content: space-between; }
+.gcard .vs { font-family: var(--font-display); color: var(--text-3); font-size: 13px; }
+.team-mini { display: flex; align-items: center; gap: 8px; }
+.team-mini b { font-family: var(--font-display); font-size: 14px; color: var(--text-1); font-weight: 600; }
+.identicon { border-radius: var(--r-sm); background: var(--bg-3); border: 1px solid var(--border-1); display: block; }
+
+/* Tapis portrait */
+.felt-portrait {
+  position: relative; height: 100%; min-height: 0;
+  background: radial-gradient(120% 80% at 50% 42%, var(--felt-bright), var(--felt) 55%, var(--felt-edge));
+}
+.seat { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.seat .chip { display: flex; align-items: center; gap: 7px; padding: 4px 9px 4px 5px; border-radius: var(--r-full); background: rgba(8,12,10,.6); border: 1px solid var(--felt-line); backdrop-filter: blur(4px); }
+.seat .chip.active { background: rgba(234,178,58,.18); border-color: var(--accent-line); box-shadow: var(--glow-accent); }
+.seat .chip b { font-family: var(--font-display); font-size: 12px; color: #eaf3ee; font-weight: 600; }
+.seat .chip .bot { color: var(--spark); font-size: 10px; }
+.seat.south { bottom: 6px; left: 50%; transform: translateX(-50%); }
+.seat.north { top: 8px; left: 50%; transform: translateX(-50%); }
+.seat.west { left: 6px; top: 46%; transform: translateY(-50%); }
+.seat.east { right: 6px; top: 46%; transform: translateY(-50%); }
+
+.pc { border-radius: var(--r-card); background: var(--card-face); border: 1px solid var(--card-face-edge); box-shadow: var(--shadow-2); display: grid; position: relative; flex: 0 0 auto; font-family: var(--font-display); font-weight: 700; }
+.pc .corner { position: absolute; top: 3px; left: 4px; display: flex; flex-direction: column; align-items: center; line-height: .9; }
+.pc .pip { place-self: center; }
+.pc.back { background: repeating-linear-gradient(45deg, var(--card-back), var(--card-back) 5px, var(--card-back-line) 5px, var(--card-back-line) 10px); border: 2px solid var(--card-face); }
+.pc.red { color: var(--card-red); }
+.pc.black { color: var(--card-black); }
+.pc.playable { box-shadow: var(--glow-accent); }
+.trick { position: absolute; }
+.trick.south { bottom: 30%; left: 50%; transform: translateX(-50%); }
+.trick.north { top: 28%; left: 50%; transform: translateX(-50%); }
+.trick.west { left: 26%; top: 48%; transform: translateY(-50%); }
+.trick.east { right: 26%; top: 48%; transform: translateY(-50%); }
+
+/* Liste robots swipeable */
+.swipe-wrap { position: relative; overflow: hidden; border-radius: var(--r-lg); }
+.swipe-bg { position: absolute; inset: 0; background: var(--error); display: flex; align-items: center; justify-content: flex-end; padding-right: 22px; color: #1a0a0c; font-weight: 700; }
+.swipe-row { position: relative; background: var(--bg-2); border: 1px solid var(--border-1); border-radius: var(--r-lg); padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; touch-action: pan-y; }
+
+/* Listes simples */
+.list-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--border-1); }
+.list-item:last-child { border-bottom: 0; }
+
+/* Sliders natifs */
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > .between span:last-child { font-family: var(--font-mono); color: var(--text-1); font-weight: 600; }
+input[type=range].m-range { -webkit-appearance: none; appearance: none; height: 8px; border-radius: 999px; background: var(--bg-4); outline: none; }
+input[type=range].m-range::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--text-1); border: 3px solid var(--accent); }
+
+/* Bottom sheet */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.6); z-index: 80; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg-3); border-radius: var(--r-2xl) var(--r-2xl) 0 0; box-shadow: var(--shadow-sheet); padding: 8px 16px calc(20px + var(--safe-bottom)); z-index: 90; }
+.sheet .grip { width: 40px; height: 4px; border-radius: 999px; background: var(--border-strong); margin: 6px auto 14px; }
+
+/* Toast */
+.toast { width: 100%; max-width: 340px; display: flex; align-items: center; gap: 10px; background: var(--bg-4); border: 1px solid var(--border-2); border-left: 3px solid var(--spark); border-radius: var(--r-md); box-shadow: var(--shadow-3); padding: 12px 14px; pointer-events: auto; }
+.toast b { color: var(--text-1); font-size: 14px; }
+
+/* Profile head */
+.profile-head { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 12px 0 4px; }
+.profile-head .name { font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--text-1); }
+
+.section-title { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--text-1); margin: 4px 0; }
+.segment { display: flex; gap: 6px; background: var(--bg-2); padding: 4px; border-radius: var(--r-md); border: 1px solid var(--border-1); }
+.segment button { flex: 1; height: 34px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text-2); font-family: var(--font-ui); font-weight: 600; font-size: 13px; cursor: pointer; }
+.segment button.on { background: var(--accent-ghost); color: var(--accent); }

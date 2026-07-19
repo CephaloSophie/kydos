@@ -1,0 +1,23 @@
+{
+  "name": "belote-contree",
+  "version": "9.4.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm --workspace belote-server run dev",
+    "dev:web": "npm --workspace belote-web run dev",
+    "build:web": "npm --workspace belote-web run build",
+    "typecheck": "npm --workspace belote-core run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-web run typecheck",
+    "mongo": "docker compose up -d mongo",
+    "test": "npm --workspace belote-core run test && npm --workspace belote-web run test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

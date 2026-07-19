@@ -1,0 +1,9 @@
+/* ============================================================================
+   CONTRÉE — point d'entrée CSS global.
+   Les consommateurs ne lient QUE ce fichier. Uniquement des @import ici.
+   ========================================================================= */
+@import url("tokens/fonts.css");
+@import url("design-tokens.css");
+@import url("animations.css");
+@import url("layout-web.css");
+@import url("layout-mobile.css");
