@@ -1,0 +1,154 @@
+/* =============================================================================
+ * KÝDOS BELOTE — DESIGN SYSTEM
+ * 01 · tokens.css — Design tokens (source of truth)
+ * -----------------------------------------------------------------------------
+ * Toutes les valeurs de design sont centralisées ici sous forme de custom
+ * properties CSS. Aucun composant ne doit contenir de valeur « en dur » :
+ * il consomme uniquement ces variables. Changer un token ici met à jour
+ * l'ensemble de l'application (theming, white-label, etc.).
+ *
+ * Univers : belote contrée haut de gamme orientée robots (IA).
+ * Ambiance : nuit étoilée, or premium, tapis vert feutré.
+ * ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------------------
+   * COULEURS — Fonds & surfaces (du plus sombre au plus clair)
+   * ------------------------------------------------------------------------ */
+  --c-night:        #05070f;   /* fond racine de l'app                        */
+  --c-night-2:      #070c17;   /* fond dégradé secondaire                     */
+  --c-surface:      #101520;   /* panneaux, cartes de contenu                 */
+  --c-surface-2:    #141a28;   /* carte surélevée                             */
+  --c-surface-3:    #0d1220;   /* base de dégradé de carte                    */
+  --c-elevated:     #161d2c;   /* dialogues, feuilles modales                 */
+
+  /* Voiles translucides (posés sur fond sombre) */
+  --c-veil-04:      rgba(255,255,255,.04);
+  --c-veil-06:      rgba(255,255,255,.06);
+  --c-veil-08:      rgba(255,255,255,.08);
+  --c-line:         rgba(255,255,255,.09);  /* bordure standard              */
+  --c-line-strong:  rgba(255,255,255,.14);  /* bordure marquée               */
+
+  /* ---------------------------------------------------------------------------
+   * COULEURS — Marque & accent
+   * ------------------------------------------------------------------------ */
+  --c-gold:         #e6c46a;   /* OR KÝDOS — accent principal                 */
+  --c-gold-hi:      #f0d179;   /* haut du dégradé doré                        */
+  --c-gold-lo:      #dcb251;   /* bas du dégradé doré                         */
+  --c-gold-deep:    #b8912f;   /* or foncé (compétitions, texte sur clair)    */
+  --c-ink:          #20242e;   /* texte sombre posé sur l'or                  */
+
+  /* ---------------------------------------------------------------------------
+   * COULEURS — Enseignes de cartes (couleurs = univers belote)
+   * ------------------------------------------------------------------------ */
+  --c-heart:        #e85d70;   /* ♥ Cœur   — Le jeu                           */
+  --c-heart-red:    #c34a5c;   /* ♥ sur carte ivoire                          */
+  --c-spade:        #3f5f92;   /* ♠ Pique  — Robots                           */
+  --c-diamond:      #6d51a0;   /* ♦ Carreau— Éditeur (violet mascotte)        */
+  --c-diamond-gold: #f0a63c;   /* ♦ orangé accent                             */
+  --c-club:         #a5414f;   /* ♣ Trèfle — Stratégie                        */
+
+  /* Dégradés d'enseigne prêts à l'emploi (feature cards, nav) */
+  --g-heart:   linear-gradient(155deg,#2f8f57,#1c6a40);  /* tapis / jouer     */
+  --g-spade:   linear-gradient(155deg,#3f5f92,#2a3f66);
+  --g-diamond: linear-gradient(155deg,#6d51a0,#4a3577);
+  --g-club:    linear-gradient(155deg,#a5414f,#7d2f3b);
+  --g-gold:    linear-gradient(155deg,#b8912f,#8f6f1f);
+  --g-slate:   linear-gradient(155deg,#4a5568,#333c4d);
+  --g-btn:     linear-gradient(180deg,var(--c-gold-hi),var(--c-gold-lo));
+
+  /* ---------------------------------------------------------------------------
+   * COULEURS — Sémantique (états système)
+   * ------------------------------------------------------------------------ */
+  --c-success:      #7ecb98;   /* en ligne, victoire, confirmation            */
+  --c-danger:       #e85d70;   /* erreur, live, adversaire                    */
+  --c-info:         #9db4dd;   /* information                                 */
+  --c-warn:         #f0a63c;   /* attention                                   */
+
+  /* ---------------------------------------------------------------------------
+   * COULEURS — Texte
+   * ------------------------------------------------------------------------ */
+  --c-text:         #f1eee2;   /* texte principal (ivoire)                    */
+  --c-text-soft:    #c8cdd6;   /* texte secondaire                            */
+  --c-text-mute:    #8b93a3;   /* texte tertiaire / labels                    */
+  --c-text-faint:   #6f7789;   /* texte très discret / données                */
+
+  /* Surfaces claires (cartes de belote ivoire) */
+  --c-ivory:        #f3efe3;
+  --c-ivory-hi:     #f6f2e6;
+  --c-ivory-lo:     #e7e0cd;
+
+  /* ---------------------------------------------------------------------------
+   * TYPOGRAPHIE
+   * ------------------------------------------------------------------------ */
+  --f-display: 'Bricolage Grotesque', system-ui, sans-serif; /* titres        */
+  --f-body:    'Manrope', system-ui, sans-serif;             /* corps de texte*/
+  --f-mono:    'JetBrains Mono', ui-monospace, monospace;    /* données/robot */
+
+  /* Échelle typographique (mode paysage mobile) */
+  --fs-xs:   9px;
+  --fs-sm:   11px;
+  --fs-base: 13px;
+  --fs-md:   15px;
+  --fs-lg:   19px;
+  --fs-xl:   24px;
+  --fs-2xl:  34px;
+  --fs-3xl:  40px;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold:600;
+  --fw-bold:    700;
+  --fw-black:   800;
+
+  --ls-tight:  -0.02em;   /* titres display                                   */
+  --ls-wide:    0.14em;   /* labels mono                                      */
+  --ls-wider:   0.22em;   /* eyebrows                                         */
+
+  /* ---------------------------------------------------------------------------
+   * ESPACEMENT — échelle 4px
+   * ------------------------------------------------------------------------ */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-5: 20px;  --s-6: 24px;  --s-8: 32px;  --s-10: 40px;
+
+  /* ---------------------------------------------------------------------------
+   * RAYONS
+   * ------------------------------------------------------------------------ */
+  --r-sm:   8px;
+  --r-md:   11px;
+  --r-lg:   14px;
+  --r-xl:   18px;
+  --r-2xl:  22px;
+  --r-pill: 999px;
+
+  /* ---------------------------------------------------------------------------
+   * OMBRES & LUEURS
+   * ------------------------------------------------------------------------ */
+  --sh-card:   0 10px 20px -10px rgba(0,0,0,.6);
+  --sh-panel:  0 18px 34px -18px rgba(0,0,0,.9);
+  --sh-float:  0 30px 60px -20px rgba(0,0,0,.7);
+  --sh-btn:    0 8px 20px -8px rgba(220,178,81,.85);
+  --glow-gold: 0 0 40px -8px rgba(230,196,106,.35);
+  --glow-soft: 0 0 14px 3px currentColor;
+  --inset-line:inset 0 0 0 1px rgba(255,255,255,.1);
+
+  /* ---------------------------------------------------------------------------
+   * PROFONDEUR (z-index)
+   * ------------------------------------------------------------------------ */
+  --z-base:   0;
+  --z-nav:    100;
+  --z-hud:    200;
+  --z-dialog: 900;
+  --z-toast:  1000;
+  --z-orient: 9999;   /* garde d'orientation paysage                          */
+
+  /* ---------------------------------------------------------------------------
+   * MOUVEMENT
+   * ------------------------------------------------------------------------ */
+  --e-out:    cubic-bezier(.22,1,.36,1);   /* décélération (entrées)          */
+  --e-inout:  cubic-bezier(.65,0,.35,1);
+  --t-fast:   .18s;
+  --t-base:   .3s;
+  --t-slow:   .5s;
+  --t-flip:   .8s;
+}

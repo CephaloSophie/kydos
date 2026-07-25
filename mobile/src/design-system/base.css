@@ -1,0 +1,119 @@
+/* =============================================================================
+ * KÝDOS BELOTE — 02 · base.css
+ * Reset, éléments globaux, primitives de layout, animations partagées et
+ * garde d'orientation (l'app est PAYSAGE UNIQUEMENT).
+ * ========================================================================== */
+
+/* --- Reset ---------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--f-body);
+  font-size: var(--fs-base);
+  color: var(--c-text);
+  background: var(--c-night);
+  overflow: hidden;                 /* l'app gère son propre défilement       */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; }
+a { color: var(--c-gold); text-decoration: none; }
+a:hover { color: var(--c-gold-hi); }
+ul { list-style: none; padding: 0; }
+
+/* Accessibilité : focus visible clavier */
+:focus-visible { outline: 2px solid var(--c-gold); outline-offset: 2px; }
+
+/* --- Fond immersif étoilé (posé une fois sur .app) ------------------------ */
+.app-bg {
+  position: absolute; inset: 0; z-index: var(--z-base);
+  background:
+    radial-gradient(1200px 700px at 78% -6%, rgba(46,124,80,.16), transparent 60%),
+    radial-gradient(900px 600px at 12% 8%, rgba(58,90,140,.12), transparent 60%),
+    linear-gradient(180deg, var(--c-night-2) 0%, var(--c-night) 55%, #04060c 100%);
+}
+.app-bg::after {   /* champ d'étoiles */
+  content: ""; position: absolute; inset: 0; opacity: .9;
+  background-image:
+    radial-gradient(1px 1px at 12% 22%, #fff, transparent),
+    radial-gradient(1px 1px at 28% 64%, #cdd6e6, transparent),
+    radial-gradient(1px 1px at 45% 14%, #fff, transparent),
+    radial-gradient(1.4px 1.4px at 63% 38%, #fff, transparent),
+    radial-gradient(1px 1px at 72% 74%, #b9c3d6, transparent),
+    radial-gradient(1px 1px at 88% 26%, #fff, transparent),
+    radial-gradient(1px 1px at 8% 84%, #fff, transparent),
+    radial-gradient(1.2px 1.2px at 55% 88%, #cdd6e6, transparent),
+    radial-gradient(1px 1px at 92% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 36% 40%, var(--c-gold), transparent);
+}
+
+/* --- Primitives de layout ------------------------------------------------- */
+.row    { display: flex; align-items: center; }
+.col    { display: flex; flex-direction: column; }
+.between{ display: flex; align-items: center; justify-content: space-between; }
+.center { display: flex; align-items: center; justify-content: center; }
+.fill   { flex: 1; }
+.gap-1 { gap: var(--s-1);} .gap-2 { gap: var(--s-2);} .gap-3 { gap: var(--s-3);}
+.gap-4 { gap: var(--s-4);} .gap-6 { gap: var(--s-6);}
+.wrap  { flex-wrap: wrap; }
+
+/* Utilitaires de texte */
+.eyebrow {
+  font-family: var(--f-mono); font-size: var(--fs-xs);
+  letter-spacing: var(--ls-wider); text-transform: uppercase;
+  color: var(--c-text-mute);
+}
+.label {
+  font-family: var(--f-mono); font-size: var(--fs-xs);
+  letter-spacing: var(--ls-wide); text-transform: uppercase;
+  color: var(--c-text-mute);
+}
+.title    { font-family: var(--f-display); font-weight: var(--fw-black); letter-spacing: var(--ls-tight); }
+.mono     { font-family: var(--f-mono); }
+.text-soft{ color: var(--c-text-soft); }
+.text-mute{ color: var(--c-text-mute); }
+.gold     { color: var(--c-gold); }
+
+/* Trait de section doré */
+.rule { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(230,196,106,.4), transparent); }
+
+/* --- Animations partagées ------------------------------------------------- */
+@keyframes screenIn { from { opacity:0; transform: translateY(10px) scale(.985);} to { opacity:1; transform:none; } }
+@keyframes fadeUp   { from { opacity:0; transform: translateY(14px);} to { opacity:1; transform:none; } }
+@keyframes cardFlipIn { 0% { opacity:0; transform: perspective(1200px) rotateY(38deg) translateY(24px);} 100% { opacity:1; transform: perspective(1200px) rotateY(0) translateY(0);} }
+@keyframes floatY   { 0%,100% { transform: translateY(0) rotate(-1deg);} 50% { transform: translateY(-10px) rotate(1deg);} }
+@keyframes glowPulse{ 0%,100% { opacity:.55;} 50% { opacity:1;} }
+@keyframes twinkle  { 0%,100% { opacity:.25;} 50% { opacity:1;} }
+@keyframes antenna  { 0%,100% { transform: translateX(-50%) scaleY(1);} 50% { transform: translateX(-50%) scaleY(.85);} }
+@keyframes caret    { 0%,49% { opacity:1;} 50%,100% { opacity:0;} }
+@keyframes dialogIn { from { opacity:0; transform: scale(.94);} to { opacity:1; transform:none; } }
+
+.anim-screen { animation: screenIn var(--t-slow) ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* --- Garde d'orientation : afficher un message en mode portrait ----------- */
+.orient-guard {
+  position: fixed; inset: 0; z-index: var(--z-orient);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-4); text-align: center; padding: var(--s-8);
+  background: var(--c-night);
+}
+.orient-guard__phone {
+  width: 56px; height: 92px; border-radius: 12px;
+  border: 2px solid var(--c-gold); position: relative;
+  animation: rotateHint 2.4s var(--e-inout) infinite;
+}
+@keyframes rotateHint { 0%,40% { transform: rotate(0);} 60%,100% { transform: rotate(-90deg);} }
+
+/* En portrait sur mobile : masquer l'app, montrer la garde */
+@media (orientation: portrait) and (max-width: 900px) {
+  .orient-guard { display: flex; }
+  .app { display: none; }
+}

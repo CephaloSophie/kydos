@@ -19,6 +19,9 @@ export class AuthService {
   }
 
   async login(username: string, password: string) {
+    // Valider AVANT tout accès base : un corps incomplet doit répondre 400
+    // immédiatement, et non partir en timeout de connexion puis 500.
+    if (!username || !password) throw badRequest('username + mot de passe requis');
     const userDocument = await UserModel.findOne({ username });
     if (!userDocument || !(await bcrypt.compare(password ?? '', userDocument.passwordHash))) {
       throw unauthorized('identifiants invalides');
@@ -28,7 +31,10 @@ export class AuthService {
 
   async getCurrentUser(userId: string) {
     const userDocument = await UserModel.findById(userId);
-    if (!userDocument) throw notFound();
+    // Jeton valide mais compte disparu (base réinitialisée) : c'est une
+    // SESSION EXPIRÉE (401) — surtout pas un 404, sinon le client reste
+    // bloqué en « connecté » avec toutes ses requêtes en erreur.
+    if (!userDocument) throw unauthorized('session expirée');
     return serializePublicUser(userDocument);
   }
 

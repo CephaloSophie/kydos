@@ -4,13 +4,23 @@ import type { Server } from 'socket.io';
 import { environment } from './core/environment.js';
 import { createLogger } from './core/logger.js';
 import { applicationModules } from './modules/index.js';
+import { HttpError } from './core/HttpError.js';
+import { registerMonitorRoutes } from './modules/monitor/monitor.module.js';
 
 const logger = createLogger('app');
 
 /** Construit l'application Express en montant chaque module sous /api. */
 export function createExpressApplication(): Express {
   const application = express();
-  application.use(cors({ origin: environment.corsOrigin, credentials: true }));
+  // CORS multi-domaines : autorise chaque origine listée (ou toutes si '*').
+  const allowedOrigins = environment.corsOrigins;
+  application.use(cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`origine non autorisée : ${origin}`));
+    },
+    credentials: true,
+  }));
   application.use(express.json({ limit: '5mb' }));
 
   application.use((request, response, next) => {
@@ -27,6 +37,24 @@ export function createExpressApplication(): Express {
       logger.info('module REST monté', { module: appModule.name, basePath: '/api' + (appModule.basePath ?? '/') });
     }
   }
+
+  // Moniteur temps réel (dev) : sessions + logs.
+  registerMonitorRoutes(application);
+
+  // 404 explicite pour toute route /api inconnue (sinon Express renvoie du HTML).
+  application.use('/api', (_request, response) => response.status(404).json({ error: 'route inconnue' }));
+
+  /**
+   * Gestionnaire d'erreurs CENTRAL (il manquait : les HttpError levées par les
+   * services remontaient au handler par défaut d'Express, qui répondait du HTML
+   * avec le statut brut — d'où des 404 opaques côté client).
+   */
+  application.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+    const status = error instanceof HttpError ? error.status : 500;
+    const message = error instanceof Error ? error.message : 'erreur interne';
+    if (status >= 500) logger.error('erreur non gérée', { message });
+    response.status(status).json({ error: message });
+  });
 
   return application;
 }

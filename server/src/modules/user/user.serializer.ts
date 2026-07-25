@@ -10,5 +10,8 @@ export function serializePublicUser(userDocument: any) {
     rewardPoints: userDocument.rewardPoints,
     gamesPlayed: userDocument.gamesPlayed ?? 0,
     level: computePlayerLevel(userDocument.rewardPoints),
+    /** Session active — pilote la bannière « Partie en cours » et le verrou (SPEC §3.8). */
+    activeSession: userDocument.activeSession ? String(userDocument.activeSession) : null,
+    favoriteRobot: userDocument.favoriteRobot ? String(userDocument.favoriteRobot) : null,
   };
 }

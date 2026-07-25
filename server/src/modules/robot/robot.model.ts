@@ -17,6 +17,20 @@ const RobotSchema = new Schema(
     algoSpec: { type: Schema.Types.Mixed, default: null },
     offlineEnabled: { type: Boolean, default: false },
     representativeSlot: { type: Number, default: 0 },
+    /**
+     * Métadonnées d'AFFICHAGE de l'application mobile (avatar + curseurs bruts).
+     * Purement présentationnel : aucun effet sur le moteur, dont le comportement
+     * reste piloté par `personality`. Voir docs/ai/MOBILE.md.
+     */
+    mobile: {
+      avatarId: { type: String, default: 'atne' },
+      strategy: {
+        aggro: { type: Number, default: 50 },
+        risk: { type: Number, default: 50 },
+        bluff: { type: Number, default: 50 },
+        memoire: { type: Number, default: 50 },
+      },
+    },
   },
   { timestamps: true },
 );

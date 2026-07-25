@@ -32,8 +32,11 @@ interface LiveGame {
   ownerId: string;
   teamId: string | null;
   visibility: 'public' | 'private';
+  kind: 'hybride' | 'acier' | 'royal';
   sessionId: string;
   persisted: boolean;
+  /** Piste enrichie (smileys, réflexions, notes) — persistée en fin de partie. */
+  events?: { type: string; at: number; seat: number; data: unknown }[];
 }
 
 /**
@@ -112,11 +115,72 @@ export class LiveGameService {
       ownerId: String(tableDocument.owner),
       teamId: tableDocument.team ? String(tableDocument.team) : null,
       visibility: tableDocument.visibility === 'public' ? 'public' : 'private',
+      kind: ['hybride', 'acier', 'royal'].includes(tableDocument.kind) ? tableDocument.kind : 'hybride',
       sessionId: String(sessionDocument._id),
       persisted: false,
     });
     logger.info('partie lancée', { table: tableId, manches: partieConfig.manches });
     this.advance(server, tableId);
+  }
+
+  /** Vrai si `userId` est ASSIS (joueur) à la table donnée. */
+  hasSeat(tableId: string, userId?: string): boolean {
+    const liveGame = this.games.get(tableId);
+    if (!liveGame) return false;
+    return this.seatOfUser(liveGame, userId) != null;
+  }
+
+  /**
+   * Enregistre un « signal » de partie (smiley, réflexion, note) émis par un
+   * joueur assis, et le rebroadcaste au canal. Alimente la piste enrichie
+   * du replay.
+   */
+  pushSignal(server: Server, tableId: string, userId: string, kind: string, data: unknown): void {
+    const liveGame = this.games.get(tableId);
+    if (!liveGame) return;
+    const seat = this.seatOfUser(liveGame, userId);
+    if (seat == null) return;
+    const event = { type: kind, at: Date.now(), seat, data } as { type: string; at: number; seat: number; data: unknown };
+    (liveGame.events ??= []).push(event);
+    server.to(`table:${tableId}`).emit('table:signal', event);
+  }
+
+  /**
+   * REPRISE (SPEC §3.8) : quand un joueur revient dans une partie où son
+   * robot substitut jouait à sa place, il reprend la main immédiatement —
+   * le siège quitte l'ensemble des substituts et l'état lui est renvoyé.
+   */
+  /**
+   * Un joueur assis QUITTE (désabonnement ou déconnexion) : on marque son siège
+   * comme substitué pour que le robot prenne la main sans attendre le timeout.
+   * S'il revient, resumeSeat() lui rend la main immédiatement.
+   */
+  markSeatLeft(server: Server, tableId: string, userId?: string): void {
+    const liveGame = this.games.get(tableId);
+    if (!liveGame || !userId) return;
+    const seat = this.seatOfUser(liveGame, userId);
+    if (seat == null) return;
+    // Seuls les sièges HUMAINS sont substituables (un robot n'a pas à l'être).
+    if (liveGame.participants[seat]?.type !== 'human') return;
+    if (!liveGame.substituteSeats.has(seat)) {
+      liveGame.substituteSeats.add(seat);
+      liveGame.logs.push({ t: Date.now(), robotId: 'system', phase: 'live', level: 'info', msg: `Le joueur du siège ${seat} a quitté — robot substitut activé.` } as LogEntry);
+      void this.broadcastState(server, tableId);
+      // Si c'était à ce siège de jouer, relancer l'avancement (le robot joue).
+      if (liveGame.engine.view().turn === seat) this.advance(server, tableId);
+    }
+  }
+
+  resumeSeat(server: Server, tableId: string, userId?: string): void {
+    const liveGame = this.games.get(tableId);
+    if (!liveGame || !userId) return;
+    const seat = this.seatOfUser(liveGame, userId);
+    if (seat == null) return;
+    if (liveGame.substituteSeats.has(seat)) {
+      liveGame.substituteSeats.delete(seat);
+      liveGame.logs.push({ t: Date.now(), robotId: 'system', phase: 'live', level: 'info', msg: `Le joueur du siège ${seat} a repris la main.` } as LogEntry);
+      void this.broadcastState(server, tableId);
+    }
   }
 
   private seatOfUser(liveGame: LiveGame, userId?: string): Seat | null {
@@ -135,14 +199,25 @@ export class LiveGameService {
     const engine = liveGame.engine;
     const view = engine.view();
     const summary = engine.summary();
-    const allHands = [0, 1, 2, 3].map((index) => engine.handOf(index as Seat));
     const sockets = await server.in(`table:${tableId}`).fetchSockets();
+    // SPEC §3.7 — un spectateur voit annonces / dernier pli / score / cartes JOUÉES,
+    // smileys et réflexions, mais JAMAIS les mains des joueurs ou robots.
+    // La vue moteur (`view`) contient déjà `currentTrick` et `lastTrick` ; on
+    // n'envoie DÉLIBÉRÉMENT pas `hands` aux non-participants.
+    // Nombre de cartes par siège (permet au client de dessiner le bon nombre
+    // de DOS sans révéler les cartes) + noms des joueurs pour l'affichage.
+    const handCounts = [0, 1, 2, 3].map((i) => engine.handOf(i as Seat).length);
+    const playerNames = engine.players.map((p) => p.name);
+    // Nombre de spectateurs = abonnés non assis. Diffusé pour l'affichage.
+    const spectatorCount = sockets.filter((sock) => this.seatOfUser(liveGame, sock.data.userId) == null).length;
+    server.to(`table:${tableId}`).emit('table:spectators', { count: spectatorCount });
     for (const socket of sockets) {
       const seat = this.seatOfUser(liveGame, socket.data.userId);
+      const commonView = { ...view, handCounts, playerNames };
       if (seat != null) {
-        socket.emit('table:game', { view, summary, myHand: engine.handOf(seat), legal: engine.legalCards(seat), mySeat: seat, logs: liveGame.logs.slice(-80) });
+        socket.emit('table:game', { view: commonView, summary, myHand: engine.handOf(seat), legal: engine.legalCards(seat), mySeat: seat, logs: liveGame.logs.slice(-80) });
       } else {
-        socket.emit('table:game', { view, summary, hands: allHands, watcher: true, logs: liveGame.logs.slice(-80) });
+        socket.emit('table:game', { view: commonView, summary, watcher: true, logs: liveGame.logs.slice(-80) });
       }
     }
   }
@@ -234,6 +309,25 @@ export class LiveGameService {
     this.advance(server, tableId);
   }
 
+  /** Instantané des sessions de jeu actives — pour le moniteur wslogs (dev). */
+  snapshotSessions(): Array<{ tableId: string; phase: string; turn: number | null; kind: string; visibility: string; players: { seat: number; name: string; isRobot: boolean; substitute: boolean }[]; scores: { A: number; B: number }; logs: number }> {
+    const out: any[] = [];
+    for (const [tableId, live] of this.games.entries()) {
+      const view = live.engine.view();
+      out.push({
+        tableId,
+        phase: view.phase,
+        turn: view.turn,
+        kind: live.kind,
+        visibility: live.visibility,
+        players: live.engine.players.map((p, i) => ({ seat: i, name: p.name, isRobot: p.type === 'robot', substitute: live.substituteSeats.has(i) })),
+        scores: view.cumulative,
+        logs: live.logs.length,
+      });
+    }
+    return out;
+  }
+
   resendState(server: Server, tableId: string) {
     if (this.games.has(tableId)) this.broadcastState(server, tableId);
   }
@@ -250,9 +344,11 @@ export class LiveGameService {
       ownerId: liveGame.ownerId,
       teamId: liveGame.teamId,
       visibility: liveGame.visibility,
+      kind: liveGame.kind,
       participants: liveGame.participants,
       logs: liveGame.logs.slice(-500),
       substituteSeats: liveGame.substituteSeats,
+      events: liveGame.events ?? [],
     });
 
     await TableModel.findByIdAndUpdate(tableId, { $set: { status: 'finished', activeSession: sessionId } });

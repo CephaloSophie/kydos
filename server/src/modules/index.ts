@@ -9,6 +9,7 @@ import { gameModule } from './game/index.js';
 import { analyticsModule } from './analytics/index.js';
 import { competitionModule } from './competition/index.js';
 import { brainModule } from './brain/index.js';
+import { walletModule } from './wallet/index.js';
 
 /**
  * Registre des modules applicatifs.
@@ -25,4 +26,5 @@ export const applicationModules: AppModule[] = [
   analyticsModule,
   competitionModule,
   brainModule,
+  walletModule,
 ];

@@ -1,0 +1,353 @@
+{
+  "info": {
+    "name": "K\u00fddos Belote \u2014 API mobile",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Endpoints consomm\u00e9s par l'application mobile K\u00fddos Belote."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth \u2014 Register",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/register",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo\",\"password\":\"contree\"}"
+        }
+      }
+    },
+    {
+      "name": "Auth \u2014 Login",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\":\"demo\",\"password\":\"contree\"}"
+        }
+      }
+    },
+    {
+      "name": "Auth \u2014 Me",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/auth/me",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Robots \u2014 List",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/robots",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Robots \u2014 Create (mobile)",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/robots",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Atn\u00e9\",\"personality\":{\"aggressiveness\":6,\"concentration\":8,\"velocity\":4},\"mobile\":{\"avatarId\":\"atne\",\"strategy\":{\"aggro\":62,\"risk\":38,\"bluff\":45,\"memoire\":78}}}"
+        }
+      }
+    },
+    {
+      "name": "Robots \u2014 Delete",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/robots/:id",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Games \u2014 List",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/games",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Games \u2014 Get (avec replay)",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/games/:id",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Games \u2014 Save",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/games",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"replay\":{\"donnes\":[]},\"logs\":[],\"mode\":\"local\",\"winner\":\"A\"}"
+        }
+      }
+    },
+    {
+      "name": "Analytics \u2014 Me",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/analytics/me",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Wallet \u2014 Get",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/wallet",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Wallet \u2014 Claim daily 500",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/wallet/claim",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 List",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/teams",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 Mine",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/teams/mine",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 Create",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/teams",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"K\u00fddos Legends\",\"visibility\":\"private\"}"
+        }
+      }
+    },
+    {
+      "name": "Teams \u2014 Rename",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/teams/:id",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"Nouveau nom\"}"
+        }
+      }
+    },
+    {
+      "name": "Teams \u2014 Join",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/teams/:id/join",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 Leave",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/teams/:id/leave",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 Kick member",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/teams/:id/members/:userId",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Teams \u2014 Change member role",
+      "request": {
+        "method": "PUT",
+        "url": "{{baseUrl}}/teams/:id/members/:userId/role",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"role\":\"admin\"}"
+        }
+      }
+    },
+    {
+      "name": "Games \u2014 Public search by name",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/games/public?q=Atn\u00e9",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Tables \u2014 Cancel pending",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/tables/:id/cancel",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ]
+      }
+    }
+  ]
+}

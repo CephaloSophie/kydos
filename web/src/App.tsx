@@ -8,7 +8,7 @@ import { TablesPage } from './pages/Tables';
 import { CompetitionsPage } from './pages/Competitions';
 import { BrainEditorPage } from './pages/robot-editor/BrainEditorPage';
 import { StandaloneBeloteTable } from './table';
-import { StandalonePixiTable } from './table-pixi';
+import { StandalonePixiTable } from './components/StandalonePixiTable';
 import { TeamPage } from './pages/Team';
 import { TrainingPage } from './pages/Training';
 import { TrainingV2Page } from './pages/TrainingV2';

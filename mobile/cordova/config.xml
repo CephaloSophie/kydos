@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.cephalosophie.kydosbelote" version="10.1.0"
+        xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+  <name>Kýdos Belote</name>
+  <description>Belote contrée haut de gamme avec robots IA — par Cephalo Sophie.</description>
+  <author email="contact@cephalosophie.com" href="https://kydosbelote.com">Cephalo Sophie</author>
+  <content src="index.html" />
+  <access origin="*" />
+  <allow-intent href="http://*/*" />
+  <allow-intent href="https://*/*" />
+  <allow-intent href="mailto:*" />
+  <allow-intent href="tel:*" />
+  <preference name="Orientation" value="landscape" />
+  <preference name="Fullscreen" value="true" />
+  <preference name="DisallowOverscroll" value="true" />
+  <preference name="BackgroundColor" value="0xff05070f" />
+  <preference name="StatusBarOverlaysWebView" value="true" />
+  <preference name="StatusBarStyle" value="lightcontent" />
+  <preference name="StatusBarBackgroundColor" value="#05070f" />
+  <platform name="android">
+    <preference name="AndroidXEnabled" value="true" />
+    <preference name="android-minSdkVersion" value="24" />
+    <preference name="android-targetSdkVersion" value="34" />
+  </platform>
+  <platform name="ios">
+    <preference name="deployment-target" value="13.0" />
+    <preference name="WKWebViewOnly" value="true" />
+  </platform>
+</widget>

@@ -1,12 +1,13 @@
 {
   "name": "belote-contree",
-  "version": "9.4.0",
+  "version": "11.2.0",
   "private": true,
   "type": "module",
   "workspaces": [
     "packages/*",
     "server",
-    "web"
+    "web",
+    "mobile"
   ],
   "scripts": {
     "dev": "concurrently -n server,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:web\"",
@@ -15,7 +16,13 @@
     "build:web": "npm --workspace belote-web run build",
     "typecheck": "npm --workspace belote-core run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-web run typecheck",
     "mongo": "docker compose up -d mongo",
-    "test": "npm --workspace belote-core run test && npm --workspace belote-web run test"
+    "test": "npm --workspace belote-core run test && npm --workspace belote-web run test",
+    "dev:mobile": "npm --workspace belote-mobile run dev",
+    "typecheck:all": "npm --workspace belote-core run typecheck && npm --workspace @kydos/table-pixi run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-web run typecheck && npm --workspace belote-mobile run typecheck",
+    "test:all": "npm --workspace belote-core run test && npm --workspace @kydos/table-pixi run test && npm --workspace belote-server run test && npm --workspace belote-web run test && npm --workspace belote-mobile run test",
+    "build:all": "npm --workspace belote-web run build && npm --workspace belote-web run build:lib && npm --workspace belote-mobile run build",
+    "tnr": "node scripts/tnr.mjs",
+    "seed": "npm --workspace belote-server run seed"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

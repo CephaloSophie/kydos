@@ -13,6 +13,7 @@ export function serializeTable(tableDocument: any) {
   return {
     id: String(tableDocument._id),
     status: tableDocument.status,
+    kind: tableDocument.kind ?? 'hybride',
     ownerType: tableDocument.ownerType,
     owner: String(tableDocument.owner),
     team: tableDocument.team ? String(tableDocument.team) : null,

@@ -1,0 +1,34 @@
+{
+  "name": "belote-mobile",
+  "version": "11.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Kýdos Belote — application MOBILE (paysage), séparée du web. Design system Claude Design + table Pixi partagée.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cordova:sync": "node cordova/sync-www.mjs",
+    "cordova:android": "npm run build && npm run cordova:sync && cd cordova && cordova platform add android --no-save || true && cordova run android",
+    "cordova:build": "npm run build && npm run cordova:sync && cd cordova && cordova build android --release"
+  },
+  "dependencies": {
+    "@kydos/table-pixi": "*",
+    "belote-core": "*",
+    "pixi.js": "^8.19.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "happy-dom": "^15.11.7",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.9"
+  }
+}

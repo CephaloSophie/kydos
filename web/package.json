@@ -1,6 +1,6 @@
 {
   "name": "belote-web",
-  "version": "9.4.0",
+  "version": "11.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -20,7 +20,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0",
-    "socket.io-client": "^4.7.5"
+    "socket.io-client": "^4.7.5",
+    "@kydos/table-pixi": "*"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

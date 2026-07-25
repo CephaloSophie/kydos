@@ -21,6 +21,7 @@ export class GameQueryService {
       id: String(gameDocument._id),
       mode: gameDocument.mode,
       visibility: gameDocument.visibility,
+      kind: gameDocument.kind ?? 'local',
       winner: gameDocument.winner,
       target: gameDocument.target,
       manches: gameDocument.manches,
@@ -38,6 +39,28 @@ export class GameQueryService {
     // Rejeu : on charge le replay froid à la demande et on le rattache (compat client).
     const replayDocument: any = await GameReplayModel.findById(gameId).lean();
     return { ...gameDocument, replay: replayDocument?.replay ?? null, logs: replayDocument?.logs ?? [] };
+  }
+
+  /**
+   * Recherche PUBLIQUE de parties par nom de joueur ou de robot (SPEC §3.10).
+   * S'appuie sur GameReplay.publicNames (indexé) ; ne renvoie que les parties
+   * en visibilité `public`.
+   */
+  async listPublicByName(query: string) {
+    const q = (query ?? '').trim();
+    if (!q) return [];
+    const replayDocs: any[] = await GameReplayModel.find({ publicNames: { $regex: q, $options: 'i' } })
+      .select('_id').sort('-createdAt').limit(50).lean();
+    if (!replayDocs.length) return [];
+    const ids = replayDocs.map((d) => d._id);
+    const gameDocuments: any[] = await GameModel.find({ _id: { $in: ids }, visibility: 'public' }).sort('-createdAt').lean();
+    return gameDocuments.map((gameDocument) => ({
+      id: String(gameDocument._id),
+      mode: gameDocument.mode,
+      winner: gameDocument.winner,
+      createdAt: gameDocument.createdAt,
+      participants: (gameDocument.participants ?? []).map((p: any) => ({ name: p.name, type: p.type, team: p.team })),
+    }));
   }
 
   async saveLocalGame(userId: string, data: any) {

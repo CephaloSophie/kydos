@@ -17,6 +17,7 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@kydos/table-pixi": ["../packages/table-pixi/index.ts"],
       "belote-core": ["../packages/core/src/index.ts"]
     }
   },

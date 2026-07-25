@@ -4,6 +4,10 @@ import { GameModel } from './game.model.js';
 import { GameReplayModel } from './gameReplay.model.js';
 import { SessionModel } from './session.model.js';
 import { UserModel } from '../user/user.model.js';
+import { RobotModel } from '../robot/robot.model.js';
+import { walletService } from '../wallet/wallet.service.js';
+import { payoutsByUser, type GameEconomyContext, type SeatEconomy } from '../../shared/gameEconomy.js';
+import { singleGameLockService } from './singleGameLock.service.js';
 import { eventBus, DomainEvents, type GameFinishedPayload } from '../../core/eventBus.js';
 import { createLogger } from '../../core/logger.js';
 
@@ -36,9 +40,12 @@ export class GamePersistenceService {
     teamId: string | null;
     visibility: 'public' | 'private';
     mode?: 'local' | 'online' | 'competition';
+    kind?: 'hybride' | 'acier' | 'royal' | 'local';
     participants: PersistenceParticipant[];
     logs: unknown[];
     substituteSeats: Set<number>;
+    /** Piste enrichie (smileys, réflexions...) — SPEC §3.10. */
+    events?: { type: string; at: number; seat: number; data: unknown }[];
   }) {
     const { engine, tableId, sessionId, ownerId, teamId, visibility, participants, logs, substituteSeats } = params;
     const winner = engine.partieWinner ?? null;
@@ -46,7 +53,23 @@ export class GamePersistenceService {
     const gameId = new mongoose.Types.ObjectId();
 
     // 1+2. Replay froid d'abord (même _id que le Game).
-    await GameReplayModel.create({ _id: gameId, game: gameId, replay: engine.toReplay(), logs });
+    // Noms publics pour la recherche par joueur/robot (SPEC §3.10) — les VRAIS
+    // noms lisibles (username / nom du robot), pas les identifiants.
+    const humanIds = participants.filter((p) => p.type === 'human' && p.userId).map((p) => p.userId!);
+    const robotIdsForNames = participants.filter((p) => p.type === 'robot' && p.robotId).map((p) => p.robotId!);
+    const [humanDocs, robotDocs] = await Promise.all([
+      humanIds.length ? UserModel.find({ _id: { $in: humanIds } }).select('username').lean() : [],
+      robotIdsForNames.length ? RobotModel.find({ _id: { $in: robotIdsForNames } }).select('name').lean() : [],
+    ]);
+    const nameByUser = new Map((humanDocs as any[]).map((u) => [String(u._id), u.username]));
+    const nameByRobot = new Map((robotDocs as any[]).map((r) => [String(r._id), r.name]));
+    const publicNames = participants
+      .map((p) => (p.type === 'human' ? nameByUser.get(p.userId ?? '') : nameByRobot.get(p.robotId ?? '')))
+      .filter(Boolean) as string[];
+    await GameReplayModel.create({
+      _id: gameId, game: gameId, replay: engine.toReplay(), logs,
+      events: params.events ?? [], publicNames,
+    });
 
     // Participants & manches embarqués (résumé pour listing/affichage).
     const embeddedParticipants = participants.map((participant) => ({
@@ -55,7 +78,7 @@ export class GamePersistenceService {
       type: participant.type,
       user: participant.userId ?? null,
       robot: participant.robotId ?? null,
-      name: '',
+      name: participant.type === 'human' ? (nameByUser.get(participant.userId ?? '') ?? '') : (nameByRobot.get(participant.robotId ?? '') ?? ''),
       wasSubstitute: substituteSeats.has(participant.seat),
     }));
     const embeddedManches = summary.manches.map((manche) => ({
@@ -75,6 +98,7 @@ export class GamePersistenceService {
       team: teamId,
       visibility,
       mode: params.mode ?? 'online',
+      kind: params.kind ?? 'local',
       target: engine.view().target,
       winner,
       participants: embeddedParticipants,
@@ -102,6 +126,33 @@ export class GamePersistenceService {
       });
       await UserModel.findByIdAndUpdate(participant.userId, { $inc: { rewardPoints: reward.total, gamesPlayed: 1 } });
     }
+
+    // 4bis. ÉCONOMIE — versement des gains selon le mode (SPEC §3.9).
+    //   Local (entraînement) : gratuit.
+    //   Online / Compétition : payouts calculés par `payoutsByUser`.
+    if (params.mode !== 'local') {
+      // Résolution des propriétaires de robots pour le calcul des gains.
+      const robotIds = participants.filter((p) => p.type === 'robot' && p.robotId).map((p) => p.robotId!) as string[];
+      const robots = robotIds.length ? await RobotModel.find({ _id: { $in: robotIds } }).select('owner').lean() : [];
+      const ownerByRobot = new Map<string, string>();
+      for (const r of robots as any[]) ownerByRobot.set(String(r._id), String(r.owner));
+
+      const seatsEconomy: SeatEconomy[] = participants.map((p) => ({
+        kind: p.type,
+        team: teamLetterOfSeat(p.seat),
+        ownerUserId: p.type === 'human' ? p.userId : undefined,
+        robotOwnerUserId: p.type === 'robot' && p.robotId ? ownerByRobot.get(p.robotId) : undefined,
+      }));
+      const ctx: GameEconomyContext = { mode: params.mode ?? 'online', seats: seatsEconomy, winner };
+      const payouts = payoutsByUser(ctx);
+      for (const [userId, amount] of payouts.entries()) {
+        try { await walletService.credit(userId, amount, String(gameDocument._id), 'game_win'); }
+        catch (error) { logger.warn('échec versement gain', { userId, amount, error: String(error) }); }
+      }
+    }
+
+    // Libération du verrou « une partie à la fois » pour tous les participants (SPEC §3.8).
+    if (sessionId) await singleGameLockService.releaseAllOf(String(sessionId));
 
     // 5. Événement de domaine → projection asynchrone, découplée.
     eventBus.publish<GameFinishedPayload>(DomainEvents.GameFinished, { gameId: String(gameDocument._id) });

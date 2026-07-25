@@ -1,0 +1,166 @@
+/* =============================================================================
+ * DATA · ApiClient.ts — Client HTTP du VRAI backend Kýdos Belote.
+ * -----------------------------------------------------------------------------
+ * Couche « data » : seule à connaître les URL et la sérialisation réseau.
+ * Base configurable via VITE_API_URL (défaut : http://localhost:4000/api).
+ * Le jeton d'authentification est conservé en localStorage et injecté en
+ * en-tête Authorization sur chaque appel protégé.
+ * Endpoints consommés : /auth/*, /robots, /games, /analytics/me.
+ * ========================================================================== */
+
+const BASE: string = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL || 'http://localhost:4000/api';
+const TOKEN_KEY = 'kydos.mobile.token';
+
+export interface AuthResult { token: string; user: { id: string; username: string; email?: string | null } }
+
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) { super(message); this.name = 'ApiError'; }
+}
+
+export class ApiClient {
+  token(): string | null { return localStorage.getItem(TOKEN_KEY); }
+  setToken(t: string | null): void { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
+  isAuthenticated(): boolean { return !!this.token(); }
+
+  async call<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+    let res: Response;
+    try {
+      res = await fetch(`${BASE}${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.token() ? { Authorization: `Bearer ${this.token()}` } : {}),
+          ...(init.headers ?? {}),
+        },
+      });
+    } catch {
+      throw new ApiError('Serveur injoignable. Vérifiez votre connexion.', 0);
+    }
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      // Session expirée / jeton invalide : on purge et on ramène au login,
+      // sinon l'app reste « connectée » avec toutes ses requêtes en erreur.
+      if (res.status === 401) {
+        this.setToken(null);
+        if (typeof location !== 'undefined' && !location.hash.startsWith('#/login')) location.hash = '#/login';
+      }
+      throw new ApiError((body as { error?: string; message?: string })?.error || (body as { message?: string })?.message || `HTTP ${res.status}`, res.status);
+    }
+    return body as T;
+  }
+
+  // --- Auth ---------------------------------------------------------------
+  login(username: string, password: string) { return this.call<AuthResult>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }); }
+  register(username: string, password: string) { return this.call<AuthResult>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }); }
+  me() { return this.call<{ user: AuthResult['user'] }>('/auth/me'); }
+
+  // --- Robots -------------------------------------------------------------
+  listRobots() { return this.call<{ robots: ServerRobot[] }>('/robots'); }
+  createRobot(body: unknown) { return this.call<{ robot: { id: string; name: string } }>('/robots', { method: 'POST', body: JSON.stringify(body) }); }
+  deleteRobot(id: string) { return this.call<{ ok: boolean }>(`/robots/${id}`, { method: 'DELETE' }); }
+
+  // --- Games / replays ----------------------------------------------------
+  listGames(scope: 'mine' | 'public' = 'mine') { return this.call<{ games: ServerGame[] }>(`/games?scope=${scope}`); }
+  getGame(id: string) { return this.call<{ game: ServerGame }>(`/games/${id}`); }
+  saveGame(body: unknown) { return this.call<{ id: string }>('/games', { method: 'POST', body: JSON.stringify(body) }); }
+
+  // --- Analytics ----------------------------------------------------------
+  myStats() { return this.call<{ stats: unknown }>('/analytics/me'); }
+  robotStats(id: string) { return this.call<{ stats: unknown }>(`/analytics/robots/${id}`); }
+
+  // --- Tables (jeu en ligne — lobby) ---------------------------------------
+  listTables() { return this.call<{ tables: ServerTable[] }>('/tables'); }
+  createTable(opts: { visibility?: 'public' | 'private'; kind?: TableKind; robotIds?: string[]; forTeam?: boolean } = {}) {
+    return this.call<{ table: ServerTable }>('/tables', { method: 'POST', body: JSON.stringify({ visibility: opts.visibility ?? 'public', kind: opts.kind ?? 'hybride', robotIds: opts.robotIds ?? [], forTeam: !!opts.forTeam }) });
+  }
+  startTable(tableId: string) { return this.call<{ ok: boolean }>(`/tables/${tableId}/start`, { method: 'POST' }); }
+  getTable(id: string) { return this.call<{ table: ServerTable }>(`/tables/${id}`); }
+  takeSeat(tableId: string, index: number, assignment: 'me' | string) {
+    // Le serveur attend le champ `as` (et non `assignment`).
+    return this.call<{ table: ServerTable }>(`/tables/${tableId}/seat`, { method: 'POST', body: JSON.stringify({ index, as: assignment }) });
+  }
+  leaveTable(tableId: string) { return this.call<{ ok: boolean }>(`/tables/${tableId}/leave`, { method: 'POST' }); }
+  cancelTable(tableId: string) { return this.call<{ ok: boolean }>(`/tables/${tableId}/cancel`, { method: 'POST' }); }
+  publicReplays(q: string) { return this.call<{ games: PublicGame[] }>(`/games/public?q=${encodeURIComponent(q)}`); }
+
+  // --- Wallet -------------------------------------------------------------
+  wallet() { return this.call<ServerWallet>('/wallet'); }
+  claimDailyTokens() { return this.call<{ claimed: boolean; balance: number; reward: number }>('/wallet/claim', { method: 'POST' }); }
+
+  // --- Teams --------------------------------------------------------------
+  listTeams() { return this.call<{ teams: ServerTeamSummary[] }>('/teams'); }
+  myTeam() { return this.call<ServerTeamDetail>('/teams/mine'); }
+  createTeam(name: string, visibility: 'public' | 'private' = 'private') {
+    return this.call<{ team: { id: string; name: string; visibility: string } }>('/teams', { method: 'POST', body: JSON.stringify({ name, visibility }) });
+  }
+  getTeam(id: string) { return this.call<ServerTeamDetail>(`/teams/${id}`); }
+  updateTeam(id: string, updates: { name?: string; visibility?: 'public' | 'private' }) {
+    return this.call<{ team: { id: string; name: string; visibility: string } }>(`/teams/${id}`, { method: 'PUT', body: JSON.stringify(updates) });
+  }
+  joinTeam(id: string) { return this.call<{ ok: boolean; team: { id: string; name: string } }>(`/teams/${id}/join`, { method: 'POST' }); }
+  leaveTeam(id: string) { return this.call<{ ok: boolean }>(`/teams/${id}/leave`, { method: 'POST' }); }
+  kickMember(teamId: string, userId: string) { return this.call<{ ok: boolean }>(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' }); }
+  changeMemberRole(teamId: string, userId: string, role: TeamRoleClient) {
+    return this.call<{ ok: boolean }>(`/teams/${teamId}/members/${userId}/role`, { method: 'PUT', body: JSON.stringify({ role }) });
+  }
+}
+
+/** Rôle d'un membre d'équipe (mêmes valeurs que côté serveur). */
+export type TeamRoleClient = 'owner' | 'super' | 'admin' | 'user';
+
+export interface ServerTeamSummary { id: string; name: string; points: number; members: number; visibility: 'public' | 'private' }
+
+export interface ServerTeamMember { id: string; username: string; role: TeamRoleClient; rewardPoints: number; level: number; joinedAt?: string }
+
+export interface ServerTeamDetail {
+  team: { id: string; name: string; points: number; owner: string; visibility: 'public' | 'private' } | null;
+  members: ServerTeamMember[];
+  myRole: TeamRoleClient | null;
+}
+
+export interface ServerWalletTransaction { kind: 'daily' | 'game_stake' | 'game_win' | 'refund'; amount: number; balance: number; at: string; game: string | null }
+
+export interface ServerWallet {
+  balance: number;
+  canClaimToday: boolean;
+  lastClaimDay: string | null;
+  transactions: ServerWalletTransaction[];
+}
+
+/** Forme serveur d'un robot (serializer listByOwner). */
+export interface ServerRobot {
+  id: string;
+  name: string;
+  personality: { aggressiveness: number; concentration: number; velocity: number };
+  responseTimeMs: number;
+  maxPlayTimeMs: number;
+  algoSpec: unknown;
+  offlineEnabled: boolean;
+  representativeSlot: number;
+  mobile: { avatarId: string; strategy: { aggro: number; risk: number; bluff: number; memoire: number } } | null;
+}
+
+/** Forme serveur d'une partie sauvegardée. */
+export interface ServerGame {
+  /** Identifiant sérialisé par le serveur (champ `id`, PAS `_id`). */
+  id: string;
+  mode: 'local' | 'online' | 'competition';
+  kind?: 'hybride' | 'acier' | 'royal' | 'local';
+  winner: 'A' | 'B' | null;
+  createdAt: string;
+  replay?: unknown;
+  players?: { name?: string }[];
+}
+
+export const api = new ApiClient();
+
+
+/** Table de jeu en ligne (lobby) — forme du serializer serveur. */
+export interface ServerTableSeat { index: number; kind: 'empty' | 'human' | 'robot'; name: string; team: 'A' | 'B'; userId: string | null; robotId: string | null; ownerId: string | null }
+/** Type de partie en ligne (SPEC §3.3). */
+export type TableKind = 'hybride' | 'acier' | 'royal';
+
+export interface ServerTable { id: string; status: 'lobby' | 'playing' | 'finished' | 'draft'; kind: TableKind; owner: string; visibility: 'public' | 'private'; seats: ServerTableSeat[]; startsAt: string | null }
+
+/** Résultat de la recherche publique de replays par nom (SPEC §3.10). */
+export interface PublicGame { id: string; mode: string; winner: 'A' | 'B' | null; createdAt: string; participants: { name: string; type: 'human' | 'robot'; team: 'A' | 'B' }[] }

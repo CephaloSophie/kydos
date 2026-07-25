@@ -2,7 +2,668 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v9.4.0 — Belote/Rebelote, annonces par siège animées, smileys, jetons sur les mains, fix resize (version actuelle)
+## v11.2.0 — Multijoueur blindé : départ auto, reprise instantanée, moniteur temps réel, écran d'init thématisé (version actuelle)
+
+Réponse à une série de retours d'Ameur sur le jeu en ligne, avec l'exigence
+« que le multijoueur ne manque rien, qu'il soit bien blindé, solide et complet ».
+
+### BUG — le bouton Quitter plantait en ligne (KB-230)
+En ligne, il n'y a pas de boucle de jeu locale : le clic sur Quitter appelait
+`loop.dispose()` sur `undefined` (« Cannot read properties of undefined (reading
+'dispose') »). Sortie unifiée `leaveTable()` : coupe la boucle locale si elle
+existe, sinon la connexion socket, puis démonte proprement.
+
+### Départ automatique synchronisé, sans bouton Lancer (KB-231)
+Dès que les 4 sièges sont pris, le serveur diffuse `table:countdown` et **tous
+les joueurs basculent vers la table au même moment** (5 s). Le bouton « Lancer »
+est supprimé.
+
+### Anti-blocage des sièges robots (KB-232)
+En Alliance Hybride / Duo d'Acier, si un joueur place un robot mais laisse le
+siège partenaire vide plus de 10 s, ses robots sont libérés pour que d'autres
+prennent les deux places. Pas en Carré Royal (aucun robot).
+
+### En ligne : logs et pause/vitesse masqués, spectateurs affichés (KB-233)
+Les logs et les contrôles Pause/Vitesse n'apparaissent plus qu'en rejeu/local.
+En ligne, un badge **👁 N** montre le nombre de spectateurs, diffusé en direct
+par le serveur (`table:spectators`).
+
+### Reprise immédiate de siège (KB-234)
+En quittant une table puis en revenant, le joueur était considéré comme un
+nouveau spectateur. Désormais, au départ (Quitter ou déconnexion) son siège
+passe **instantanément en substitution robot** ; à son retour, il **reprend la
+main immédiatement**. Le changement est visible tout de suite quand quelqu'un
+sort ou entre.
+
+### Moniteur wslogs temps réel (KB-235)
+Nouveau répertoire `wslogs/` (au niveau de `server/`, `web/`, `mobile/`) avec un
+tableau HTML autonome affichant **en temps réel** toutes les sessions actives
+(par table, par joueur connecté), les scores, et le flux de logs (info / warn /
+error) des web services et WebSockets. Alimenté par `GET /api/monitor/snapshot`
+et le namespace socket `/monitor`, avec un tampon de logs circulaire côté
+serveur. Désactivable via `MONITOR_ENABLED=false`. Aucune main de joueur exposée.
+
+### Écran d'initialisation au thème du jeu (KB-236)
+La page d'initialisation apparaissait en **blanc** (avant chargement du bundle).
+CSS critique **en ligne** dans `index.html` : fond sombre du jeu, « waiting », et
+**4 robots animés** en pur CSS (rebond, clignement, antenne lumineuse). La garde
+d'orientation portrait est thématisée elle aussi. `main.tsx` retire l'écran en
+fondu dès que l'app est montée.
+
+### Rejoindre une équipe publique (KB-237)
+On voyait les équipes publiques mais sans moyen de les rejoindre. Bouton
+**« Rejoindre »** ajouté sur chaque équipe publique (« Voir » pour les privées).
+
+### CORS multi-domaines (KB-238)
+`CORS_ORIGIN` accepte plusieurs domaines séparés par des virgules (REST +
+WebSocket). `*` autorise toutes les origines (dev).
+
+### Aucune alerte native
+Rappel maintenu : tous les retours passent par des toasts et des dialogues du
+design system.
+
+### Vérification — TNR complet
+```
+typecheck ×5 ✓ · tests : core 53 · table-pixi 51 · server 80 · web 20 · mobile 89
+builds ✓ · démo moteur ✓
+Résultat : 14/14 étapes · 293 tests · 114.8 s
+```
+
+### Reste ouvert — 2 tâches P0
+KB-042 invitations d'équipe mobile · KB-071 prélèvement effectif des mises.
+
+## v11.1.0 — Jeu en ligne temps réel sur serveur, 3 types de partie, reprise directe, rejeu et table corrigés
+
+Session centrée sur le jeu en ligne, jugé « catastrophique » par Ameur. Cause
+racine identifiée : le mobile n'avait AUCUN client socket. Le serveur faisait
+déjà tout (moteur, robots, substitution, reprise, diffusion filtrée) mais le
+mobile ne s'y connectait jamais.
+
+### Client socket mobile (KB-220 / KB-052)
+Nouveau `data/TableSocket.ts` : abonnement authentifié, réception de l'état de
+partie, émission des enchères et cartes, alimentation de la table Pixi sans
+jamais révéler les mains adverses. **Le jeu tourne sur le serveur, robots
+inclus**, comme la version web.
+
+### Trois types de partie (KB-222 / KB-050)
+Dialogue de création guidé :
+- **Alliance Hybride** — joueur + robot contre joueur + robot.
+- **Duo d'Acier** — vos DEUX robots ensemble contre le duo d'un autre joueur.
+- **Carré Royal** — 4 joueurs humains.
+
+Champ `kind` sur la table, pré-placement des robots du créateur, règle « les
+deux robots d'une personne jouent toujours ensemble » appliquée à la création
+et à la prise de siège. Le `kind` est propagé jusqu'à l'historique.
+
+### Lobby en temps réel (KB-221)
+Un socket par table : dès qu'un joueur prend, quitte ou change un siège (ou un
+robot), l'écran se met à jour immédiatement pour tout le monde, sans
+rechargement. Bouton « Lancer » (créateur, 4 sièges pris → `POST
+/tables/:id/start`) et « Rejoindre » (partie en cours).
+
+### Reprise directe (KB-223 / KB-051)
+La bannière « Partie en cours » de l'accueil menait vers un `?session=` qui
+déclenchait le dialogue « nouvelle partie ». Comme `activeSession` est l'id de
+la table, elle mène désormais vers `?online=<tableId>` : reprise DIRECTE, sans
+popup. Le serveur rend la main au joueur de retour (son robot jouait à sa
+place). Voile d'attente si la partie n'a pas encore démarré.
+
+### Rejeu comme une partie en cours (KB-224)
+Le rejeu montrait toutes les mains face visible et n'affichait pas les cartes
+jouées dans le pli. Il est désormais rendu comme une partie EN COURS :
+observation depuis le sud, cartes jouées dans le pli, adversaires en dos.
+
+### Table Pixi — précisions d'Ameur (KB-225)
+Les mains sont rapprochées des bords (le sud descend, le nord monte :
+`handInset` réduit). Le panneau du dernier pli **monte** désormais (haut-gauche
++ animation de montée), au lieu de descendre.
+
+### Historique — portée et filtres (KB-091)
+Onglets Mes parties / Publiques + filtres par type de partie (Toutes /
+Alliance Hybride / Duo d'Acier / Carré Royal). Parties privées visibles
+uniquement par l'équipe, publiques par tous.
+
+### Aucune alerte native
+Rappel : tous les retours passent par des toasts et des dialogues du design
+system (aucun `alert()` / `confirm()`).
+
+### Vérification — TNR complet
+```
+typecheck ×5 ✓ · tests : core 53 · table-pixi 51 · server 76 · web 20 · mobile 89
+builds ✓ · démo moteur ✓
+Résultat : 14/14 étapes · 289 tests · 99 s
+```
+
+### Reste ouvert — 2 tâches P0
+KB-042 invitations d'équipe mobile · KB-071 prélèvement effectif des mises.
+
+## v11.0.1 — Correctif prise de siège en ligne, affichage et animations de la table
+
+Session pilotée par deux captures d'Ameur : un 403 à la prise de siège, et la
+table Pixi (cartes au mauvais endroit, animations à revoir).
+
+### BUG — 403 « robot inconnu » à la prise de siège (KB-210)
+`POST /tables/:id/seat` renvoyait 403 pour le joueur ET ses robots. Cause :
+le mobile envoyait `{ index, assignment }` alors que le serveur lit
+`{ index, as }`. Le champ arrivait `undefined`, le code tombait dans la
+branche robot avec `findById(undefined)` → « robot inconnu ». Corrigé côté
+client (contrat aligné) et durci côté serveur (message clair si assignation
+absente). 3 tests ajoutés (2 mobile + 1 API).
+
+### Table Pixi — affichage des mains (KB-211)
+Règle rétablie et rendue constante : le **SUD** (joueur) est toujours face
+visible et jouable, les **3 autres sièges toujours dos**, le **coéquipier
+n'est JAMAIS révélé** — y compris en mode observation. `opponentCards` forcé
+à `back` côté mobile. 4 tests unitaires verrouillent la règle.
+
+### Table Pixi — animations (KB-212)
+- Origines des cartes **alignées** entre la main et le pli (`handInset()`
+  partagé) : les cartes jouées partent désormais exactement de la bonne main.
+- Glissé de jeu adouci : 380 ms, arc vertical, fondu et légère montée
+  d'échelle — mouvement posé plutôt que téléporté.
+- **Dernier pli** repositionné en bas à gauche, avec une animation de montée
+  rejouée à chaque nouveau pli.
+
+### Retours sans boîte native (KB-213)
+Plus aucun `alert()` / `confirm()` : nouveau `components/feedback.ts` avec
+`toast()` (bandeau flottant erreur/succès/info) et `confirmDialog()`
+(dialogue du design system). Tous les écrans concernés migrés.
+
+### Vérification
+TNR : 14/14 étapes · **283 tests** · builds verts · démo moteur OK.
+
+## v11.0.0 — Refactoring d'architecture, design system mobile autonome, tests API, seed complet, TNR et infrastructure
+
+Version MAJEURE : le couplage entre les deux applications est éliminé, le
+design system mobile devient autonome, et la chaîne de validation complète
+tient dans une seule commande.
+
+### Refactoring — la table devient un package partagé (KB-200)
+Le mobile importait `web/src/table-pixi` : les deux applications étaient
+**couplées**, ce qui contredisait la règle de séparation stricte.
+
+- Table promue en **`packages/table-pixi`** (`@kydos/table-pixi`).
+- `StandalonePixiTable` rapatrié côté web (c'est un habillage de démo web).
+- Alias `@kydos/table-pixi` dans les deux applications ; le mobile ne
+  référence plus **aucun** fichier de `web/`.
+- Le package a son propre runner : **47 tests** y sont désormais exécutés.
+
+Nouvelle règle de dépendance, documentée dans `ARCHITECTURE.md` :
+`belote-core` et `@kydos/table-pixi` sont les seuls éléments partagés.
+
+### Design system mobile autonome (KB-201)
+- CSS regroupés dans **`mobile/src/design-system/`** avec un point d'entrée
+  unique et un ordre d'import documenté. Aucune référence hors du dossier.
+- Nouvel écran **`#/styleguide`** : aperçu vivant de tous les composants
+  (couleurs commentées, typographies, boutons, badges, mascottes, avatars,
+  champs, curseurs, cartes, dialogue) — référence visuelle et détection de dérive.
+- `DESIGN-SYSTEM.md` : règles (aucune valeur en dur, pas de liste déroulante
+  native, couleurs d'équipe constantes) et procédure d'ajout d'un composant.
+
+### Tests de contrat API (KB-202)
+Nouvelle suite **supertest** sur l'application Express réelle, sans base :
+existence des 21 routes protégées, refus de l'anonyme, jeton malformé,
+schéma d'autorisation inconnu, 404 JSON sur route inconnue, CORS actif,
+ordre de déclaration (`/games/public` non capturée par `/games/:id`),
+forme des erreurs. Tests serveur : **23 → 75**.
+
+### BUG révélé par ces tests (KB-203)
+`POST /auth/login` avec un corps vide interrogeait MongoDB **avant** de
+valider son entrée : 10 s de timeout puis 500, au lieu d'un 400 immédiat.
+Validation ajoutée en amont de tout accès base.
+
+### Seed complet (KB-204)
+5 comptes couvrant **les 4 rôles d'équipe** plus un compte hors équipe
+(`ameur` owner, `hamid` super, `sofia` admin, `invite` user, `zoe` externe),
+portes-monnaie alimentés avec journal, deux équipes publiques, une invitation
+en attente, une compétition ouverte entre robots, une table de lobby avec deux
+sièges libres, et une partie terminée avec son rejeu. Toutes les permissions
+sont testables sans manipulation manuelle.
+
+### TNR et infrastructure (KB-205)
+- **`npm run tnr`** : typecheck ×5, tests ×5, builds ×3, démo moteur — rapport
+  lisible + `reports/tnr-latest.json`, code de sortie 1 à la moindre régression.
+- **CI GitHub Actions** à deux jobs : non-régression complète, et tests
+  d'intégration MongoDB (`MONGOMS_AVAILABLE=1`).
+- `.env.example` documenté pour les trois applications, `.gitignore` complet.
+
+### Documentation (KB-206)
+Cinq nouveaux documents : **ARCHITECTURE.md** (diagramme de dépendances,
+couches, contrats à ne jamais casser), **TESTING.md** (pyramide, faux serveur,
+règle de non-régression), **DESIGN-SYSTEM.md**, **DEPLOYMENT.md** (comptes du
+seed, production, Cordova, exploitation), **CONTRIBUTING.md** (règles non
+négociables, procédure de livraison).
+
+### Référentiel de tâches
+51 tâches (44 → 51). Les 7 nouvelles couvrent ce refactoring et sont toutes
+en statut `tested`.
+
+### Vérification — TNR complet
+```
+typecheck  core ✓  table-pixi ✓  server ✓  web ✓  mobile ✓
+tests      core 53 · table-pixi 47 · server 75 · web 20 · mobile 81
+builds     web ✓  table-lib ✓  mobile ✓
+smoke      moteur ✓
+Résultat : 14/14 étapes · 276 tests · 103 s
+```
+
+**276 tests** (223 → 276, +53).
+
+### Reste ouvert — 4 tâches P0
+KB-042 invitations mobile · KB-050 compétitions réelles ·
+KB-051 démarrer une table · KB-052 client socket mobile.
+
+## v10.6.0 — Référentiel de tâches (JSON + markdown + tableau HTML) et menus de l'accueil
+
+Session de DIAGNOSTIC demandée par Ameur : établir précisément ce qui est fait
+et ce qui manque, côté serveur comme côté mobile, et en faire un référentiel
+durable qui pilote toutes les sessions suivantes.
+
+### Diagnostic (relevé automatique, pas d'estimation à vue)
+- **56 routes serveur** listées par introspection réelle de l'application Express.
+- **Endpoints consommés par le mobile** extraits de `ApiClient`.
+- Croisement des deux → écarts identifiés.
+
+**Écart principal : plusieurs API serveur COMPLÈTES ne sont pas exploitées
+par le mobile** — invitations (5 endpoints), compétitions (moteur de match
+automatique complet, l'écran mobile n'est qu'une vitrine), démarrage de table,
+recherche d'utilisateurs, édition/suppression de robot, statistiques de robot,
+réglages, cerveaux.
+
+**Incohérence relevée côté serveur** : `walletService.stake()` n'a aucun
+appelant en production — les gains sont versés mais les mises ne sont jamais
+prélevées (tâche KB-071).
+
+### Référentiel de tâches — `docs/tasks/`
+- **`tasks.json`** — base de vérité : 44 tâches avec identifiant, domaine,
+  module, type, statut, priorité, version cible, estimation, spécification,
+  instructions, critères d'acceptation, dates, **historique horodaté** et
+  **journaux** (info / warn / error). Statuts : draft, pending, onprocess,
+  needreview, tested, finished, needconfirmation, confirmed, bug, refused.
+- **`BACKLOG.md`** — lecture humaine : ce qui existe / ce qui manque côté
+  serveur et mobile, bugs traités avec leur cause réelle, contraintes
+  d'environnement, couverture de tests, ordre de la prochaine session.
+- **`board.html`** — tableau interactif autonome (aucune dépendance) :
+  vue Kanban par statut et vue liste triable, recherche plein texte,
+  filtres statut / priorité / domaine / type, compteurs, panneau de détail
+  avec instructions, critères d'acceptation, frise d'historique et journaux.
+  Lit `tasks.json` ; en ouverture `file://` il propose un sélecteur de fichier.
+
+### Règle de travail inscrite dans la documentation
+Toute session doit désormais : lire `tasks.json`, rapprocher chaque demande
+d'une tâche existante (enrichir ses instructions) ou en créer une, mettre à
+jour statut / horodatage / historique, puis travailler par priorité.
+La mise à jour des documents est elle-même une tâche permanente (**KB-121**).
+
+### KB-100 — menus de l'accueil
+Ameur : « il manquait juste des menus dans l'accueil qui permettent la gestion
+d'équipe ». Rangée de 8 tuiles ajoutée sous les 3 cartes principales :
+Jouer en ligne · Mon équipe · Équipes · Compétitions · Porte-monnaie ·
+Classements · Historique · À propos. Toutes les sections sont désormais
+atteignables en un geste (elles n'étaient accessibles que par l'éventail).
+
+### Tests — 221 → 223
++2 tests E2E vérifiant la présence de tous les menus de l'accueil.
+Total : **223** (53 core + 67 web + 23 server + 80 mobile).
+
+### Vérifs
+- typecheck × 4 : verts · 223 tests verts · builds verts · démo moteur OK
+- `tasks.json` validé syntaxiquement.
+
+### Reste ouvert — 5 tâches P0 (par ordre)
+KB-042 invitations · KB-050 compétitions réelles · KB-051 démarrer une table ·
+KB-052 client socket mobile · (KB-100 clôturée dans cette version).
+
+## v10.5.0 — Cause des 404 corrigée, table Pixi dimensionnée par son conteneur, E2E sur les 12 écrans
+
+Session de diagnostic sur les captures d'Ameur (404 sur `/me` et `/wallet`,
+table de jeu vide avec le HUD collé en haut-gauche). Les deux problèmes ont
+été reproduits, expliqués et corrigés **à la racine** — pas de contournement.
+
+### 404 — la vraie cause
+Le serveur n'avait **aucun middleware de gestion d'erreurs**. Les `HttpError`
+levées par les services remontaient au handler par défaut d'Express.
+`GET /auth/me` et `GET /wallet` appellent tous deux `UserModel.findById` et
+levaient `notFound()` : un jeton valide dont le compte n'existe plus (base
+réinitialisée) produisait donc un **404**, tandis que `/robots` répondait 200
+(liste vide) — d'où une application « à moitié connectée ».
+
+- **Middleware d'erreurs central** dans `app.ts` → `{ error }` + bon statut.
+- **404 JSON explicite** pour toute route `/api` inconnue (plus de HTML).
+- `getCurrentUser` / `getMyWallet` lèvent **401 « session expirée »**.
+- `ApiClient` intercepte tout **401** : purge du jeton et retour au login.
+
+### Table Pixi — dimensionnement déterministe
+La taille était déléguée au ResizePlugin de Pixi (`resizeTo: host`), qui
+n'écoute que le resize de la **fenêtre**. Monté dans un slot dont la taille
+se stabilise après le premier paint, le renderer restait en 0×0 : la scène
+ne dessinait rien et les variables CSS du feutre valaient 0 — d'où le panneau
+d'annonce cadré en haut-gauche et coupé.
+
+- `resizeTo` retiré : la taille est **mesurée sur le conteneur**
+  (`applySize()`) et appliquée au renderer PUIS à la scène.
+- Boucle `requestAnimationFrame` jusqu'à obtenir une taille exploitable.
+- `ResizeObserver` + listener fenêtre → re-mesure/relayout/redraw instantanés.
+- `renderScene()` passe par `applySize()` (plus de calcul depuis
+  `renderer.width`).
+- Retrait du `calc()` fragile ajouté en v10.4.0 sur `.px-actions-slot`.
+
+### Rejeu — bug réel révélé par les nouveaux tests
+`GameEngine.toReplay()` renvoie `{ manches[].donnes[] }`, alors que
+`ReplayScreen` lisait `replay.donnes` (clé inexistante) : tout rejeu
+affichait « Rejeu introuvable ». Corrigé avec `flattenDonnes()`.
+
+### Sélection des sièges — tactile
+Le dialogue de configuration n'utilise plus de `<select>` (menu natif hors
+design system, illisible sur mobile). Chaque siège affiche ses options en
+pastilles simultanément (🤖 Auto · 👤 Moi · robots de l'écurie), avec
+l'appartenance d'équipe NOUS/EUX et un seul « Moi » possible.
+
+### Tests — 173 → 221
+- **Moteur (+21)** : `GameScenarios.test.ts` — belote détectée/annoncée,
+  refus de changer l'annonce après une carte jouée, siège sans belote,
+  répéter la couleur du coéquipier, signal réflexion, signaux désactivés,
+  contre autorisé/refusé selon l'équipe, légalité des cartes, ramassage de
+  pli, donne complète, replay rejouable, partie jusqu'au vainqueur.
+- **Mobile E2E (+27)** : `fakeServer.ts` (intercepteur `fetch` avec données
+  réalistes) + `screens.e2e.test.ts` — **les 12 écrans** montés en DOM réel
+  (happy-dom), endpoints vérifiés, connexion, réclamation quotidienne,
+  permissions d'équipe, lobby en ligne, dialogue de configuration,
+  régression du 401.
+- **Web (+0, déjà 67)** dont les 4 tests de `responsiveCardW`.
+- Total : **221 tests** (53 core + 67 web + 23 server + 78 mobile).
+
+### Note d'honnêteté sur les captures d'écran
+Playwright ne peut pas être installé ici (CDN navigateur bloqué, HTTP 403) et
+MongoDB non plus (`fastdl.mongodb.org` bloqué). La vérification d'IHM est
+donc faite en **DOM réel** avec un faux serveur, ce qui valide le rendu et
+les parcours mais pas le pixel. Les mêmes fixtures sont réutilisables
+directement dans un Playwright local pour produire des captures Android.
+
+### Vérifs
+- typecheck × 4 : verts · 221 tests verts · 3 builds verts · démo moteur OK.
+
+## v10.4.0 — Table Pixi responsive, fix 404, replays publics, annulation pending, reprise robot, lobby en ligne
+
+Session pilotée par les captures d'écran d'Ameur (table mobile cassée au
+montage, débordements sur petit viewport) + audit complet des 404 + reliquats
+du PRD, avec trois passes de revue (design, non-régression, exigences).
+
+### Table Pixi — responsive et fluide (les 2 captures corrigées)
+- **Cause du layout initial cassé** : le ResizePlugin Pixi ne réagit qu'aux
+  resizes de la FENÊTRE ; sur mobile le slot `#game-table-mount` obtient sa
+  taille APRÈS l'init → canvas mal dimensionné jusqu'à une interaction.
+  **Fix : `ResizeObserver` sur le conteneur** (resize + relayout + redraw
+  instantanés) + rattrapage `requestAnimationFrame` au premier paint.
+- **Taille de carte CONTINUE** `responsiveCardW(feltW, feltH)` (pure, 4 tests)
+  au lieu des paliers 52/68/84 — la table s'adapte à N'IMPORTE quel device.
+- **Ancrage des mains proportionnel** (`INSET = cardH × 0.42 + 16`, fixe 62 avant).
+- **CSS compact** : feuille de score scale .78/.62 et pile d'actions resserrée
+  sous 560 px / 430 px de hauteur — plus aucun chevauchement avec la main est.
+
+### Fix 404 (audit mobile ↔ serveur)
+- `GET /games/undefined` : le serveur sérialise `id`, le mobile lisait `_id`
+  → interface `ServerGame` alignée + `HistoryScreen` corrigé.
+- `serializePublicUser` expose désormais `activeSession` (la bannière verte
+  « Partie en cours » fonctionnait sur du vide) et `favoriteRobot`.
+
+### SPEC §3.10 — replays publics par nom
+- `publicNames` rempli avec les VRAIS noms lisibles (usernames + noms de
+  robots, lookups à la persistance) — les participants embarqués gagnent
+  aussi leur `name`.
+- Nouveau `GET /games/public?q=` (insensible à la casse, `public` uniquement,
+  50 max) — route déclarée AVANT `/games/:id`.
+
+### SPEC §3.8 — annulation pending + reprise
+- `POST /tables/:id/cancel` : créateur requis, refusé dès que les 4 sièges
+  sont pris ; libère les verrous des joueurs assis, vide les sièges.
+- `resumeSeat` : au retour d'un joueur (`table:subscribe`), son siège quitte
+  les substituts → il REPREND LA MAIN sur son robot immédiatement (log + broadcast).
+
+### Mobile — écran « Jouer en ligne » (lobby réel)
+- Liste des tables publiques en attente (chips sièges A–D, libres cliquables),
+  création, choix 👤 Moi / 🤖 mes robots par siège, changement de place tant
+  que libre, annulation pending (créateur), statut « En jeu — suivez sur le
+  web » quand la partie démarre. Route `online` dans l'éventail.
+- Honnêteté : le JEU temps réel sur mobile (client socket) reste à câbler —
+  le lobby, le verrou, la reprise et la persistance sont complets côté serveur.
+
+### Tests (169 → 173)
+- +4 web (`responsiveCardW`), tests d'intégration `publicAndCancel.test.ts`
+  (annulation owner/non-owner/table-complète + recherche publique
+  insensible/privée/vide) exécutés avec `MONGOMS_AVAILABLE=1`.
+
+### Docs
+- `API.md` (+ /games/public, /tables/:id/cancel, activeSession, resumeSeat),
+  `SPEC.md` (§3.3 partiel lobby, §3.10 fait), `MOBILE.md` (§12 OnlineScreen,
+  §13 table responsive), Postman +2 requêtes.
+
+### Vérifs
+- typecheck × 4 : verts · 173 tests verts · 3 builds verts · démo moteur OK.
+
+## v10.3.0 — Équipes rôlées, économie serveur, spectateurs et verrou une-partie
+
+Livraison intégrale des modules 3.5 (équipes), 3.7 (spectateurs), 3.8 (verrou
+une-partie-à-la-fois) et 3.9 (économie serveur) du PRD (`docs/ai/SPEC.md`).
+Chaque fonctionnalité est implémentée COMPLÈTEMENT — modèle Mongo, service
+serveur, endpoints, écrans mobile, docs et tests.
+
+### Backend — équipes rôlées (SPEC §3.5)
+- Modèle `Team` étendu : membres embarqués, rôles `owner|super|admin|user`,
+  limite 40 membres, index unique sur `owner`.
+- Module `permissions.ts` (pur, testé) : `canAct`, `canAssign`,
+  `canRenameTeam`, `canInvite`. Autorité `owner > super > admin > user`.
+- `TeamService.addMember`, `kickMember`, `changeRole`, `getDetail` avec
+  `myRole` — chaque action vérifie les permissions.
+- Nouvelles routes : `PUT /teams/:id`, `POST /teams/:id/leave`,
+  `DELETE /teams/:id/members/:userId`, `PUT /teams/:id/members/:userId/role`.
+
+### Backend — porte-monnaie serveur (SPEC §3.9)
+- `User.wallet` : solde, `lastClaimDay`, journal des transactions.
+- `shared/gameEconomy.ts` (pur, testé) : constantes 100/50/500 et calculs
+  `stakesByUser` + `payoutsByUser` (4H → 150, 2H+2R → 225, 4R → 150, local → 0).
+- `WalletService.claimDaily` (idempotent), `stake`, `credit`.
+- Endpoints `/wallet` (GET) et `/wallet/claim` (POST).
+- Payouts VERSÉS AUTOMATIQUEMENT en fin de partie via
+  `gamePersistenceService` (résolution des propriétaires de robots incluse).
+
+### Backend — verrou une-partie-à-la-fois (SPEC §3.8)
+- `User.activeSession` + `SingleGameLockService` (acquire idempotent,
+  release, releaseAllOf).
+- Acquis dès qu'un joueur s'assied à une table (`table.service.changeSeat`).
+- Libéré pour tous les participants en fin de partie
+  (`gamePersistenceService`).
+
+### Backend — spectateurs et signaux (SPEC §3.7)
+- **CORRECTIF DE SÉCURITÉ** : le broadcast `table:game` n'envoie PLUS
+  `hands` aux spectateurs (bug antérieur : ils voyaient toutes les mains).
+- Cap 5 spectateurs simultanés dans `table.socket.ts`, event
+  `table:spectator:full` en cas de dépassement.
+- `LiveGameService.hasSeat` et `pushSignal` publics ; canal
+  `table:signal` pour smileys/réflexions/notes des joueurs assis.
+- `GameReplay.events` (piste enrichie) + `publicNames` (recherche par nom).
+
+### Mobile — écrans équipes, porte-monnaie, bannière et logs
+- Entité `Team` avec permissions client-side MIROIR du serveur (pour
+  masquer/afficher les actions inaccessibles).
+- `TeamService` (mobile) enveloppant `ApiClient`.
+- Écran `TeamsScreen` (liste des équipes publiques + accès mon équipe).
+- Écran `MyTeamScreen` (détail avec rename, visibilité, kick, change role,
+  quitter — actions filtrées par le rôle du viewer).
+- Écran `WalletScreen` (solde, réclamation quotidienne, journal des
+  transactions, rappel du barème économique).
+- `TopBar` : passage SERVEUR-PREMIER via `services/wallet.ts` (fallback
+  localStorage transparent hors-ligne).
+- Bannière verte « Partie en cours… » sur l'accueil quand
+  `User.activeSession` est non-null (cliquable pour reprendre).
+- **Overlay de logs semi-transparent** en bas-gauche de la table
+  (minimisable), alimenté par l'action moteur courante.
+- Nouvelles routes `/wallet`, `/teams`, `/team` intégrées à l'éventail
+  de navigation permanent.
+
+### Tests
+- **Server** : nouveau workspace `test` (vitest). 23 tests unitaires purs
+  (permissions équipe, gameEconomy) + tests d'intégration Mongo écrits
+  pour `TeamService`, `WalletService` et `SingleGameLockService` (exécutés
+  quand `MONGOMS_AVAILABLE=1`, CI ou machine dev — sandbox restreint sans
+  accès à fastdl.mongodb.org).
+- **Mobile** : 14 nouveaux tests (permissions Team miroir + wallet
+  serveur-premier avec fallback). Total mobile : 51.
+- **Total projet : 169 tests unitaires** (32 core + 63 web + 23 server + 51 mobile).
+
+### Documentation
+- `docs/ai/SPEC.md` : statuts mis à jour (§3.5, §3.7, §3.8, §3.9 en v10.3.0).
+- `docs/ai/API.md` : sections équipes/wallet/verrou/spectateurs ajoutées.
+- `docs/ai/README.md` : état v10.3.0.
+- `docs/api/kydos-mobile.postman_collection.json` : 10 nouvelles requêtes.
+
+### Vérifs
+- typecheck × 4 workspaces : verts.
+- Tests : 169 verts.
+- Builds : web + web:lib + mobile — verts.
+- Démo moteur : `Vainqueur de la partie : A`.
+
+### Ce qui n'est PAS encore livré (tranches ultérieures identifiées)
+Certains points du prompt d'origine restent (honnêteté) :
+- **Jeu en ligne humain/robot vs humain/robot** (SPEC §3.3) : la brique
+  socket existe (liveGame.service.ts), le lock est en place — il reste à
+  câbler l'écran mobile de matchmaking et le flux pending/annulation +
+  la reprise par le robot favori au départ d'un joueur.
+- **Endpoints publics de recherche de replays par nom** (SPEC §3.10) :
+  `GameReplay.publicNames` est indexé mais l'endpoint `/games/public?q=...`
+  reste à ajouter.
+- **Modèle Pending Game** distinct : pour l'instant l'état lobby de Table
+  fait office ; à isoler quand le matchmaking en ligne sera implémenté.
+
+## v10.2.0 — Dialogue de configuration de partie contre robots
+
+Ajout ciblé sur l'application mobile : quand l'utilisateur lance une partie
+contre robots (`/table`), un dialogue s'ouvre — MÊME style que « Robot créé ! »
+— pour choisir les paramètres.
+
+### Nouveau composant `presentation/components/GameSetupDialog.ts`
+- **Emplacement de chaque siège (A, B, C, D)** : 🤖 Auto, 👤 Moi, ou n'importe
+  quel robot de l'écurie. Un seul « Moi » à la fois (le déplacer libère
+  l'ancien siège automatiquement).
+- **Visibilité des cartes** : Personne / Mes robots / Tout le monde. Le
+  coéquipier reste TOUJOURS caché (règle de belote, appliquée par PixiTable
+  via `partnerFaceDown`).
+- **Nombre de manches** : 1, 2 ou 4 (union stricte du moteur `belote-core`).
+- Mêmes tokens visuels que le dialogue Robot créé (fond dépoli, lueur dorée,
+  actions Annuler / Lancer la partie).
+
+### Logique pure `services/gameSetup.ts` (testée)
+- `mySeatFromSetup(setup)` — résout le siège humain (ou null).
+- `visibleSeatsFromSetup(setup, myRobotIds)` — sièges dont l'utilisateur voit
+  les cartes.
+- `isSetupValid(setup)` — vérifie un seul « moi » et manches > 0.
+
+### Refactoring TableScreen
+- Ouverture du dialogue au chargement (sauf mode `?watch=1` qui saute
+  directement à 4 robots visibles, 2 manches).
+- Construction du moteur PARAMÉTRÉE par le setup choisi (sièges + manches).
+- `opponentCards` dynamique (`back` en mode Personne, `faceup` sinon).
+
+### Tests
+- `gameSetup.test.ts` : 11 nouveaux tests.
+- Total mobile : 37 (26 → 37). Total projet : 132 tests (32 core + 63 web + 37 mobile).
+
+### Docs
+- `docs/ai/README.md` : état v10.2.0.
+- `docs/ai/MOBILE.md` : nouvelle section « 10. Configuration d'une partie
+  (dialogue) » avec les règles de résolution.
+
+### Ce qui n'est PAS dans cette version (par honnêteté)
+Les modules suivants du prompt d'origine demandent le serveur temps réel et
+sont conservés pour les prochaines tranches : jeu en ligne humain/robot vs
+humain/robot, verrou « une partie à la fois », reprise par un robot, pending,
+équipes (owner/super/admin/user max 40), spectateurs max 5 vue filtrée,
+économie de jetons SERVEUR (prélèvements 100 humain / 50 robot, gains
+150 / 225 / 150), replay enrichi (collection indépendante avec smileys,
+réflexions, temps réels, replays publics par nom). Ces tranches ne sont
+PAS des fausses vitrines : le status vert « Partie en cours » et l'historique
+correct viendront ENSEMBLE avec le serveur.
+
+### Vérifs
+- typecheck × 4 (core, server, web, mobile) : verts.
+- Tests : 132 verts.
+- Builds : web + web:lib + mobile — verts.
+- Démo moteur : `Vainqueur de la partie : A`.
+
+## v10.1.0 — Application mobile Kýdos Belote (design system fidèle, backend branché)
+
+Version bâtie sur la base saine v9.4.0. Web et mobile sont désormais deux
+applications TOTALEMENT SÉPARÉES ; elles partagent uniquement `belote-core`
+(le moteur) et le composant table Pixi `web/src/table-pixi/` (importé côté
+mobile via alias `@table-pixi`).
+
+### Nouveau workspace `mobile/`
+Clean architecture stricte (`core → data → domain → presentation`) et
+composition root explicite (`main.tsx`). Les 3 CSS du design system Claude
+Design sont copiés VERBATIM comme source de vérité visuelle.
+
+- **Login** — carte de belote as de cœur (flip 3D). Connexion ET création de
+  compte via `/auth/register` et `/auth/login` réels.
+- **Accueil** — 3 grandes cartes-fonctionnalités (♥ Jouer, ♠ Mes robots,
+  ♦ Créer un robot) + éventail permanent des écrans visités.
+- **Barre supérieure** — Kýdos BELOTE + pastille ◆ CLIQUABLE (déblocage des
+  500 jetons quotidiens avec dialogue de confirmation) + niveau + mascotte.
+- **Mes robots** — écurie live depuis le VRAI backend (`GET /robots`).
+  Robots créés par le web restent lisibles (curseurs reconstruits depuis
+  la personnalité moteur par le mapping inverse).
+- **Créer un robot** — éditeur du design system fonctionnel : mascotte
+  flottante, 5 presets d'avatars, 4 curseurs (Agressivité / Prise de risque /
+  Bluff / Mémoire), aperçu live, personnalité dérivée aux seuils EXACTS
+  du DS. `POST /robots` avec `personality` moteur + `mobile` (avatar +
+  curseurs bruts). **Comportement moteur PRÉSERVÉ** — mapping documenté,
+  testé, réversible ; le bluff est purement présentationnel (ignoré du moteur).
+- **Table** — layout du DS (Quitter · NOUS/EUX · atout · pause · vitesse ·
+  statut vert) avec la TABLE PIXI MONTÉE dans l'emplacement réservé
+  (`#game-table-mount`). Coéquipier caché même en cartes visibles.
+  Sauvegarde automatique du replay en fin de partie.
+- **Rejeu live** — `#/replay?id=…` rejoue chaque opération avec ses délais
+  (annonce 700 ms, carte 900 ms, pli 1200 ms), pause, ×1/×2/×4.
+- **Historique** — liste des parties (`GET /games`) avec « ▶ Rejouer ».
+- **Classements** — SAISON 1 · ROBOTS (DS fidèle, complété par l'écurie).
+- **Compétitions** — vitrine du DS (Grand Prix des IA · Coupe Contrée ·
+  Ligue hebdo · Inviter des amis · Partager natif).
+- **À propos** — Cephalo Sophie, liens cephalosophie.com / kantoaplo.com /
+  kydosbelote.com, l'équipe (Ameur Hamdouni CEO & Founder & Architect ;
+  Abdelhamid Sghaier Co-fondateur & CTO expert mobile) et les clients
+  (IFPEN, La Poste, LeadsHook, Docaposte, Softia, JCDecaux, Unibet, Allianz).
+
+### Boucle de jeu isolée (services/gameLoop.ts)
+Contrôleur PUR autour de `belote-core` — plan de coup, pause, vitesse,
+scheduler injectable. Testé unitairement.
+
+### Backend adapté
+- Champ `mobile` (`Mixed`) ajouté au modèle robot + serializer, sans effet
+  moteur (comportement pris en compte dans les tests dédiés).
+- Endpoints existants réutilisés (auth, robots, games, analytics) —
+  aucun endpoint dupliqué, aucune régression.
+
+### Cordova (mobile/cordova/)
+Projet prêt : `config.xml` force le paysage sur Android et iOS, script
+`sync-www.mjs` (mobile/dist → cordova/www), scripts npm dédiés.
+
+### Documentation
+- `docs/ai/README.md` — vue d'ensemble complète (destinée aux IA/devs).
+- `docs/ai/MOBILE.md` — architecture détaillée de l'app mobile.
+- `docs/ai/API.md` — contrat backend consommé.
+- `docs/api/kydos-mobile.postman_collection.json` — collection Postman.
+
+### Tests
+- 26 tests mobile (Robot mapping/entité, dailyTokens, GameLoop planificateur).
+- 63 tests web + 32 tests core inchangés.
+- Total : **121 tests unitaires** verts.
+
+### Vérifs
+- typecheck × 4 (core, server, web, mobile) : verts.
+- Tests × 3 workspaces : verts.
+- Builds : web + web:lib + mobile — verts.
+- Démo moteur : `Vainqueur de la partie : A`.
+
+## v9.4.0 — Belote/Rebelote, annonces par siège animées, smileys, jetons sur les mains, fix resize
 
 ### Moteur (belote-core)
 - **Belote / Rebelote avec annonce optionnelle.** Détection corrigée (le MÊME joueur détient Roi + Dame

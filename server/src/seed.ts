@@ -20,11 +20,26 @@ import { GameReplayModel } from './modules/game/gameReplay.model.js';
 import { gameProjectionService } from './modules/analytics/gameProjection.service.js';
 import { TeamModel } from './modules/team/team.model.js';
 import { InvitationModel } from './modules/invitation/invitation.model.js';
+import { CompetitionTableModel } from './modules/competition/competition.model.js';
+import { TableModel } from './modules/table/table.model.js';
+import { DAILY_REWARD } from './shared/gameEconomy.js';
 
+/**
+ * Comptes de démonstration — couvrent TOUS les rôles d'équipe afin de pouvoir
+ * tester les permissions sans manipulation manuelle.
+ *   ameur  → propriétaire de l'équipe (owner)
+ *   hamid  → super administrateur
+ *   sofia  → administrateur
+ *   invite → membre simple
+ *   zoe    → hors équipe (sert à tester les invitations)
+ * Mot de passe commun : belote123
+ */
 const USERS = [
-  { username: 'ameur', password: 'belote123', email: 'ameur@contree.fr' },
-  { username: 'invite', password: 'belote123', email: 'invite@contree.fr' },
-  { username: 'sofia', password: 'belote123', email: 'sofia@contree.fr' },
+  { username: 'ameur',  password: 'belote123', email: 'ameur@contree.fr',  role: 'owner',  tokens: 5000 },
+  { username: 'hamid',  password: 'belote123', email: 'hamid@contree.fr',  role: 'super',  tokens: 3200 },
+  { username: 'sofia',  password: 'belote123', email: 'sofia@contree.fr',  role: 'admin',  tokens: 2100 },
+  { username: 'invite', password: 'belote123', email: 'invite@contree.fr', role: 'user',   tokens: 900 },
+  { username: 'zoe',    password: 'belote123', email: 'zoe@contree.fr',    role: null,     tokens: 500 },
 ];
 
 const ROBOTS = [
@@ -68,20 +83,59 @@ function playSamplePartie() {
 /** Alimente la base — suppose une connexion mongoose DÉJÀ établie (réutilisable). */
 export async function seedDatabase() {
 
-  // 1. utilisateurs
-  const [ameur, invite, sofia] = await Promise.all(USERS.map((u) => upsertUser(u.username, u.password, u.email)));
-  console.log(`[seed] utilisateurs : ${USERS.map((u) => u.username).join(', ')}`);
+  // ── 1. Utilisateurs (tous les rôles représentés) ──────────────────────
+  const users = await Promise.all(USERS.map((u) => upsertUser(u.username, u.password, u.email)));
+  const byName = new Map(USERS.map((u, i) => [u.username, users[i]!]));
+  const ameur = byName.get('ameur')!, hamid = byName.get('hamid')!;
+  const sofia = byName.get('sofia')!, invite = byName.get('invite')!, zoe = byName.get('zoe')!;
+  console.log(`[seed] utilisateurs : ${USERS.map((u) => u.username).join(', ')} (mot de passe : belote123)`);
 
-  // 2. robots du compte principal (remplace les précédents pour rester idempotent)
-  // équipe de démo + rattachement
-  const team = await TeamModel.findOneAndUpdate({ name: 'Les Atouts' }, { $set: { owner: ameur!._id, visibility: 'public' }, $setOnInsert: { points: 1200 } }, { upsert: true, new: true });
-  await UserModel.updateOne({ _id: ameur!._id }, { $set: { team: team!._id } });
-  await UserModel.updateOne({ _id: invite!._id }, { $set: { team: team!._id } });
-  await UserModel.updateOne({ _id: sofia!._id }, { $set: { team: null } });
-  // invitation en attente : ameur invite sofia
+  // ── 2. Porte-monnaie : solde initial + journal de transactions ────────
+  for (const spec of USERS) {
+    const user = byName.get(spec.username)!;
+    await UserModel.updateOne({ _id: user._id }, {
+      $set: {
+        'wallet.tokens': spec.tokens,
+        'wallet.lastClaimDay': null,
+        'wallet.transactions': [
+          { kind: 'daily', amount: DAILY_REWARD, balance: spec.tokens, at: new Date(Date.now() - 864e5) },
+        ],
+      },
+    });
+  }
+  console.log(`[seed] porte-monnaie alimenté (${USERS.map((u) => `${u.username}:${u.tokens}`).join(', ')})`);
+
+  // ── 3. Équipe de démo avec les 4 rôles ────────────────────────────────
+  const team = await TeamModel.findOneAndUpdate(
+    { name: 'Les Atouts' },
+    { $set: { owner: ameur._id, visibility: 'public' }, $setOnInsert: { points: 1200 } },
+    { upsert: true, new: true },
+  );
+  team!.members = [
+    { user: ameur._id,  role: 'owner', joinedAt: new Date() },
+    { user: hamid._id,  role: 'super', joinedAt: new Date() },
+    { user: sofia._id,  role: 'admin', joinedAt: new Date() },
+    { user: invite._id, role: 'user',  joinedAt: new Date() },
+  ] as never;
+  await team!.save();
+  await UserModel.updateMany({ _id: { $in: [ameur._id, hamid._id, sofia._id, invite._id] } }, { $set: { team: team!._id } });
+  await UserModel.updateOne({ _id: zoe._id }, { $set: { team: null } });
+  console.log('[seed] équipe « Les Atouts » : owner=ameur, super=hamid, admin=sofia, user=invite');
+
+  // Seconde équipe publique, pour tester l'adhésion.
+  const rivals = await TeamModel.findOneAndUpdate(
+    { name: 'Les Contrées' },
+    { $set: { owner: zoe._id, visibility: 'public' }, $setOnInsert: { points: 640 } },
+    { upsert: true, new: true },
+  );
+  rivals!.members = [{ user: zoe._id, role: 'owner', joinedAt: new Date() }] as never;
+  await rivals!.save();
+  console.log('[seed] équipe « Les Contrées » (publique, propriétaire zoe)');
+
+  // ── 4. Invitation en attente : ameur invite zoe ───────────────────────
   await InvitationModel.deleteMany({ team: team!._id });
-  await InvitationModel.create({ team: team!._id, from: ameur!._id, to: sofia!._id, status: 'pending' });
-  console.log('[seed] invitation en attente : ameur -> sofia (Les Atouts)');
+  await InvitationModel.create({ team: team!._id, from: ameur._id, to: zoe._id, status: 'pending' });
+  console.log('[seed] invitation en attente : ameur -> zoe (Les Atouts)');
 
   await RobotModel.deleteMany({ owner: ameur!._id });
   await RobotModel.insertMany(ROBOTS.map((r, i) => ({ owner: ameur!._id, conventionConfig: {}, maxPlayTimeMs: 10000, offlineEnabled: i < 2, representativeSlot: i + 1, algoSpec: { version: 1, name: i % 2 ? 'Agressif' : 'Classique', personality: r.personality, bidding: { acePoints: 10 + i }, contre: { enabled: true, minOpponentRiskToContre: 0.65, minOwnStrengthToSurcontre: 0.8 }, play: { aggressiveness: r.personality.aggressiveness } }, ...r })));
@@ -112,6 +166,34 @@ export async function seedDatabase() {
   await UserModel.updateOne({ _id: ameur!._id }, { $set: { rewardPoints: 320, gamesPlayed: 12 } });
   await UserModel.updateOne({ _id: invite!._id }, { $set: { rewardPoints: 140, gamesPlayed: 6 } });
   console.log(`[seed] partie de démo sauvegardée (vainqueur équipe ${sample.winner})`);
+
+  // ── 8. Compétition ouverte entre robots (prête à être rejointe) ───────
+  await CompetitionTableModel.deleteMany({});
+  const ameurRobots = await RobotModel.find({ owner: ameur._id }).limit(2).lean();
+  if (ameurRobots.length === 2) {
+    await CompetitionTableModel.create({
+      owner: ameur._id,
+      ownerRobots: ameurRobots.map((r: any) => r._id),
+      visibility: 'public',
+      status: 'open',
+      config: { manches: 2 },
+    });
+    console.log('[seed] compétition ouverte : 2 robots d\'ameur attendent un challenger');
+  }
+
+  // ── 9. Table de lobby publique (2 sièges libres) ──────────────────────
+  await TableModel.deleteMany({});
+  await TableModel.create({
+    status: 'lobby', ownerType: 'user', owner: ameur._id, visibility: 'public',
+    seats: [
+      { index: 0, kind: 'human', user: ameur._id, robot: null, ownerId: null, name: 'ameur' },
+      { index: 1, kind: 'empty', user: null, robot: null, ownerId: null, name: '' },
+      { index: 2, kind: 'robot', user: null, robot: ameurRobots[0]?._id ?? null, ownerId: ameur._id, name: ameurRobots[0]?.name ?? 'Robot' },
+      { index: 3, kind: 'empty', user: null, robot: null, ownerId: null, name: '' },
+    ],
+    config: { manches: 2 },
+  });
+  console.log('[seed] table de lobby publique : 2 sièges libres');
 
   console.log('\n[seed] terminé ✓  — connecte-toi avec  ameur / belote123  (ou  invite / belote123 )');
 }

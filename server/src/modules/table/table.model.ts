@@ -51,6 +51,13 @@ const TableConfigSchema = new Schema(
 const TableSchema = new Schema(
   {
     status: { type: String, enum: ['lobby', 'playing', 'finished', 'draft'], default: 'lobby', index: true },
+    /**
+     * Type de partie (SPEC §3.3) :
+     *   'hybride' — Alliance Hybride : 2 humains + 2 robots (1 humain + son robot par équipe).
+     *   'acier'   — Duo d'Acier : 2 humains, chacun avec DEUX de ses robots (le duo joue ensemble).
+     *   'royal'   — Carré Royal : 4 joueurs humains.
+     */
+    kind: { type: String, enum: ['hybride', 'acier', 'royal'], default: 'hybride', index: true },
     ownerType: { type: String, enum: ['user', 'team'], required: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
@@ -67,6 +74,7 @@ const TableSchema = new Schema(
 );
 TableSchema.index({ status: 1, visibility: 1, lastActivityAt: -1 });
 TableSchema.index({ status: 1, team: 1 });
+TableSchema.index({ status: 1, kind: 1 });
 
 export type SeatAttributes = InferSchemaType<typeof SeatSchema>;
 export type TableConfigAttributes = InferSchemaType<typeof TableConfigSchema>;

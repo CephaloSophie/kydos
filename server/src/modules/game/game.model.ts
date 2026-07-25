@@ -50,6 +50,8 @@ const GameSchema = new Schema(
 
     visibility: { type: String, enum: ['public', 'private', 'team'], default: 'private', index: true },
     mode: { type: String, enum: ['local', 'online', 'competition'], default: 'local' },
+    /** Type de partie en ligne (SPEC §3.3), pour les filtres d'historique. */
+    kind: { type: String, enum: ['hybride', 'acier', 'royal', 'local'], default: 'local', index: true },
     target: { type: Number, default: 0 },
     winner: { type: String, enum: ['A', 'B', null], default: null },
     finishedAt: { type: Date, default: () => new Date() },

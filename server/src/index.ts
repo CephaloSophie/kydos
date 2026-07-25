@@ -5,12 +5,13 @@ import { connectDatabase, disconnectDatabase } from './core/database.js';
 import { createLogger } from './core/logger.js';
 import { createExpressApplication, registerModuleSockets } from './app.js';
 import { attachSocketAuthentication } from './shared/socketAuthentication.js';
+import { registerMonitorSocket } from './modules/monitor/monitor.module.js';
 
 const logger = createLogger('server');
 
 const application = createExpressApplication();
 const httpServer = http.createServer(application);
-const socketServer = new Server(httpServer, { cors: { origin: environment.corsOrigin } });
+const socketServer = new Server(httpServer, { cors: { origin: environment.corsOrigins.includes('*') ? '*' : environment.corsOrigins } });
 
 attachSocketAuthentication(socketServer);
 
@@ -19,7 +20,8 @@ attachSocketAuthentication(socketServer);
 async function bootstrap() {
   await connectDatabase();
   registerModuleSockets(socketServer);
-  httpServer.listen(environment.port, () => logger.info(`API + WebSocket sur :${environment.port}`, { cors: environment.corsOrigin }));
+  registerMonitorSocket(socketServer);
+  httpServer.listen(environment.port, () => logger.info(`API + WebSocket sur :${environment.port}`, { cors: environment.corsOrigins }));
 }
 void bootstrap();
 

@@ -1,0 +1,286 @@
+/* =============================================================================
+ * KÝDOS BELOTE — 03 · components.css
+ * -----------------------------------------------------------------------------
+ * Bibliothèque de composants. Convention de nommage : BEM léger.
+ *   .block            → composant
+ *   .block__element   → sous-partie
+ *   .block--modifier  → variante / état
+ * Tous les composants consomment uniquement les tokens de tokens.css.
+ * ========================================================================== */
+
+/* =========================================================================
+ * ROBOT MASCOTTE  (.robot)
+ * Petit robot mignon construit en CSS pur — identité de la marque.
+ * Taille pilotée par --robot-size ; couleur des yeux/antenne par --robot-accent.
+ * Ex : <div class="robot robot--online" style="--robot-size:96px;--robot-accent:#7ecb98"></div>
+ * ====================================================================== */
+.robot {
+  --robot-size: 44px;
+  --robot-accent: var(--c-gold);
+  position: relative;
+  width: var(--robot-size);
+  height: calc(var(--robot-size) * .86);
+}
+.robot__antenna {              /* tige + ampoule lumineuse */
+  position: absolute; left: 50%; top: calc(var(--robot-size) * -0.22);
+  transform: translateX(-50%);
+  width: 2px; height: calc(var(--robot-size) * .2);
+  background: var(--robot-accent); transform-origin: bottom;
+  animation: antenna 2.4s ease-in-out infinite;
+}
+.robot__bulb {
+  position: absolute; left: 50%; top: calc(var(--robot-size) * -0.3);
+  transform: translateX(-50%);
+  width: calc(var(--robot-size) * .14); height: calc(var(--robot-size) * .14);
+  border-radius: 50%; background: var(--robot-accent);
+  box-shadow: 0 0 8px 2px var(--robot-accent);
+}
+.robot__head {                 /* boîtier + yeux */
+  width: 100%; height: 100%;
+  border-radius: calc(var(--robot-size) * .27);
+  background: linear-gradient(180deg,#2b3346,#171d2c);
+  border: 2px solid var(--robot-accent);
+  display: flex; align-items: center; justify-content: center;
+  gap: calc(var(--robot-size) * .14);
+  box-shadow: var(--sh-card);
+}
+.robot__eye {
+  width: calc(var(--robot-size) * .16); height: calc(var(--robot-size) * .16);
+  border-radius: 50%; background: var(--robot-accent);
+  box-shadow: 0 0 10px var(--robot-accent);
+}
+.robot--float { animation: floatY 4s ease-in-out infinite; }
+
+/* =========================================================================
+ * BOUTONS  (.btn)
+ * Variantes : --primary (or), --secondary, --ghost, --danger. État [disabled].
+ * Tailles   : --sm, --block (pleine largeur).
+ * ====================================================================== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  height: 42px; padding: 0 var(--s-5);
+  font-family: var(--f-display); font-weight: var(--fw-bold); font-size: var(--fs-md);
+  border-radius: var(--r-md);
+  transition: transform var(--t-fast) var(--e-out), box-shadow var(--t-fast), filter var(--t-fast);
+  user-select: none;
+}
+.btn:active { transform: translateY(1px) scale(.99); }
+.btn:disabled, .btn--disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
+.btn:disabled:active { transform: none; }
+
+.btn--primary   { color: var(--c-ink); background: var(--g-btn); box-shadow: var(--sh-btn); }
+.btn--primary:hover:not(:disabled) { filter: brightness(1.05); }
+.btn--secondary { color: var(--c-text); background: var(--c-veil-06); border: 1px solid var(--c-line-strong); }
+.btn--secondary:hover { background: var(--c-veil-08); }
+.btn--ghost     { color: var(--c-success); background: rgba(126,203,152,.12); border: 1px solid rgba(126,203,152,.35); }
+.btn--danger    { color: #fff; background: linear-gradient(180deg,#f07485,#d84457); }
+
+.btn--sm    { height: 34px; font-size: var(--fs-base); padding: 0 var(--s-4); }
+.btn--block { width: 100%; }
+
+/* Bouton bascule de langue (FR / EN) */
+.lang-toggle {
+  font-family: var(--f-mono); font-size: var(--fs-sm); letter-spacing: .1em;
+  color: var(--c-gold); padding: 8px 14px; border-radius: var(--r-md);
+  background: rgba(230,196,106,.08); border: 1px solid rgba(230,196,106,.3);
+}
+
+/* =========================================================================
+ * CHAMPS DE SAISIE  (.field / .input)
+ * États : défaut, :focus, --error. Structure label + input + hint.
+ * ====================================================================== */
+.field { display: flex; flex-direction: column; gap: var(--s-1); }
+.field__label { composes: label; }
+.input {
+  height: 40px; padding: 0 var(--s-3);
+  display: flex; align-items: center;
+  background: var(--c-veil-04); color: var(--c-text);
+  border: 1px solid var(--c-line-strong); border-radius: var(--r-md);
+  font-size: var(--fs-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+  width: 100%;
+}
+.input::placeholder { color: var(--c-text-faint); }
+.input:focus, .input--focus {
+  outline: none;
+  border-color: rgba(230,196,106,.5);
+  box-shadow: 0 0 0 3px rgba(230,196,106,.1);
+}
+.input--error { border-color: rgba(232,93,112,.5); background: rgba(232,93,112,.06); }
+.field__hint       { font-family: var(--f-mono); font-size: var(--fs-xs); color: var(--c-text-faint); }
+.field__hint--error{ color: var(--c-danger); }
+
+/* Curseur clignotant (démonstration de focus) */
+.caret { width: 1.5px; height: 18px; background: var(--c-gold); animation: caret 1.1s steps(1) infinite; margin-left: auto; }
+
+/* =========================================================================
+ * SLIDER  (.slider)  — réglage de stratégie de robot
+ * <input type=range> superposé transparent + piste + remplissage colorable.
+ * Couleur de remplissage : --slider-fill.
+ * ====================================================================== */
+.slider { --slider-fill: var(--g-btn); }
+.slider__head { display: flex; justify-content: space-between; font-size: var(--fs-sm); color: var(--c-text-soft); margin-bottom: var(--s-1); }
+.slider__val  { font-family: var(--f-mono); color: var(--c-gold); }
+.slider__track{ position: relative; height: 8px; border-radius: 6px; background: var(--c-veil-08); }
+.slider__fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; background: var(--slider-fill); transition: width var(--t-fast) linear; }
+.slider__input{ position: absolute; inset: -6px 0; width: 100%; opacity: 0; cursor: pointer; }
+
+/* =========================================================================
+ * CARTES  (.panel / .card / .play-card / .feature-card)
+ * ====================================================================== */
+/* Surface de contenu standard */
+.panel {
+  background: rgba(16,21,31,.6);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-xl);
+  padding: var(--s-4);
+}
+.card {
+  background: linear-gradient(180deg, var(--c-surface-2), var(--c-surface-3));
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+}
+
+/* Carte de belote ivoire (écran connexion, DS) — enseigne via --suit-color */
+.play-card {
+  --suit-color: var(--c-heart-red);
+  position: relative; border-radius: var(--r-2xl);
+  background: linear-gradient(160deg, var(--c-ivory-hi), var(--c-ivory-lo));
+  color: var(--c-ink);
+  box-shadow: inset 0 0 0 2px rgba(230,196,106,.55), var(--sh-float);
+}
+.play-card__corner {
+  position: absolute; text-align: center; line-height: .9;
+  font-family: var(--f-display); font-weight: var(--fw-black);
+  color: var(--suit-color);
+}
+.play-card__corner--tl { top: 12px; left: 14px; }
+.play-card__corner--br { bottom: 12px; right: 14px; transform: rotate(180deg); }
+
+/* Carte-fonctionnalité (accueil) — enseigne rayée via --card-grad */
+.feature-card {
+  --card-grad: var(--g-heart);
+  position: relative; overflow: hidden; cursor: pointer;
+  border-radius: var(--r-xl);
+  background: var(--card-grad);
+  box-shadow: 0 18px 34px -18px rgba(0,0,0,.7), var(--inset-line);
+  transition: transform var(--t-base) var(--e-out), box-shadow var(--t-base);
+}
+.feature-card:hover { transform: translateY(-4px) scale(1.015); }
+.feature-card:active{ transform: scale(.98); }
+.feature-card::before {   /* texture rayée feutre */
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(125deg, transparent, transparent 13px, rgba(255,255,255,.05) 13px, rgba(255,255,255,.05) 26px);
+}
+.feature-card__glyph { position: absolute; right: -6px; top: -10px; font-size: 96px; color: rgba(255,255,255,.1); font-family: var(--f-display); }
+.feature-card__body  { position: absolute; left: 16px; right: 16px; bottom: 16px; }
+.feature-card__kicker{ font-family: var(--f-mono); font-size: var(--fs-xs); letter-spacing: .2em; color: rgba(255,255,255,.7); }
+.feature-card__title { font-family: var(--f-display); font-weight: var(--fw-black); font-size: 22px; color: #fff; margin: 2px 0 6px; }
+.feature-card__desc  { font-size: var(--fs-sm); color: rgba(255,255,255,.82); }
+
+/* =========================================================================
+ * BADGES & PUCES  (.badge / .chip)
+ * Variantes couleur : --gold --success --danger --info --level --neutral
+ * ====================================================================== */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--f-mono); font-size: var(--fs-sm);
+  padding: 4px 10px; border-radius: var(--r-pill);
+  background: var(--c-veil-06); border: 1px solid var(--c-line-strong); color: var(--c-text-soft);
+}
+.badge--gold   { background: rgba(230,196,106,.12); border-color: rgba(230,196,106,.3); color: var(--c-gold); }
+.badge--success{ background: rgba(126,203,152,.12); border-color: rgba(126,203,152,.35); color: var(--c-success); }
+.badge--danger { background: rgba(232,93,112,.12); border-color: rgba(232,93,112,.35); color: var(--c-danger); }
+.badge--info   { background: rgba(157,180,221,.12); border-color: rgba(157,180,221,.35); color: var(--c-info); }
+.badge--level  { background: rgba(109,81,160,.16); border-color: rgba(109,81,160,.4); color: #b39ddb; }
+
+/* =========================================================================
+ * AVATARS  (.avatar)  — cadre autour d'une mascotte robot
+ * Anneau d'état via --avatar-ring.
+ * ====================================================================== */
+.avatar {
+  --avatar-ring: var(--c-line-strong);
+  width: 44px; height: 40px; border-radius: var(--r-lg);
+  background: linear-gradient(180deg,#2b3346,#171d2c);
+  border: 2px solid var(--avatar-ring);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; transition: border-color var(--t-fast), transform var(--t-fast);
+}
+.avatar:hover { transform: translateY(-2px); }
+.avatar__dot  { width: 7px; height: 7px; border-radius: 50%; background: var(--avatar-ring); }
+.avatar--initial {
+  border-radius: 50%; background: var(--g-spade); border: none;
+  font-family: var(--f-display); font-weight: var(--fw-black); color: #fff;
+}
+
+/* =========================================================================
+ * DIALOGUES / MODALES  (.dialog)
+ * Fond dépoli + carte surélevée à lueur dorée.
+ * ====================================================================== */
+.dialog-backdrop {
+  position: absolute; inset: 0; z-index: var(--z-dialog);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,12,.72); backdrop-filter: blur(4px);
+  animation: screenIn var(--t-base) ease both;
+}
+.dialog {
+  width: 340px; max-width: 86%; padding: var(--s-6); text-align: center;
+  background: linear-gradient(180deg, var(--c-elevated), #0e131f);
+  border: 1px solid rgba(230,196,106,.25); border-radius: var(--r-2xl);
+  box-shadow: var(--sh-float), var(--glow-gold);
+  animation: dialogIn var(--t-base) var(--e-out) both;
+}
+.dialog__icon {
+  width: 52px; height: 52px; margin: 0 auto var(--s-3); border-radius: var(--r-lg);
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  background: rgba(126,203,152,.14); border: 1px solid rgba(126,203,152,.4); color: var(--c-success);
+}
+.dialog__title { font-family: var(--f-display); font-weight: var(--fw-black); font-size: var(--fs-lg); margin-bottom: 6px; }
+.dialog__body  { font-size: var(--fs-base); color: var(--c-text-soft); line-height: 1.5; margin-bottom: var(--s-5); }
+.dialog__actions { display: flex; gap: var(--s-3); }
+
+/* =========================================================================
+ * MENUS  (.menu)
+ * Liste d'actions ; item actif surligné or.
+ * ====================================================================== */
+.menu { background: rgba(0,0,0,.3); border: 1px solid var(--c-line); border-radius: var(--r-lg); padding: 6px; }
+.menu__item {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: 8px 10px; border-radius: var(--r-md); font-size: var(--fs-base);
+  color: var(--c-text-soft); cursor: pointer; transition: background var(--t-fast);
+}
+.menu__item:hover  { background: var(--c-veil-04); }
+.menu__item--active{ background: rgba(230,196,106,.1); color: var(--c-gold); }
+
+/* =========================================================================
+ * NAVIGATION EN ÉVENTAIL  (.nav-fan)
+ * Pile de cartes déjà visitées, éventaillée, ancrée en bas — menu permanent.
+ * Chaque carte : --i (index) pilote rotation + décalage vertical.
+ * ====================================================================== */
+.nav-fan { position: relative; height: 92px; }
+.nav-fan__card {
+  /* Le transform (angle + décalage de l'éventail) est calculé en JS et posé
+     inline — voir HomeScreen.js — car abs()/calc imbriqués sont peu portables. */
+  position: absolute; bottom: 0; left: 50%;
+  width: 66px; height: 92px; border-radius: var(--r-md);
+  transform-origin: bottom center;
+  background: var(--card-grad, var(--g-slate));
+  box-shadow: 0 -6px 20px -6px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.14);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer; transition: transform var(--t-base) var(--e-out);
+}
+.nav-fan__glyph { font-size: 20px; color: #fff; }
+.nav-fan__label { font-family: var(--f-mono); font-size: 7px; letter-spacing: .08em; color: #fff; }
+
+/* =========================================================================
+ * TOP BAR / HUD  (.topbar)
+ * Barre supérieure des écrans (logo, monnaie, niveau).
+ * ====================================================================== */
+.topbar { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--s-6) 0 60px; }
+.brand  { display: flex; align-items: baseline; gap: var(--s-2); }
+.brand__name { font-family: var(--f-display); font-weight: var(--fw-black); color: var(--c-gold); }
+.brand__sub  { font-family: var(--f-mono); font-size: var(--fs-xs); letter-spacing: .2em; color: var(--c-text-mute); }
+
+/* Pastille de monnaie / niveau */
+.coin { display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: var(--r-pill); font-family: var(--f-mono); font-size: var(--fs-sm); color: var(--c-gold); background: rgba(230,196,106,.1); border: 1px solid rgba(230,196,106,.28); }

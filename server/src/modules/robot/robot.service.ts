@@ -14,6 +14,7 @@ export class RobotService {
       algoSpec: robotDocument.algoSpec,
       offlineEnabled: robotDocument.offlineEnabled,
       representativeSlot: robotDocument.representativeSlot,
+      mobile: robotDocument.mobile ?? null,
     }));
   }
 

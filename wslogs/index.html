@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kýdos Belote — Moniteur WebSocket (dev)</title>
+<style>
+  :root {
+    --bg: #070c17; --panel: #0d1424; --panel-2: #111a2e; --line: rgba(255,255,255,.08);
+    --line-strong: rgba(255,255,255,.16); --text: #e8ecf4; --soft: #a9b4c9; --mute: #6c7891;
+    --gold: #e6c46a; --success: #7ecb98; --danger: #e85d70; --info: #6b78ea;
+    --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, monospace;
+    --ui: 'Manrope', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: linear-gradient(160deg, #070c17, #05070f); color: var(--text); font-family: var(--ui); height: 100vh; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: rgba(6,10,20,.6); }
+  header .brand { font-weight: 800; letter-spacing: .02em; }
+  header .brand b { color: var(--gold); }
+  header .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--mute); box-shadow: 0 0 0 3px rgba(108,120,145,.2); }
+  header .dot.on { background: var(--success); box-shadow: 0 0 0 3px rgba(126,203,152,.25); }
+  header .dot.off { background: var(--danger); box-shadow: 0 0 0 3px rgba(232,93,112,.25); }
+  header input { background: var(--panel); border: 1px solid var(--line-strong); color: var(--text); border-radius: 8px; padding: 7px 11px; font-family: var(--mono); font-size: 12px; width: 260px; }
+  header button { background: var(--gold); color: #1a1406; border: 0; border-radius: 8px; padding: 8px 15px; font-weight: 700; font-size: 12px; cursor: pointer; }
+  header button.ghost { background: transparent; color: var(--soft); border: 1px solid var(--line-strong); }
+  header .spacer { flex: 1; }
+  header .stat { font-family: var(--mono); font-size: 11px; color: var(--soft); }
+  header .stat b { color: var(--gold); }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; overflow: hidden; }
+  .col { display: flex; flex-direction: column; min-height: 0; }
+  .col h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--mute); }
+  .scroll { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+  /* Sessions */
+  .session { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .session .top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .session .kind { font-weight: 700; font-size: 13px; }
+  .session .badge { font-family: var(--mono); font-size: 9.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--soft); }
+  .session .badge.playing { color: var(--success); border-color: rgba(126,203,152,.5); background: rgba(126,203,152,.12); }
+  .session .badge.bidding { color: var(--gold); border-color: rgba(230,196,106,.5); background: rgba(230,196,106,.12); }
+  .session .id { font-family: var(--mono); font-size: 10px; color: var(--mute); margin-left: auto; }
+  .seats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .seat { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font-family: var(--mono); font-size: 10.5px; }
+  .seat .lbl { color: var(--mute); }
+  .seat .nm { color: var(--text); display: block; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seat.robot .nm::before { content: '🤖 '; }
+  .seat.turn { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(230,196,106,.5); }
+  .seat.sub { border-color: var(--info); }
+  .seat.team-A { border-left: 3px solid var(--success); }
+  .seat.team-B { border-left: 3px solid var(--danger); }
+  .session .foot { margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--mute); display: flex; gap: 14px; }
+  .session .foot .sc-a { color: var(--success); } .session .foot .sc-b { color: var(--danger); }
+  .empty-note { color: var(--mute); font-size: 12px; padding: 20px; text-align: center; }
+  /* Logs */
+  .logs { flex: 1; overflow: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-family: var(--mono); font-size: 11px; line-height: 1.55; }
+  .log { display: flex; gap: 8px; padding: 1px 0; }
+  .log .t { color: var(--mute); flex-shrink: 0; }
+  .log .lv { flex-shrink: 0; width: 46px; font-weight: 700; }
+  .log .sc { color: var(--info); flex-shrink: 0; }
+  .log .msg { color: var(--soft); word-break: break-word; }
+  .log.debug .lv { color: var(--mute); } .log.info .lv { color: var(--success); }
+  .log.warn .lv { color: var(--gold); } .log.error .lv { color: var(--danger); }
+  .log.error .msg { color: #ffb3bd; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .toolbar input[type=text] { flex: 1; background: var(--panel); border: 1px solid var(--line-strong); color: var(--text); border-radius: 8px; padding: 6px 10px; font-family: var(--mono); font-size: 11px; }
+  .toolbar label { font-size: 11px; color: var(--soft); display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .pill { font-family: var(--mono); font-size: 10px; padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--soft); cursor: pointer; }
+  .pill.active { color: var(--gold); border-color: rgba(230,196,106,.5); background: rgba(230,196,106,.12); }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="conn-dot"></span>
+  <span class="brand"><b>Kýdos</b> Belote — Moniteur WebSocket</span>
+  <input id="server-url" value="http://localhost:4000" spellcheck="false" />
+  <button id="connect-btn">Se connecter</button>
+  <button id="disconnect-btn" class="ghost">Couper</button>
+  <span class="spacer"></span>
+  <span class="stat">Sessions <b id="stat-sessions">0</b></span>
+  <span class="stat">Joueurs <b id="stat-players">0</b></span>
+  <span class="stat">Logs <b id="stat-logs">0</b></span>
+</header>
+<main>
+  <section class="col">
+    <h2>Sessions de jeu actives</h2>
+    <div class="scroll" id="sessions"><div class="empty-note">Non connecté.</div></div>
+  </section>
+  <section class="col">
+    <h2>Flux de logs (web services &amp; websockets)</h2>
+    <div class="toolbar">
+      <input type="text" id="log-filter" placeholder="Filtrer (scope ou message)…" />
+      <span class="pill active" data-lv="all">Tous</span>
+      <span class="pill" data-lv="info">info</span>
+      <span class="pill" data-lv="warn">warn</span>
+      <span class="pill" data-lv="error">error</span>
+      <label><input type="checkbox" id="autoscroll" checked /> Auto-défil.</label>
+    </div>
+    <div class="logs" id="logs"></div>
+  </section>
+</main>
+
+<!-- Socket.IO client depuis le serveur lui-même (même origine que l'API). -->
+<script>
+(function () {
+  var socket = null;
+  var logs = [];
+  var levelFilter = 'all';
+  var textFilter = '';
+  var logCount = 0;
+
+  var connDot = document.getElementById('conn-dot');
+  var sessionsEl = document.getElementById('sessions');
+  var logsEl = document.getElementById('logs');
+  var statSessions = document.getElementById('stat-sessions');
+  var statPlayers = document.getElementById('stat-players');
+  var statLogs = document.getElementById('stat-logs');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function time(iso) { try { return new Date(iso).toLocaleTimeString('fr-FR', { hour12: false }); } catch (e) { return ''; } }
+
+  function renderSessions(sessions) {
+    statSessions.textContent = sessions.length;
+    var players = 0;
+    sessions.forEach(function (s) { players += (s.players || []).filter(function (p) { return !p.isRobot; }).length; });
+    statPlayers.textContent = players;
+    if (!sessions.length) { sessionsEl.innerHTML = '<div class="empty-note">Aucune session active.</div>'; return; }
+    sessionsEl.innerHTML = sessions.map(function (s) {
+      var seats = (s.players || []).map(function (p) {
+        var cls = 'seat team-' + (p.seat % 2 === 0 ? 'A' : 'B');
+        if (p.isRobot) cls += ' robot';
+        if (s.turn === p.seat) cls += ' turn';
+        if (p.substitute) cls += ' sub';
+        return '<div class="' + cls + '"><span class="lbl">' + ['A', 'B', 'C', 'D'][p.seat] +
+          (p.substitute ? ' · robot substitut' : '') + '</span><span class="nm">' + esc(p.name) + '</span></div>';
+      }).join('');
+      var phaseCls = s.phase === 'playing' ? 'playing' : s.phase === 'bidding' ? 'bidding' : '';
+      return '<div class="session">' +
+        '<div class="top">' +
+          '<span class="kind">' + ({ hybride: 'Alliance Hybride', acier: "Duo d\'Acier", royal: 'Carré Royal' }[s.kind] || s.kind) + '</span>' +
+          '<span class="badge ' + phaseCls + '">' + esc(s.phase) + '</span>' +
+          '<span class="badge">' + (s.visibility === 'public' ? 'publique' : 'privée') + '</span>' +
+          '<span class="id">' + esc(s.tableId) + '</span>' +
+        '</div>' +
+        '<div class="seats">' + seats + '</div>' +
+        '<div class="foot"><span class="sc-a">NOUS ' + (s.scores ? s.scores.A : 0) + '</span>' +
+          '<span class="sc-b">EUX ' + (s.scores ? s.scores.B : 0) + '</span>' +
+          '<span>' + (s.logs || 0) + ' évènements</span></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function logVisible(l) {
+    if (levelFilter !== 'all' && l.level !== levelFilter) return false;
+    if (textFilter && (esc(l.scope) + ' ' + esc(l.message)).toLowerCase().indexOf(textFilter) === -1) return false;
+    return true;
+  }
+  function logLine(l) {
+    return '<div class="log ' + l.level + '"><span class="t">' + time(l.at) + '</span>' +
+      '<span class="lv">' + l.level.toUpperCase() + '</span>' +
+      '<span class="sc">[' + esc(l.scope) + ']</span>' +
+      '<span class="msg">' + esc(l.message) + (l.data && Object.keys(l.data).length ? ' ' + esc(JSON.stringify(l.data)) : '') + '</span></div>';
+  }
+  function renderLogs() {
+    logsEl.innerHTML = logs.filter(logVisible).map(logLine).join('');
+    if (document.getElementById('autoscroll').checked) logsEl.scrollTop = logsEl.scrollHeight;
+  }
+  function pushLog(l) {
+    logs.push(l); if (logs.length > 800) logs.shift();
+    logCount++; statLogs.textContent = logCount;
+    if (logVisible(l)) {
+      logsEl.insertAdjacentHTML('beforeend', logLine(l));
+      if (document.getElementById('autoscroll').checked) logsEl.scrollTop = logsEl.scrollHeight;
+    }
+  }
+
+  function loadSocketIo(origin, cb) {
+    if (window.io) return cb();
+    var sc = document.createElement('script');
+    sc.src = origin.replace(/\/$/, '') + '/socket.io/socket.io.js';
+    sc.onload = cb;
+    sc.onerror = function () { alert('Impossible de charger socket.io depuis ' + origin); };
+    document.head.appendChild(sc);
+  }
+
+  function connect() {
+    var origin = document.getElementById('server-url').value.trim();
+    disconnect();
+    // Instantané REST d'abord.
+    fetch(origin.replace(/\/$/, '') + '/api/monitor/snapshot')
+      .then(function (r) { return r.json(); })
+      .then(function (snap) { renderSessions(snap.sessions || []); logs = snap.logs || []; logCount = logs.length; statLogs.textContent = logCount; renderLogs(); })
+      .catch(function () { /* le socket prendra le relais */ });
+    // Puis flux socket.
+    loadSocketIo(origin, function () {
+      socket = window.io(origin.replace(/\/$/, '') + '/monitor', { transports: ['websocket', 'polling'] });
+      socket.on('connect', function () { connDot.className = 'dot on'; });
+      socket.on('disconnect', function () { connDot.className = 'dot off'; });
+      socket.on('connect_error', function () { connDot.className = 'dot off'; });
+      socket.on('monitor:snapshot', function (snap) { renderSessions(snap.sessions || []); if (snap.logs) { logs = snap.logs; renderLogs(); } });
+      socket.on('monitor:sessions', function (p) { renderSessions(p.sessions || []); });
+      socket.on('monitor:log', function (l) { pushLog(l); });
+    });
+  }
+  function disconnect() {
+    if (socket) { try { socket.disconnect(); } catch (e) {} socket = null; }
+    connDot.className = 'dot off';
+  }
+
+  document.getElementById('connect-btn').addEventListener('click', connect);
+  document.getElementById('disconnect-btn').addEventListener('click', disconnect);
+  document.getElementById('log-filter').addEventListener('input', function (e) { textFilter = e.target.value.toLowerCase(); renderLogs(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.pill'), function (pill) {
+    pill.addEventListener('click', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.pill'), function (p) { p.classList.remove('active'); });
+      pill.classList.add('active'); levelFilter = pill.getAttribute('data-lv'); renderLogs();
+    });
+  });
+
+  // Connexion automatique au chargement.
+  connect();
+})();
+</script>
+</body>
+</html>

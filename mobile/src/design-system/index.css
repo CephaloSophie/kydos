@@ -1,0 +1,16 @@
+/* =============================================================================
+ * DESIGN SYSTEM KÝDOS — point d'entrée unique de l'application MOBILE.
+ * -----------------------------------------------------------------------------
+ * Ce design system est TOTALEMENT INDÉPENDANT de l'application web : il ne
+ * référence aucun fichier hors de ce dossier. L'ordre d'import est significatif.
+ *
+ *   1. tokens.css     — variables (couleurs, typographies, rayons, ombres…)
+ *   2. base.css       — remise à zéro, mise en page, animations, garde paysage
+ *   3. components.css — vocabulaire visuel (boutons, cartes, badges, dialogues…)
+ *
+ * Documentation : docs/ai/DESIGN-SYSTEM.md
+ * Aperçu vivant : écran « styleguide » de l'application (route #/styleguide).
+ * ========================================================================== */
+@import './tokens.css';
+@import './base.css';
+@import './components.css';

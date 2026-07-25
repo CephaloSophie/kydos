@@ -5,7 +5,7 @@ import {
 } from 'belote-core';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../state';
-import { PixiTable } from '../table-pixi';
+import { PixiTable } from '@kydos/table-pixi';
 import { DevDock } from '../table';
 import { Recap } from '../components/ScoreBoard';
 import { ControlBar } from '../ds/devtools/ControlBar';

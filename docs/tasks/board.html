@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kýdos Belote — Tableau des tâches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#05070f; --bg-2:#080d18; --panel:#0d1322; --panel-2:#121a2c;
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+    --text:#eef1f6; --soft:#aab4c6; --mute:#6f7c93; --faint:#4a5468;
+    --gold:#e6c46a; --gold-d:#b8912f; --green:#7ecb98; --red:#e85d70; --blue:#9db4dd; --violet:#b39ddb;
+    --r-s:8px; --r-m:12px; --r-l:16px; --r-xl:22px;
+    --f-ui:'Manrope',system-ui,sans-serif; --f-title:'Bricolage Grotesque',var(--f-ui); --f-mono:'JetBrains Mono',ui-monospace,monospace;
+    --sh:0 18px 46px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(900px 600px at 78% -10%,rgba(43,120,78,.16),transparent 60%),linear-gradient(160deg,#070c17,#05070f);color:var(--text);font-family:var(--f-ui);min-height:100vh}
+  a{color:var(--gold)}
+  .wrap{max-width:1560px;margin:0 auto;padding:20px 24px 60px}
+
+  /* ── Header ─────────────────────────────────────────────── */
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:baseline;gap:9px}
+  .brand b{font-family:var(--f-title);font-size:26px;font-weight:800;color:var(--gold);letter-spacing:-.02em}
+  .brand span{font-family:var(--f-mono);font-size:10px;letter-spacing:.28em;color:var(--mute)}
+  .sub{font-size:12px;color:var(--mute);margin-top:4px}
+  .metaline{font-family:var(--f-mono);font-size:10px;color:var(--faint);margin-top:3px}
+
+  /* ── Stats ──────────────────────────────────────────────── */
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-m);padding:9px 14px;min-width:86px}
+  .stat b{display:block;font-family:var(--f-title);font-size:21px;line-height:1.1}
+  .stat span{font-family:var(--f-mono);font-size:9px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+
+  /* ── Toolbar ────────────────────────────────────────────── */
+  .toolbar{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-l);padding:12px 14px;margin-bottom:16px;display:flex;flex-direction:column;gap:11px}
+  .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .search{flex:1;min-width:230px;display:flex;align-items:center;gap:9px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-m);padding:9px 13px}
+  .search input{flex:1;background:none;border:0;outline:none;color:var(--text);font-family:var(--f-ui);font-size:14px}
+  .search svg{opacity:.5;flex-shrink:0}
+  .fgroup{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+  .flabel{font-family:var(--f-mono);font-size:9px;letter-spacing:.16em;color:var(--faint);text-transform:uppercase;margin-right:2px}
+  .chip{cursor:pointer;user-select:none;font-family:var(--f-mono);font-size:10.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--soft);transition:.15s;white-space:nowrap}
+  .chip:hover{border-color:var(--line-2);background:rgba(255,255,255,.07)}
+  .chip.on{background:rgba(230,196,106,.16);border-color:rgba(230,196,106,.55);color:var(--gold)}
+  .chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .seg{display:flex;border:1px solid var(--line-2);border-radius:var(--r-m);overflow:hidden}
+  .seg button{background:none;border:0;color:var(--soft);font-family:var(--f-mono);font-size:11px;padding:7px 14px;cursor:pointer}
+  .seg button.on{background:var(--gold);color:#141414;font-weight:600}
+  .ghost{background:none;border:1px solid var(--line-2);color:var(--soft);font-family:var(--f-mono);font-size:10.5px;padding:6px 11px;border-radius:var(--r-s);cursor:pointer}
+  .ghost:hover{color:var(--text);border-color:var(--gold)}
+
+  /* ── Board ──────────────────────────────────────────────── */
+  .board{display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;align-items:flex-start}
+  .col{flex:0 0 292px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-l);padding:11px;max-height:74vh;display:flex;flex-direction:column}
+  .colhead{display:flex;align-items:center;gap:8px;padding:2px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:9px}
+  .colhead b{font-size:13px;font-weight:700;flex:1}
+  .count{font-family:var(--f-mono);font-size:10px;color:var(--mute);background:rgba(255,255,255,.05);padding:2px 7px;border-radius:999px}
+  .cards{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:3px}
+  .cards::-webkit-scrollbar,.board::-webkit-scrollbar,.cards::-webkit-scrollbar{height:8px;width:8px}
+  .cards::-webkit-scrollbar-thumb,.board::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:9px}
+
+  .card{background:var(--panel-2);border:1px solid var(--line);border-left-width:3px;border-radius:var(--r-m);padding:10px 11px;cursor:pointer;transition:.15s}
+  .card:hover{transform:translateY(-2px);border-color:var(--line-2);box-shadow:0 10px 24px rgba(0,0,0,.35)}
+  .card .id{font-family:var(--f-mono);font-size:9.5px;color:var(--gold-d);letter-spacing:.06em}
+  .card h4{margin:5px 0 7px;font-size:13px;line-height:1.35;font-weight:650}
+  .card .tags{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .tag{font-family:var(--f-mono);font-size:9px;padding:2.5px 7px;border-radius:999px;border:1px solid var(--line-2);color:var(--soft);white-space:nowrap}
+  .tag.p0{background:rgba(232,93,112,.16);border-color:rgba(232,93,112,.5);color:#ff9aa8}
+  .tag.p1{background:rgba(230,196,106,.14);border-color:rgba(230,196,106,.45);color:var(--gold)}
+  .tag.p2{background:rgba(157,180,221,.12);border-color:rgba(157,180,221,.4);color:var(--blue)}
+  .tag.p3{background:rgba(255,255,255,.05)}
+  .tag.bugt{background:rgba(232,93,112,.14);border-color:rgba(232,93,112,.45);color:#ff9aa8}
+
+  /* ── Table view ─────────────────────────────────────────── */
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden}
+  th{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+  th:hover{color:var(--gold)}
+  td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.045);font-size:13px;vertical-align:top}
+  tbody tr{cursor:pointer}
+  tbody tr:hover{background:rgba(255,255,255,.035)}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-family:var(--f-mono);font-size:10px;padding:3px 9px;border-radius:999px;border:1px solid var(--line-2)}
+
+  /* ── Drawer ─────────────────────────────────────────────── */
+  .scrim{position:fixed;inset:0;background:rgba(3,5,10,.66);backdrop-filter:blur(3px);display:none;z-index:40}
+  .scrim.on{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(620px,100%);background:linear-gradient(180deg,#0c1220,#080d18);border-left:1px solid var(--line-2);box-shadow:var(--sh);z-index:41;transform:translateX(100%);transition:transform .26s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column}
+  .drawer.on{transform:none}
+  .dhead{padding:18px 22px 14px;border-bottom:1px solid var(--line)}
+  .dbody{padding:18px 22px 40px;overflow-y:auto;flex:1}
+  .close{position:absolute;top:14px;right:18px;background:none;border:0;color:var(--mute);font-size:26px;cursor:pointer;line-height:1}
+  .close:hover{color:var(--text)}
+  .sec{margin-top:20px}
+  .sec > h5{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin:0 0 9px}
+  .sec ul{margin:0;padding-left:17px;line-height:1.65;font-size:13.5px;color:var(--soft)}
+  .sec li{margin-bottom:4px}
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:7px 12px;font-size:13px}
+  .kv dt{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding-top:2px}
+  .kv dd{margin:0;color:var(--soft)}
+  .tl{border-left:2px solid var(--line-2);margin-left:5px;padding-left:15px}
+  .tl .ev{position:relative;padding-bottom:14px}
+  .tl .ev::before{content:'';position:absolute;left:-21px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)}
+  .tl .when{font-family:var(--f-mono);font-size:9.5px;color:var(--faint)}
+  .tl .what{font-size:13px;margin-top:3px;color:var(--soft);line-height:1.5}
+  .tl .who{font-family:var(--f-mono);font-size:9px;color:var(--gold-d);text-transform:uppercase;letter-spacing:.1em}
+  .log{font-family:var(--f-mono);font-size:11px;padding:8px 11px;border-radius:var(--r-s);margin-bottom:6px;line-height:1.5;border-left:3px solid}
+  .log.info{background:rgba(157,180,221,.07);border-color:var(--blue);color:#c6d4ea}
+  .log.warn{background:rgba(230,196,106,.08);border-color:var(--gold);color:#f0dda6}
+  .log.error{background:rgba(232,93,112,.09);border-color:var(--red);color:#ffb6bf}
+  .empty{padding:50px 20px;text-align:center;color:var(--mute);font-size:14px}
+  .loadbox{background:var(--panel);border:1px dashed var(--line-2);border-radius:var(--r-l);padding:26px;text-align:center;margin-top:16px}
+  .loadbox p{color:var(--soft);font-size:13.5px;line-height:1.6;margin:0 0 14px}
+  code{font-family:var(--f-mono);font-size:12px;background:rgba(255,255,255,.06);padding:2px 6px;border-radius:5px;color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand"><b>Kýdos</b><span>BELOTE · TABLEAU DES TÂCHES</span></div>
+      <div class="sub" id="sub">Référentiel unique — diagnostic serveur & mobile, tâches faites, manquantes et bugs.</div>
+      <div class="metaline" id="metaline"></div>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="toolbar">
+    <div class="row">
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" placeholder="Rechercher : titre, description, instruction, module, identifiant…" />
+      </div>
+      <div class="seg">
+        <button id="vBoard" class="on">Tableau</button>
+        <button id="vList">Liste</button>
+      </div>
+      <button class="ghost" id="reset">Réinitialiser</button>
+    </div>
+    <div class="row"><span class="flabel">Statut</span><div class="fgroup" id="fStatus"></div></div>
+    <div class="row"><span class="flabel">Priorité</span><div class="fgroup" id="fPrio"></div></div>
+    <div class="row"><span class="flabel">Domaine</span><div class="fgroup" id="fArea"></div></div>
+    <div class="row"><span class="flabel">Type</span><div class="fgroup" id="fType"></div></div>
+  </div>
+
+  <div id="view"></div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <button class="close" id="closeD">×</button>
+  <div class="dhead" id="dhead"></div>
+  <div class="dbody" id="dbody"></div>
+</aside>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+ * Tableau de bord des tâches Kýdos Belote.
+ * Lit `tasks.json` (même dossier). Ouvert en file:// le navigateur bloque
+ * fetch — un sélecteur de fichier prend alors le relais.
+ * ══════════════════════════════════════════════════════════════════════════ */
+let DATA = null;
+const S = { q:'', status:new Set(), prio:new Set(), area:new Set(), type:new Set(), view:'board', sort:'id', dir:1 };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const statusOf = (id) => DATA.meta.statuses.find(s => s.id === id) || { id, label:id, color:'#888' };
+const prioOf   = (id) => DATA.meta.priorities.find(p => p.id === id) || { id, label:id, color:'#888' };
+const areaOf   = (id) => DATA.meta.areas.find(a => a.id === id) || { id, label:id };
+const fmt = (iso) => { if(!iso) return '—'; const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) + ' · ' + d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); };
+
+/* ── Chargement ─────────────────────────────────────────── */
+async function boot(){
+  try {
+    const res = await fetch('tasks.json', { cache:'no-store' });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    DATA = await res.json();
+    render();
+  } catch (err) {
+    $('view').innerHTML = `<div class="loadbox">
+      <p><b>Impossible de lire <code>tasks.json</code> automatiquement.</b><br>
+      C'est normal si cette page est ouverte directement depuis le disque : les navigateurs
+      interdisent la lecture de fichiers voisins en <code>file://</code>.</p>
+      <p>Deux solutions : sélectionner le fichier ci-dessous, ou servir le dossier
+      (<code>npx serve docs/tasks</code>) puis recharger.</p>
+      <input type="file" id="picker" accept="application/json" />
+    </div>`;
+    $('picker').addEventListener('change', (e) => {
+      const f = e.target.files[0]; if(!f) return;
+      const r = new FileReader();
+      r.onload = () => { DATA = JSON.parse(r.result); render(); };
+      r.readAsText(f);
+    });
+  }
+}
+
+/* ── Filtres ────────────────────────────────────────────── */
+function chip(container, list, set, colorKey){
+  container.innerHTML = '';
+  list.forEach(item => {
+    const el = document.createElement('span');
+    el.className = 'chip' + (set.has(item.id) ? ' on' : '');
+    const color = colorKey ? item[colorKey] : null;
+    el.innerHTML = (color ? `<span class="dot" style="background:${color}"></span>` : '') + esc(item.label);
+    el.onclick = () => { set.has(item.id) ? set.delete(item.id) : set.add(item.id); render(); };
+    container.appendChild(el);
+  });
+}
+
+function visible(){
+  const q = S.q.trim().toLowerCase();
+  return DATA.tasks.filter(t => {
+    if(S.status.size && !S.status.has(t.status)) return false;
+    if(S.prio.size   && !S.prio.has(t.priority)) return false;
+    if(S.area.size   && !S.area.has(t.area)) return false;
+    if(S.type.size   && !S.type.has(t.type)) return false;
+    if(!q) return true;
+    const hay = [t.id,t.title,t.description,t.module,t.area,t.spec,t.version,
+      (t.instructions||[]).join(' '),(t.acceptance||[]).join(' ')].join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+/* ── Rendu ──────────────────────────────────────────────── */
+function render(){
+  if(!DATA) return;
+  const m = DATA.meta;
+  $('metaline').textContent = `v${m.currentVersion} · schéma ${m.schemaVersion} · généré le ${fmt(m.generatedAt)} · ${DATA.tasks.length} tâches`;
+  chip($('fStatus'), m.statuses, S.status, 'color');
+  chip($('fPrio'),   m.priorities, S.prio, 'color');
+  chip($('fArea'),   m.areas, S.area, null);
+  chip($('fType'),   m.types.map(t => ({ id:t, label:t })), S.type, null);
+
+  const all = DATA.tasks, done = ['finished','confirmed','tested'];
+  const stats = [
+    { l:'Total', v: all.length, c:'var(--text)' },
+    { l:'Faites', v: all.filter(t=>done.includes(t.status)).length, c:'var(--green)' },
+    { l:'À faire', v: all.filter(t=>['pending','draft'].includes(t.status)).length, c:'var(--blue)' },
+    { l:'En cours', v: all.filter(t=>t.status==='onprocess').length, c:'var(--gold)' },
+    { l:'Bugs', v: all.filter(t=>t.type==='bug').length, c:'var(--red)' },
+    { l:'Bloquants', v: all.filter(t=>t.priority==='P0' && !done.includes(t.status)).length, c:'var(--red)' },
+  ];
+  $('stats').innerHTML = stats.map(s => `<div class="stat"><b style="color:${s.c}">${s.v}</b><span>${s.l}</span></div>`).join('');
+
+  const list = visible();
+  $('view').innerHTML = '';
+  $('view').appendChild(S.view === 'board' ? boardView(list) : listView(list));
+}
+
+function cardEl(t){
+  const st = statusOf(t.status);
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.style.borderLeftColor = st.color;
+  el.innerHTML = `<div class="id">${esc(t.id)} · ${esc(t.module||'')}</div>
+    <h4>${esc(t.title)}</h4>
+    <div class="tags">
+      <span class="tag ${t.priority.toLowerCase()}">${esc(t.priority)}</span>
+      <span class="tag">${esc(areaOf(t.area).label)}</span>
+      ${t.type==='bug' ? '<span class="tag bugt">bug</span>' : `<span class="tag">${esc(t.type)}</span>`}
+      <span class="tag">v${esc(t.version)}</span>
+    </div>`;
+  el.onclick = () => openTask(t);
+  return el;
+}
+
+function boardView(list){
+  const wrap = document.createElement('div'); wrap.className = 'board';
+  DATA.meta.statuses.forEach(st => {
+    const items = list.filter(t => t.status === st.id);
+    if(!items.length && S.status.size) return;
+    const col = document.createElement('div'); col.className = 'col';
+    col.innerHTML = `<div class="colhead">
+        <span class="dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${st.color}"></span>
+        <b>${esc(st.label)}</b><span class="count">${items.length}</span></div>`;
+    const cards = document.createElement('div'); cards.className = 'cards';
+    if(!items.length) cards.innerHTML = `<div style="color:var(--faint);font-size:12px;padding:10px 4px">Aucune tâche</div>`;
+    items.sort((a,b)=>a.priority.localeCompare(b.priority)||a.id.localeCompare(b.id)).forEach(t => cards.appendChild(cardEl(t)));
+    col.appendChild(cards); wrap.appendChild(col);
+  });
+  if(!wrap.children.length) wrap.innerHTML = '<div class="empty">Aucune tâche ne correspond aux filtres.</div>';
+  return wrap;
+}
+
+function listView(list){
+  const cols = [['id','ID'],['title','Titre'],['area','Domaine'],['type','Type'],['status','Statut'],['priority','Prio'],['version','Version'],['estimate','Estim.'],['updatedAt','Modifiée']];
+  const t = document.createElement('table');
+  t.innerHTML = `<thead><tr>${cols.map(c=>`<th data-k="${c[0]}">${c[1]}</th>`).join('')}</tr></thead>`;
+  const tb = document.createElement('tbody');
+  const sorted = [...list].sort((a,b)=>{
+    const A = (a[S.sort]??'').toString(), B = (b[S.sort]??'').toString();
+    return A.localeCompare(B, 'fr', { numeric:true }) * S.dir;
+  });
+  if(!sorted.length) tb.innerHTML = `<tr><td colspan="${cols.length}"><div class="empty">Aucune tâche ne correspond aux filtres.</div></td></tr>`;
+  sorted.forEach(task => {
+    const st = statusOf(task.status);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><span style="font-family:var(--f-mono);font-size:11px;color:var(--gold-d)">${esc(task.id)}</span></td>
+      <td style="max-width:430px">${esc(task.title)}</td>
+      <td style="color:var(--mute);font-size:12px">${esc(areaOf(task.area).label)}</td>
+      <td><span class="tag ${task.type==='bug'?'bugt':''}">${esc(task.type)}</span></td>
+      <td><span class="pill" style="border-color:${st.color}66;color:${st.color}">${esc(st.label)}</span></td>
+      <td><span class="tag ${task.priority.toLowerCase()}">${esc(task.priority)}</span></td>
+      <td style="font-family:var(--f-mono);font-size:11px;color:var(--soft)">v${esc(task.version)}</td>
+      <td style="font-family:var(--f-mono);font-size:11px;color:var(--mute)">${esc(task.estimate||'—')}</td>
+      <td style="font-family:var(--f-mono);font-size:10.5px;color:var(--faint)">${fmt(task.updatedAt)}</td>`;
+    tr.onclick = () => openTask(task);
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  t.querySelectorAll('th').forEach(th => th.onclick = () => {
+    const k = th.dataset.k;
+    S.dir = (S.sort === k) ? -S.dir : 1; S.sort = k; render();
+  });
+  return t;
+}
+
+/* ── Détail ─────────────────────────────────────────────── */
+function openTask(t){
+  const st = statusOf(t.status), pr = prioOf(t.priority);
+  $('dhead').innerHTML = `<div style="font-family:var(--f-mono);font-size:10px;color:var(--gold-d);letter-spacing:.1em">${esc(t.id)} · ${esc(areaOf(t.area).label)} · ${esc(t.module||'')}</div>
+    <h2 style="font-family:var(--f-title);font-size:21px;margin:7px 0 11px;line-height:1.25">${esc(t.title)}</h2>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="pill" style="border-color:${st.color}66;color:${st.color}"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:${st.color};display:inline-block"></span>${esc(st.label)}</span>
+      <span class="pill" style="border-color:${pr.color}66;color:${pr.color}">${esc(pr.id)} · ${esc(pr.label)}</span>
+      <span class="pill">${esc(t.type)}</span>
+      <span class="pill">v${esc(t.version)}</span>
+    </div>`;
+
+  const sec = (title, html) => html ? `<div class="sec"><h5>${title}</h5>${html}</div>` : '';
+  const ul  = (arr) => (arr && arr.length) ? `<ul>${arr.map(i=>`<li>${esc(i)}</li>`).join('')}</ul>` : '';
+
+  const history = (t.history||[]).slice().reverse().map(h => {
+    const hs = statusOf(h.status);
+    return `<div class="ev"><div class="when">${fmt(h.at)}</div>
+      <div class="what"><span class="pill" style="border-color:${hs.color}66;color:${hs.color};margin-right:7px">${esc(hs.label)}</span>${esc(h.note||'')}</div>
+      <div class="who">par ${esc(h.by||'—')}</div></div>`;
+  }).join('');
+
+  const logs = (t.logs||[]).map(l =>
+    `<div class="log ${esc(l.level)}"><b>${esc((l.level||'info').toUpperCase())}</b> · ${fmt(l.at)}<br>${esc(l.msg)}</div>`).join('');
+
+  $('dbody').innerHTML =
+    sec('Description', `<p style="font-size:13.5px;line-height:1.7;color:var(--soft);margin:0">${esc(t.description)}</p>`) +
+    sec('Instructions', ul(t.instructions)) +
+    sec('Critères d\'acceptation', ul(t.acceptance)) +
+    sec('Informations', `<dl class="kv">
+        <dt>Spécification</dt><dd>${esc(t.spec||'—')}</dd>
+        <dt>Estimation</dt><dd>${esc(t.estimate||'—')}</dd>
+        <dt>Version cible</dt><dd>v${esc(t.version)}</dd>
+        <dt>Créée le</dt><dd>${fmt(t.createdAt)}</dd>
+        <dt>Modifiée le</dt><dd>${fmt(t.updatedAt)}</dd>
+      </dl>`) +
+    sec('Historique', history ? `<div class="tl">${history}</div>` : '<div style="color:var(--faint);font-size:12.5px">Aucun événement.</div>') +
+    sec('Journal', logs || '<div style="color:var(--faint);font-size:12.5px">Aucune entrée.</div>');
+
+  $('drawer').classList.add('on'); $('scrim').classList.add('on');
+}
+function closeDrawer(){ $('drawer').classList.remove('on'); $('scrim').classList.remove('on'); }
+
+/* ── Événements ─────────────────────────────────────────── */
+$('q').addEventListener('input', e => { S.q = e.target.value; render(); });
+$('vBoard').onclick = () => { S.view='board'; $('vBoard').classList.add('on'); $('vList').classList.remove('on'); render(); };
+$('vList').onclick  = () => { S.view='list';  $('vList').classList.add('on');  $('vBoard').classList.remove('on'); render(); };
+$('reset').onclick  = () => { S.q=''; $('q').value=''; [S.status,S.prio,S.area,S.type].forEach(s=>s.clear()); render(); };
+$('closeD').onclick = closeDrawer; $('scrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeDrawer();
+  if(e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); }
+});
+boot();
+</script>
+</body>
+</html>

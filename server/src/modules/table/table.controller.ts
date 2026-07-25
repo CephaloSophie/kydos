@@ -9,8 +9,8 @@ export function attachTableControllerSocket(server: Server) { socketServer = ser
 
 export class TableController {
   async create(request: AuthenticatedRequest, response: Response) {
-    const { visibility, forTeam, config } = request.body ?? {};
-    response.json({ table: await tableService.createTable(request.userId!, visibility, !!forTeam, config) });
+    const { visibility, forTeam, config, kind, robotIds } = request.body ?? {};
+    response.json({ table: await tableService.createTable(request.userId!, { visibility, forTeam: !!forTeam, config, kind, robotIds }) });
   }
 
   async list(request: AuthenticatedRequest, response: Response) {
@@ -30,6 +30,9 @@ export class TableController {
     response.json({ table: outcome.table });
   }
 
+  async cancel(request: AuthenticatedRequest, response: Response) {
+    response.json(await tableService.cancelPending(request.params.id, request.userId!));
+  }
   async leave(request: AuthenticatedRequest, response: Response) {
     response.json({ ok: true, status: await tableService.leaveTable(request.params.id, request.userId!) });
   }
