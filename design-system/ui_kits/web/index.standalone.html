@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrée — Web</title>
+<meta name="ext-resource-dependency" content="../../assets/mark-contree.svg" data-resource-id="mark" />
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg-1); }
+  #root { height: 100vh; }
+</style>
+<template id="__bundler_thumbnail" data-bg-color="#0f1115">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0f1115"/>
+    <path d="M600 250 L735 328 L735 484 L600 562 L465 484 L465 328 Z" fill="#161922" stroke="#2e3648" stroke-width="6"/>
+    <path d="M600 300 C660 365 720 400 720 460 C720 505 685 530 650 520 C638 516 622 508 612 496 C618 540 632 566 658 594 L542 594 C568 566 582 540 588 496 C578 508 562 516 550 520 C515 530 480 505 480 460 C480 400 540 365 600 300 Z" fill="#eab23a"/>
+  </svg>
+</template>
+</head>
+<body class="app-web">
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel" data-presets="react">
+
+/* ===== icons.jsx ===== */
+// Jeu d'icônes line (style Lucide, stroke 2). Partagé par les écrans du kit.
+const Ic = {
+  play: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m6 3 14 9-14 9V3Z"/></svg>,
+  cards: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="5" width="13" height="16" rx="2"/><path d="M8 5V3M12 5V3"/><path d="m18 8 3 1-3 9-3-1"/></svg>,
+  bot: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M9 4h6"/><circle cx="9" cy="14" r="1"/><circle cx="15" cy="14" r="1"/></svg>,
+  eye: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>,
+  trophy: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M6 9a6 6 0 0 0 12 0V4H6v5Z"/><path d="M6 5H3v2a3 3 0 0 0 3 3M18 5h3v2a3 3 0 0 1-3 3M9 21h6M12 17v4"/></svg>,
+  user: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>,
+  settings: (p) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 13.6H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8Z"/></svg>,
+  plus: (p) => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M12 5v14M5 12h14"/></svg>,
+  lock: (p) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>,
+  copy: (p) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>,
+  search: (p) => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>,
+};
+window.Ic = Ic;
+
+
+/* ===== GameScreen.jsx ===== */
+// Écran ENTRAÎNEMENT / partie — flagship. Tapis 2/3 + panneaux droits 1/3.
+const { ScoreBoard, TableFelt, PlayingCard, AnnounceStream, LogConsole, ControlBar, Button, Badge } = window.ContrEDesignSystem_9c78ea;
+
+const START_HAND = [
+  { rank: "A", suit: "hearts" }, { rank: "10", suit: "hearts" }, { rank: "R", suit: "spades" },
+  { rank: "9", suit: "spades" }, { rank: "V", suit: "clubs" }, { rank: "8", suit: "diamonds" }, { rank: "7", suit: "diamonds" },
+];
+
+function GameScreen() {
+  const [hand, setHand] = React.useState(START_HAND);
+  const [trick, setTrick] = React.useState({
+    west: { rank: "9", suit: "hearts" }, north: { rank: "7", suit: "hearts" },
+  });
+  const [playing, setPlaying] = React.useState(false);
+  const [speed, setSpeed] = React.useState(2);
+  const [before, setBefore] = React.useState(400);
+  const [after, setAfter] = React.useState(700);
+
+  const playCard = (i) => {
+    const card = hand[i];
+    setTrick((t) => ({ ...t, south: { ...card, winning: true } }));
+    setHand((h) => h.filter((_, idx) => idx !== i));
+  };
+
+  const log = [
+    { ts: "12:04:01", level: "info", msg: "donne 4 — distribution 3-2-3" },
+    { ts: "12:04:01", level: "debug", msg: "eval main Sud = 0.71 · atout ♥" },
+    { ts: "12:04:01", level: "warning", msg: "annonce capot à risque (concentration 0.4)" },
+    { ts: "12:04:02", level: "info", msg: "pli 3 remporté par Sud (R♥)" },
+    { ts: "12:04:02", level: "debug", msg: "ws → state.tick #482" },
+    { ts: "12:04:02", level: "error", msg: "contrat menacé — équipe B à 148/150" },
+  ];
+  const stream = [
+    { player: "Vous", team: "a", kind: "bid", value: 80, suit: "spades" },
+    { player: "Iznogoud", team: "b", isRobot: true, kind: "bid", value: 90, suit: "hearts" },
+    { player: "Partenaire", team: "a", kind: "bid", value: 110, suit: "spades" },
+    { player: "Roboubelot", team: "b", isRobot: true, kind: "contre" },
+    { player: "Vous", team: "a", kind: "surcontre" },
+  ];
+
+  return (
+    <div className="layout-game">
+      <div className="layout-game__table">
+        <ScoreBoard
+          teamA={{ name: "Les Atouts", score: 1240 }}
+          teamB={{ name: "Capot City", score: 980 }}
+          target={1500} round={2} rounds={3} brut={{ a: 82, b: 80 }} />
+
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <TableFelt
+            atout="hearts"
+            seats={[
+              { dir: "south", name: "Vous", team: "Les Atouts", cards: hand.length, active: true },
+              { dir: "west", name: "Iznogoud", team: "Capot City", isRobot: true, cards: 6 },
+              { dir: "north", name: "Partenaire", team: "Les Atouts", cards: 6 },
+              { dir: "east", name: "Roboubelot", team: "Capot City", isRobot: true, cards: 7 },
+            ]}
+            trick={trick}
+            prevTrick={[{ rank: "R", suit: "spades" }, { rank: "7", suit: "spades" }, { rank: "8", suit: "spades", winning: true }, { rank: "D", suit: "spades" }]} />
+        </div>
+
+        {/* Main du joueur */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 8, padding: "4px 0 2px", minHeight: 96 }}>
+          {hand.map((c, i) => (
+            <PlayingCard key={`${c.rank}${c.suit}`} rank={c.rank} suit={c.suit} size="lg" playable onClick={() => playCard(i)} />
+          ))}
+          {hand.length === 0 && <span style={{ color: "var(--text-3)", fontSize: "var(--fs-sm)", paddingBottom: 32 }}>Main jouée — pli en cours.</span>}
+        </div>
+
+        <ControlBar
+          playing={playing} speed={speed} delayBefore={before} delayAfter={after}
+          onTogglePlay={() => setPlaying((p) => !p)} onStep={() => {}} onSpeed={setSpeed}
+          onDelayBefore={setBefore} onDelayAfter={setAfter} />
+      </div>
+
+      <div className="layout-game__side">
+        <AnnounceStream entries={stream} />
+        <LogConsole defaultHidden={["trace"]} entries={log} />
+      </div>
+    </div>
+  );
+}
+window.GameScreen = GameScreen;
+
+
+/* ===== LobbyScreen.jsx ===== */
+// Écran LOBBY — filtres + grille de tables.
+const { Card: LCard, Badge: LBadge, Button: LButton, Tag: LTag, TeamBadge: LTeamBadge, Input: LInput } = window.ContrEDesignSystem_9c78ea;
+
+const TABLES = [
+  { id: 214, teamA: "Les Atouts", teamB: "Capot City", round: "Manche 2/3", players: 2, bots: 2, watchers: 7, live: true, private: false },
+  { id: 198, teamA: "Pique & Coeur", teamB: "Belote Club", round: "Enchères", players: 3, bots: 1, watchers: 2, live: true, private: false },
+  { id: 231, teamA: "Les Carreaux", teamB: "—", round: "En attente", players: 1, bots: 0, watchers: 0, live: false, private: true },
+  { id: 240, teamA: "Trèfle FC", teamB: "Capot City", round: "Manche 1/2", players: 4, bots: 0, watchers: 12, live: true, private: false },
+  { id: 245, teamA: "Les Atouts", teamB: "—", round: "En attente", players: 2, bots: 2, watchers: 0, live: false, private: false },
+  { id: 251, teamA: "Roi & Dame", teamB: "Belote Club", round: "Manche 3/3", players: 4, bots: 0, watchers: 23, live: true, private: false },
+];
+
+function LobbyScreen() {
+  const [q, setQ] = React.useState("");
+  const [showPrivate, setShowPrivate] = React.useState(true);
+  const [liveOnly, setLiveOnly] = React.useState(false);
+  const tables = TABLES.filter((t) =>
+    (showPrivate || !t.private) && (!liveOnly || t.live) &&
+    (`${t.id} ${t.teamA} ${t.teamB}`.toLowerCase().includes(q.toLowerCase())));
+
+  return (
+    <div className="layout-lobby">
+      <aside className="layout-lobby__filters">
+        <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "var(--fs-h2)", color: "var(--text-1)" }}>Lobby</h2>
+        <LInput placeholder="Rechercher une table…" value={q} onChange={(e) => setQ(e.target.value)} iconLeft={window.Ic.search()} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span style={{ fontSize: "var(--fs-xs)", letterSpacing: "var(--ls-caps)", textTransform: "uppercase", color: "var(--text-3)" }}>Filtres</span>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <LTag selected={showPrivate} onClick={() => setShowPrivate((v) => !v)}>Privées</LTag>
+            <LTag selected={liveOnly} onClick={() => setLiveOnly((v) => !v)}>En direct</LTag>
+          </div>
+        </div>
+        <LButton variant="primary" iconLeft={window.Ic.plus()} fullWidth>Créer une table</LButton>
+      </aside>
+
+      <div className="layout-lobby__grid">
+        {tables.map((t) => (
+          <LCard key={t.id} interactive elevated padding="none"
+            header={<><span style={{ display: "flex", alignItems: "center", gap: 8 }}>Table #{t.id}{t.private && <span style={{ color: "var(--text-3)", display: "flex" }}>{window.Ic.lock()}</span>}</span>
+              {t.live ? <LBadge tone="spark" dot>Live</LBadge> : <LBadge tone="neutral">Ouverte</LBadge>}</>}>
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <LTeamBadge name={t.teamA} size={34} showName />
+                <span style={{ fontFamily: "var(--font-display)", color: "var(--text-3)", fontSize: "var(--fs-sm)" }}>vs</span>
+                {t.teamB !== "—" ? <LTeamBadge name={t.teamB} size={34} /> : <span style={{ color: "var(--text-3)", fontSize: "var(--fs-sm)" }}>1 place</span>}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "var(--fs-sm)", color: "var(--text-2)" }}>
+                <span>{t.round}</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-3)" }}>{t.players}👤 · {t.bots} BOT · {t.watchers}👁</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <LButton variant={t.live ? "secondary" : "primary"} size="sm" fullWidth>{t.live ? "Rejoindre" : "S'asseoir"}</LButton>
+                {t.live && <LButton variant="ghost" size="sm" iconLeft={window.Ic.eye({ width: 16, height: 16 })}>Observer</LButton>}
+              </div>
+            </div>
+          </LCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+window.LobbyScreen = LobbyScreen;
+
+
+/* ===== RobotsScreen.jsx ===== */
+// Écran MES ROBOTS — liste + détail/édition (sliders) + comparaison côte à côte.
+const { Card: RCard, Badge: RBadge, Button: RButton, Slider: RSlider, Select: RSelect, Switch: RSwitch, Input: RInput } = window.ContrEDesignSystem_9c78ea;
+
+const ROBOTS = [
+  { id: 1, name: "Iznogoud", agr: 0.82, conc: 0.6, vel: 0.7, conv: "aggressive", active: true, win: 73, avg: 128, games: 1204 },
+  { id: 2, name: "Roboubelot", agr: 0.4, conc: 0.85, vel: 0.5, conv: "classique", active: true, win: 68, avg: 119, games: 980 },
+  { id: 3, name: "Le Prudent", agr: 0.2, conc: 0.95, vel: 0.3, conv: "soft", active: false, win: 61, avg: 104, games: 412 },
+  { id: 4, name: "Capot-or", agr: 0.95, conc: 0.5, vel: 0.9, conv: "aggressive", active: true, win: 70, avg: 134, games: 1560 },
+];
+
+function Stat({ label, value, suffix }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <span style={{ fontSize: "var(--fs-xs)", letterSpacing: "var(--ls-caps)", textTransform: "uppercase", color: "var(--text-3)" }}>{label}</span>
+      <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--fs-h2)", color: "var(--text-1)" }}>{value}<span style={{ fontSize: "var(--fs-sm)", color: "var(--text-3)", marginLeft: 2 }}>{suffix}</span></span>
+    </div>
+  );
+}
+
+function RobotEditor({ bot, onChange }) {
+  return (
+    <RCard padding="lg" header={<><span>Édition · {bot.name}</span><RSwitch checked={bot.active} onChange={(v) => onChange({ ...bot, active: v })} label="Actif" /></>}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 20 }}>
+        <Stat label="Contrat réussi" value={bot.win} suffix="%" />
+        <Stat label="Pts / donne" value={bot.avg} suffix="" />
+        <Stat label="Parties" value={bot.games.toLocaleString("fr-FR")} suffix="" />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <RInput label="Nom" value={bot.name} onChange={(e) => onChange({ ...bot, name: e.target.value })} />
+        <RSlider label="Agressivité" value={bot.agr} min={0} max={1} onChange={(v) => onChange({ ...bot, agr: v })} format={(v) => v.toFixed(2)} />
+        <RSlider label="Concentration" value={bot.conc} min={0} max={1} onChange={(v) => onChange({ ...bot, conc: v })} format={(v) => v.toFixed(2)} />
+        <RSlider label="Vélocité" value={bot.vel} min={0} max={1} onChange={(v) => onChange({ ...bot, vel: v })} format={(v) => v.toFixed(2)} />
+        <RSelect label="Convention d'enchères" value={bot.conv} onChange={(v) => onChange({ ...bot, conv: v })}
+          options={[{ value: "classique", label: "Classique" }, { value: "soft", label: "Soft" }, { value: "aggressive", label: "Agressive" }]} />
+      </div>
+      <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+        <RButton variant="primary">Enregistrer</RButton>
+        <RButton variant="secondary" iconLeft={window.Ic.copy()}>Dupliquer</RButton>
+        <RButton variant="ghost" style={{ marginLeft: "auto", color: "var(--error)" }}>Supprimer</RButton>
+      </div>
+    </RCard>
+  );
+}
+
+function RobotsScreen() {
+  const [bots, setBots] = React.useState(ROBOTS);
+  const [selId, setSelId] = React.useState(1);
+  const [compare, setCompare] = React.useState(false);
+  const [cmpId, setCmpId] = React.useState(4);
+  const sel = bots.find((b) => b.id === selId);
+  const cmp = bots.find((b) => b.id === cmpId);
+  const update = (next) => setBots((bs) => bs.map((b) => (b.id === next.id ? next : b)));
+
+  return (
+    <div className="layout-robots">
+      <div className="layout-robots__list">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "var(--fs-h2)", color: "var(--text-1)" }}>Mes robots</h2>
+          <RButton size="sm" iconLeft={window.Ic.plus()}>Nouveau</RButton>
+        </div>
+        {bots.map((b) => (
+          <button key={b.id} onClick={() => setSelId(b.id)} className="focus-ring"
+            style={{ textAlign: "left", border: `1px solid ${selId === b.id ? "var(--accent-line)" : "var(--border-1)"}`, background: selId === b.id ? "var(--accent-ghost)" : "var(--bg-2)", borderRadius: "var(--r-md)", padding: "12px 14px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <span style={{ fontWeight: 600, color: "var(--text-1)", display: "flex", alignItems: "center", gap: 8 }}>{b.name}{!b.active && <RBadge tone="neutral">off</RBadge>}</span>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-xs)", color: "var(--text-3)" }}>{b.win}% · {b.avg} pts · {b.conv}</span>
+            </span>
+            <RBadge tone="accent">{b.games > 1000 ? "Pro" : "Rookie"}</RBadge>
+          </button>
+        ))}
+        <RButton variant="ghost" size="sm" onClick={() => setCompare((c) => !c)} style={{ marginTop: 8 }}>
+          {compare ? "← Revenir au détail" : "Comparer deux robots"}
+        </RButton>
+      </div>
+
+      <div className="layout-robots__detail">
+        {compare ? (
+          <div className="layout-robots__compare">
+            <RobotEditor bot={sel} onChange={update} />
+            <RobotEditor bot={cmp} onChange={update} />
+          </div>
+        ) : (
+          <RobotEditor bot={sel} onChange={update} />
+        )}
+      </div>
+    </div>
+  );
+}
+window.RobotsScreen = RobotsScreen;
+
+
+/* ===== TournamentScreen.jsx ===== */
+// Écran TOURNOIS — classement des équipes + fiche tournoi.
+const { Card: TCard, Badge: TBadge, Button: TButton, TeamBadge: TTeamBadge } = window.ContrEDesignSystem_9c78ea;
+
+const STANDINGS = [
+  { rank: 1, name: "Les Atouts", pts: 4820, games: 38 },
+  { rank: 2, name: "Capot City", pts: 4510, games: 40 },
+  { rank: 3, name: "Roi & Dame", pts: 4180, games: 36 },
+  { rank: 4, name: "Pique & Coeur", pts: 3990, games: 39 },
+  { rank: 5, name: "Trèfle FC", pts: 3720, games: 35 },
+  { rank: 6, name: "Belote Club", pts: 3110, games: 37 },
+];
+
+function TournamentScreen() {
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <TButton variant="primary" size="sm">Actifs</TButton>
+        <TButton variant="ghost" size="sm">À venir</TButton>
+        <TButton variant="ghost" size="sm">Terminés</TButton>
+      </div>
+      <div className="layout-tournament">
+        <div className="layout-tournament__board">
+          <h2 style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontSize: "var(--fs-h2)", color: "var(--text-1)" }}>Coupe d'Automne · classement</h2>
+          {STANDINGS.map((s) => {
+            const mine = s.name === "Les Atouts";
+            return (
+              <div key={s.rank} style={{
+                display: "grid", gridTemplateColumns: "28px 1fr auto auto", alignItems: "center", gap: 14,
+                padding: "10px 14px", borderRadius: "var(--r-md)",
+                background: mine ? "var(--accent-ghost)" : "var(--bg-2)",
+                border: `1px solid ${mine ? "var(--accent-line)" : "var(--border-1)"}`,
+              }}>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--fs-h3)", color: s.rank <= 3 ? "var(--accent)" : "var(--text-3)" }}>{s.rank}</span>
+                <TTeamBadge name={s.name} size={32} showName />
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-sm)", color: "var(--text-3)" }}>{s.games} parties</span>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--fs-h3)", color: "var(--text-1)" }}>{s.pts.toLocaleString("fr-FR")}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <aside className="layout-tournament__aside">
+          <TCard padding="lg" header="Coupe d'Automne">
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <TBadge tone="spark" dot>En cours</TBadge>
+                <span style={{ color: "var(--text-3)", fontSize: "var(--fs-sm)" }}>jusqu'au 30 nov.</span>
+              </div>
+              <p style={{ margin: 0, color: "var(--text-2)", fontSize: "var(--fs-sm)", lineHeight: 1.5 }}>
+                Compétition entre 12 clans. Les points de récompense s'accumulent à chaque partie en ligne (base 100 + écart de score + primes).
+              </p>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0", borderTop: "1px solid var(--border-1)", borderBottom: "1px solid var(--border-1)" }}>
+                <span style={{ color: "var(--text-3)", fontSize: "var(--fs-sm)" }}>Votre rang</span>
+                <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, color: "var(--accent)" }}>1<sup>er</sup> · 4 820 pts</span>
+              </div>
+              <TButton variant="primary" fullWidth>Rejoindre une partie classée</TButton>
+            </div>
+          </TCard>
+        </aside>
+      </div>
+    </div>
+  );
+}
+window.TournamentScreen = TournamentScreen;
+
+
+/* ===== app.jsx ===== */
+// Shell de l'application web : brand + nav latérale + topbar + screen switch.
+const { TeamBadge: ATeamBadge, Button: AButton, Badge: ABadge } = window.ContrEDesignSystem_9c78ea;
+
+const NAV = [
+  { id: "game", label: "Entraînement", icon: "play" },
+  { id: "lobby", label: "Lobby", icon: "cards" },
+  { id: "watch", label: "Regarder", icon: "eye" },
+  { id: "robots", label: "Mes robots", icon: "bot" },
+  { id: "tournaments", label: "Tournois", icon: "trophy" },
+];
+
+function NavItem({ item, active, onClick }) {
+  return (
+    <button onClick={onClick} className="focus-ring"
+      style={{
+        display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+        padding: "10px 12px", borderRadius: "var(--r-md)", border: 0, cursor: "pointer",
+        background: active ? "var(--accent-ghost)" : "transparent",
+        color: active ? "var(--accent)" : "var(--text-2)",
+        fontFamily: "var(--font-ui)", fontSize: "var(--fs-body)", fontWeight: active ? 600 : 500,
+      }}>
+      {window.Ic[item.icon]()}
+      <span>{item.label}</span>
+    </button>
+  );
+}
+
+function App() {
+  const [screen, setScreen] = React.useState("game");
+  const Screen = {
+    game: window.GameScreen, lobby: window.LobbyScreen, robots: window.RobotsScreen,
+    tournaments: window.TournamentScreen, watch: window.LobbyScreen,
+  }[screen];
+
+  return (
+    <div className="app-shell">
+      <div className="app-shell__brand">
+        <img src={(window.__resources && window.__resources.mark) || "../../assets/mark-contree.svg"} alt="" width="26" height="26" />
+        <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--fs-h3)", color: "var(--text-1)" }}>Contrée</span>
+      </div>
+      <div className="app-shell__topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--fs-h3)", fontWeight: 600, color: "var(--text-1)" }}>
+            {NAV.find((n) => n.id === screen)?.label}
+          </span>
+          {screen === "watch" && <ABadge tone="spark" dot>Mode spectateur</ABadge>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <ABadge tone="accent" solid>4 820 pts</ABadge>
+          <ATeamBadge name="Les Atouts" size={32} showName />
+        </div>
+      </div>
+      <nav className="app-shell__nav">
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          {NAV.map((n) => <NavItem key={n.id} item={n} active={screen === n.id} onClick={() => setScreen(n.id)} />)}
+        </div>
+      </nav>
+      <main className="app-shell__main">
+        {Screen ? <Screen /> : null}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+
+</script>
+</body>
+</html>

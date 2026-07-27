@@ -1,0 +1,16 @@
+node_modules/
+dist/
+dist-lib/
+reports/
+*.log
+*.tsbuildinfo
+.env
+.DS_Store
+mobile/cordova/www/
+mobile/cordova/platforms/
+mobile/cordova/plugins/
+coverage/
+**/coverage/
+web/e2e/report/
+web/e2e/.results/
+test-results/

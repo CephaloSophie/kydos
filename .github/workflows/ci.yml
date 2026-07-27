@@ -1,0 +1,110 @@
+name: CI — Kýdos Belote
+
+# Pipeline de non-régression AUTOMATISÉ : typecheck, tests + couverture (seuils),
+# TNR global, TNR serveur (intégration Mongo active en CI), et E2E web
+# (Playwright, navigateur réel). Chaque job publie ses rapports en artefacts.
+
+on:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main, develop] }
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  typecheck:
+    name: Typecheck (5 workspaces)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci --no-audit --no-fund
+      - run: |
+          npm --workspace belote-core run typecheck
+          npm --workspace @kydos/table-pixi run typecheck
+          npm --workspace belote-server run typecheck
+          npm --workspace belote-web run typecheck
+          npm --workspace belote-mobile run typecheck
+
+  coverage:
+    name: Tests + couverture (seuils)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci --no-audit --no-fund
+      - name: Couverture consolidée (échoue sous les seuils)
+        run: npm run coverage
+      - name: Publier les rapports de couverture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            reports/coverage-latest.json
+            packages/core/coverage/lcov.info
+            packages/table-pixi/coverage/lcov.info
+            server/coverage/lcov.info
+            web/coverage/lcov.info
+            mobile/coverage/lcov.info
+          if-no-files-found: ignore
+
+  tnr:
+    name: TNR global
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci --no-audit --no-fund
+      - name: TNR (typecheck + tests + builds + démo moteur)
+        run: npm run tnr
+      - name: Publier le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: tnr-report, path: reports/tnr-latest.json, if-no-files-found: ignore }
+
+  tnr-server:
+    name: TNR serveur + intégration MongoDB
+    runs-on: ubuntu-latest
+    env: { MONGOMS_AVAILABLE: '1' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci --no-audit --no-fund
+      - name: TNR serveur (unit + contrat + couverture + intégration Mongo)
+        run: npm run tnr:server
+      - name: Publier le rapport TNR serveur
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: tnr-server-report, path: reports/tnr-server-latest.json, if-no-files-found: ignore }
+
+  e2e-web:
+    name: E2E web (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '${{ env.NODE_VERSION }}', cache: 'npm' }
+      - run: npm ci --no-audit --no-fund
+      - name: Installer Chromium (Playwright)
+        run: npm --workspace belote-web run e2e:install
+      - name: E2E web (navigateur réel)
+        run: npm --workspace belote-web run e2e
+      - name: Publier le rapport Playwright
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            web/e2e/report
+            web/e2e/.results
+          if-no-files-found: ignore

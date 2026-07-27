@@ -1,0 +1,121 @@
+/* ============================================================================
+   CONTRÉE — LAYOUT WEB  (fichier livrable #5)
+   Grid system desktop-first + layouts nommés. Collapse à 1024px (simplifié)
+   puis 768px (bascule mobile : l'app charge alors la surface mobile).
+   N'importe AUCUNE règle de couleur de fond hors tokens.
+   ========================================================================= */
+
+/* ---- Reset doux + base applicative ----------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+.app-web {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg-1);
+  color: var(--text-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Conteneur & rythme ---------------------------------------------- */
+.container { width: 100%; max-width: 1440px; margin-inline: auto; padding-inline: var(--sp-6); }
+.stack    { display: flex; flex-direction: column; gap: var(--sp-4); }
+.row      { display: flex; align-items: center; gap: var(--sp-3); }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.grid     { display: grid; gap: var(--sp-4); }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* ---- Chrome applicatif : barre haute + nav latérale ------------------ */
+.app-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas: "brand topbar" "nav main";
+  height: 100vh;
+}
+.app-shell__brand  { grid-area: brand; display: flex; align-items: center; gap: var(--sp-3); padding-inline: var(--sp-5); border-bottom: 1px solid var(--border-1); border-right: 1px solid var(--border-1); }
+.app-shell__topbar { grid-area: topbar; display: flex; align-items: center; justify-content: space-between; padding-inline: var(--sp-6); border-bottom: 1px solid var(--border-1); background: var(--bg-1); }
+.app-shell__nav    { grid-area: nav; padding: var(--sp-4) var(--sp-3); border-right: 1px solid var(--border-1); background: var(--bg-1); overflow-y: auto; }
+.app-shell__main   { grid-area: main; overflow-y: auto; padding: var(--sp-6); background: var(--bg-1); }
+
+/* =====================================================================
+   .layout-game — table 2/3 + panneaux droits 1/3 (stack annonces/console)
+   ===================================================================== */
+.layout-game {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--sp-4);
+  height: 100%;
+  min-height: 0;            /* autorise les enfants à scroller            */
+}
+.layout-game__table { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+.layout-game__side {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); /* AnnounceStream | LogConsole */
+  gap: var(--sp-4);
+}
+.layout-game__side > * { min-height: 0; }   /* chacun scrolle en interne   */
+
+/* =====================================================================
+   .layout-lobby — filtres + grille de tables
+   ===================================================================== */
+.layout-lobby { display: grid; grid-template-columns: 240px 1fr; gap: var(--sp-6); align-items: start; }
+.layout-lobby__filters { position: sticky; top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
+.layout-lobby__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sp-4); }
+
+/* =====================================================================
+   .layout-robots — liste (gauche) + détail/édition ou comparaison (droite)
+   ===================================================================== */
+.layout-robots { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: var(--sp-5); align-items: start; height: 100%; min-height: 0; }
+.layout-robots__list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--sp-2); }
+.layout-robots__detail { min-height: 0; overflow-y: auto; }
+.layout-robots__compare { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); } /* 2 robots côte à côte */
+
+/* =====================================================================
+   .layout-tournament — classement (gauche) + infos/fiche (droite)
+   ===================================================================== */
+.layout-tournament { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--sp-6); align-items: start; }
+.layout-tournament__board { display: flex; flex-direction: column; gap: var(--sp-2); }
+.layout-tournament__aside { position: sticky; top: var(--sp-6); display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* =====================================================================
+   .layout-profile — entête joueur + colonnes stats/robots/équipe
+   ===================================================================== */
+.layout-profile { display: flex; flex-direction: column; gap: var(--sp-6); }
+.layout-profile__header { display: flex; align-items: center; gap: var(--sp-5); }
+.layout-profile__cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); align-items: start; }
+
+/* ---- Utilitaires d'espacement ---------------------------------------- */
+.gap-1 { gap: var(--sp-1); } .gap-2 { gap: var(--sp-2); } .gap-3 { gap: var(--sp-3); }
+.gap-4 { gap: var(--sp-4); } .gap-6 { gap: var(--sp-6); }
+.mt-2 { margin-top: var(--sp-2); } .mt-4 { margin-top: var(--sp-4); } .mt-6 { margin-top: var(--sp-6); }
+.p-4 { padding: var(--sp-4); } .p-6 { padding: var(--sp-6); }
+.scroll-y { overflow-y: auto; min-height: 0; }
+
+/* =====================================================================
+   COLLAPSE — 1024px : on dégrade en colonnes empilées (panneaux sous table)
+   ===================================================================== */
+@media (max-width: 1024px) {
+  .app-shell { grid-template-columns: 64px 1fr; }      /* nav en icônes    */
+  .app-shell__brand { padding-inline: var(--sp-3); }
+  .layout-game { grid-template-columns: 1fr; grid-auto-rows: minmax(0, auto); }
+  .layout-game__side { grid-template-rows: auto auto; }
+  .layout-robots { grid-template-columns: 1fr; }
+  .layout-robots__compare { grid-template-columns: 1fr; }
+  .layout-tournament { grid-template-columns: 1fr; }
+  .layout-profile__cols { grid-template-columns: 1fr 1fr; }
+  .layout-lobby { grid-template-columns: 1fr; }
+  .layout-lobby__filters { position: static; }
+}
+
+/* 768px : sous ce seuil, l'application bascule sur la SURFACE MOBILE.
+   Ce garde-fou masque le shell web si jamais il reste monté. */
+@media (max-width: 768px) {
+  .app-shell { grid-template-columns: 1fr; grid-template-areas: "topbar" "main"; grid-template-rows: 56px 1fr; }
+  .app-shell__brand, .app-shell__nav { display: none; }
+  .layout-profile__cols { grid-template-columns: 1fr; }
+}

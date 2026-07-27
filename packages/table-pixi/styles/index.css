@@ -1,0 +1,7 @@
+/* table-pixi — design-system styles. One import. */
+@import './tokens.css';
+@import './table.css';
+@import './hud.css';
+@import './panel.css';
+@import './scoresheet.css';
+@import './compact.css';

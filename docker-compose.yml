@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: belote-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - belote_mongo:/data/db
+volumes:
+  belote_mongo:

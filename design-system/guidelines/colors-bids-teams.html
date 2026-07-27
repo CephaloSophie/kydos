@@ -1,0 +1,29 @@
+<!-- @dsCard group="Colors" viewport="700x140" name="Badges d'enchère & équipes" subtitle="pass/bid/contre/surcontre + couleurs d'équipe HSL" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+  body{margin:0;background:var(--bg-1);font-family:var(--font-ui);padding:18px;display:flex;gap:26px;align-items:center}
+  .grp{display:flex;flex-direction:column;gap:9px}
+  .lab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+  .badges{display:flex;gap:8px}
+  .b{font-family:var(--font-display);font-weight:600;font-size:13px;padding:6px 12px;border-radius:var(--r-full)}
+  .teams{display:flex;gap:10px}
+  .team{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-1)}
+  .dot{width:16px;height:16px;border-radius:var(--r-full)}
+</style></head><body>
+  <div class="grp">
+    <span class="lab">Enchères</span>
+    <div class="badges">
+      <span class="b" style="background:var(--bid-pass-bg);color:var(--bid-pass-fg)">Passe</span>
+      <span class="b" style="background:var(--bid-bid-bg);color:var(--bid-bid-fg)">110 ♥</span>
+      <span class="b" style="background:var(--bid-contre-bg);color:var(--bid-contre-fg)">Contré</span>
+      <span class="b" style="background:var(--bid-surcontre-bg);color:var(--bid-surcontre-fg)">Surcontré</span>
+    </div>
+  </div>
+  <div class="grp">
+    <span class="lab">Équipes (HSL dynamique)</span>
+    <div class="teams">
+      <span class="team"><span class="dot" style="background:var(--team-a)"></span>Équipe A</span>
+      <span class="team"><span class="dot" style="background:var(--team-b)"></span>Équipe B</span>
+    </div>
+  </div>
+</body></html>

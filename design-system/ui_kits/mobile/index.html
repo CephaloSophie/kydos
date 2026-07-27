@@ -1,0 +1,27 @@
+<!-- @dsCard group="Mobile UI Kit" viewport="402x150" name="Mobile — accueil (dashboard)" subtitle="Surface mobile vanilla, écran 390px" -->
+<!-- @startingPoint section="Mobile" subtitle="App mobile Contrée : dashboard, jeu portrait, robots" viewport="402x860" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contrée — Mobile</title>
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="./mobile.css">
+</head>
+<body class="kit-stage">
+  <div class="device">
+    <div class="device__notch"></div>
+    <div class="app-mobile" data-surface="mobile">
+      <main class="m-screen">
+        <header class="m-topbar" id="topbar"></header>
+        <section class="m-content" id="content"></section>
+        <nav class="m-tabbar" id="tabbar" role="tablist"></nav>
+      </main>
+      <div id="overlay-root"></div>
+      <div class="m-toast-host" id="toasts"></div>
+    </div>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

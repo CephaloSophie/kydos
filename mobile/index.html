@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070f" />
+    <title>Kýdos Belote</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Manrope:wght@400..800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <!-- ══════════════════════════════════════════════════════════════════
+         CSS CRITIQUE EN LIGNE — appliqué AVANT le chargement du bundle, pour
+         que l'écran d'initialisation et la garde d'orientation soient déjà
+         AU THÈME DU JEU (fond sombre, or), et non un écran blanc par défaut.
+         ══════════════════════════════════════════════════════════════════ -->
+    <style>
+      :root {
+        --c-night: #05070f; --c-gold: #e6c46a; --c-text: #e8ecf4; --c-soft: #a9b4c9; --c-mute: #6c7891;
+        --c-success: #7ecb98; --c-danger: #e85d70;
+        --f-title: 'Bricolage Grotesque', system-ui, sans-serif;
+        --f-ui: 'Manrope', system-ui, sans-serif; --f-mono: 'JetBrains Mono', monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: radial-gradient(1200px 700px at 50% 30%, #0b1120, #05070f 70%); color: var(--c-text); font-family: var(--f-ui); overflow: hidden; }
+
+      /* ── Écran d'initialisation (waiting + 4 robots animés) ────────────── */
+      #boot {
+        position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 28px; text-align: center;
+        background: radial-gradient(1200px 700px at 50% 30%, #0b1120, #05070f 70%);
+        transition: opacity .5s ease; padding: 24px;
+      }
+      #boot.hidden { opacity: 0; pointer-events: none; }
+      #boot .wordmark { font-family: var(--f-title); font-weight: 800; font-size: 30px; letter-spacing: .01em; }
+      #boot .wordmark b { color: var(--c-gold); }
+      #boot .robots { display: flex; gap: 20px; align-items: flex-end; height: 92px; }
+      /* Un robot = corps + tête + yeux, dessiné en pur CSS, qui rebondit. */
+      .bot { width: 52px; display: flex; flex-direction: column; align-items: center; animation: botBounce 1.4s ease-in-out infinite; }
+      .bot:nth-child(1) { animation-delay: 0s; } .bot:nth-child(2) { animation-delay: .18s; }
+      .bot:nth-child(3) { animation-delay: .36s; } .bot:nth-child(4) { animation-delay: .54s; }
+      .bot__head { width: 34px; height: 26px; border-radius: 9px; background: linear-gradient(180deg, #1b2740, #131d31); border: 2px solid var(--bot-accent, var(--c-gold)); position: relative; box-shadow: 0 0 14px -2px var(--bot-accent, var(--c-gold)); }
+      .bot__head::before { /* antenne */ content: ''; position: absolute; top: -10px; left: 50%; width: 2px; height: 8px; background: var(--bot-accent, var(--c-gold)); transform: translateX(-50%); }
+      .bot__head::after { /* pastille antenne */ content: ''; position: absolute; top: -14px; left: 50%; width: 6px; height: 6px; border-radius: 50%; background: var(--bot-accent, var(--c-gold)); transform: translateX(-50%); box-shadow: 0 0 8px var(--bot-accent, var(--c-gold)); }
+      .bot__eyes { position: absolute; top: 9px; left: 0; right: 0; display: flex; justify-content: center; gap: 7px; }
+      .bot__eyes i { width: 6px; height: 6px; border-radius: 50%; background: var(--bot-accent, var(--c-gold)); animation: botBlink 2.6s infinite; }
+      .bot__body { margin-top: 4px; width: 26px; height: 20px; border-radius: 7px; background: linear-gradient(180deg, #16223a, #101a2c); border: 1px solid rgba(255,255,255,.12); }
+      #boot .waiting { display: flex; align-items: center; gap: 10px; font-family: var(--f-mono); font-size: 13px; color: var(--c-soft); letter-spacing: .08em; }
+      #boot .waiting .dots { display: inline-flex; gap: 4px; }
+      #boot .waiting .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--c-gold); opacity: .3; animation: dotPulse 1.2s infinite; }
+      #boot .waiting .dots i:nth-child(2) { animation-delay: .2s; } #boot .waiting .dots i:nth-child(3) { animation-delay: .4s; }
+      @keyframes botBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+      @keyframes botBlink { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.1); } }
+      @keyframes dotPulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+
+      /* ── Garde d'orientation (portrait) — AU THÈME également ────────────── */
+      .orient-guard {
+        position: fixed; inset: 0; z-index: 9998; display: none; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 32px;
+        background: radial-gradient(1200px 700px at 50% 30%, #0b1120, #05070f 70%);
+      }
+      .orient-guard__phone { width: 56px; height: 92px; border-radius: 12px; border: 2px solid var(--c-gold); box-shadow: 0 0 20px -4px var(--c-gold); animation: rotateHint 2.4s ease-in-out infinite; }
+      .orient-guard .title { font-family: var(--f-title); font-weight: 800; font-size: 20px; color: var(--c-text); }
+      .orient-guard p { max-width: 280px; line-height: 1.5; color: var(--c-mute); font-size: 13px; margin: 0; }
+      @keyframes rotateHint { 0%, 40% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+      @media (orientation: portrait) and (max-width: 900px) {
+        .orient-guard { display: flex; } #app { display: none; } #boot { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Écran d'initialisation : thème du jeu, « waiting », 4 robots animés.
+         Retiré par main.tsx dès que l'application est montée. -->
+    <div id="boot">
+      <div class="wordmark"><b>Kýdos</b> Belote</div>
+      <div class="robots">
+        <div class="bot" style="--bot-accent:#e6c46a"><div class="bot__head"><div class="bot__eyes"><i></i><i></i></div></div><div class="bot__body"></div></div>
+        <div class="bot" style="--bot-accent:#7ecb98"><div class="bot__head"><div class="bot__eyes"><i></i><i></i></div></div><div class="bot__body"></div></div>
+        <div class="bot" style="--bot-accent:#6b78ea"><div class="bot__head"><div class="bot__eyes"><i></i><i></i></div></div><div class="bot__body"></div></div>
+        <div class="bot" style="--bot-accent:#e85d70"><div class="bot__head"><div class="bot__eyes"><i></i><i></i></div></div><div class="bot__body"></div></div>
+      </div>
+      <div class="waiting">waiting<span class="dots"><i></i><i></i><i></i></span></div>
+    </div>
+
+    <!-- Garde d'orientation paysage -->
+    <div class="orient-guard">
+      <div class="orient-guard__phone"></div>
+      <div class="title">Pivotez votre appareil</div>
+      <p>Kýdos Belote se joue en mode paysage pour une immersion maximale à la table.</p>
+    </div>
+
+    <!-- Racine de l'application -->
+    <div id="app" class="app"><div id="viewport"></div></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

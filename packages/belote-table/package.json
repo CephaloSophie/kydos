@@ -1,0 +1,35 @@
+{
+  "name": "@kanto-aplo/belote-table",
+  "version": "0.1.0",
+  "description": "Table de Belote Contrée autonome, responsive et plein écran — composant React piloté par un client socket/REST configurable.",
+  "type": "module",
+  "main": "./dist/belote-table.js",
+  "module": "./dist/belote-table.js",
+  "types": "./types.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types.d.ts",
+      "import": "./dist/belote-table.js"
+    },
+    "./styles.css": "./dist/belote-table.css"
+  },
+  "files": [
+    "dist",
+    "types.d.ts",
+    "README.md"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.7.5"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "license": "UNLICENSED"
+}

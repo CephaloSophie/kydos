@@ -1,0 +1,53 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Core — boutons, badges, tags, carte" subtitle="Button · IconButton · Badge · Tag · Card" -->
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>
+  body{margin:0;background:var(--bg-1);font-family:var(--font-ui);color:var(--text-2);padding:20px}
+  .grp{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px}
+  .lab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);width:100%;margin-bottom:2px}
+</style></head><body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { Button, IconButton, Badge, Tag, Card } = window.ContrEDesignSystem_9c78ea;
+const Eye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>;
+const Pause = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>;
+function Demo(){
+  const [sel,setSel]=React.useState(true);
+  return <>
+    <div className="grp"><span className="lab">Button — variantes</span>
+      <Button variant="primary">Rejoindre</Button>
+      <Button variant="secondary" iconLeft={<Eye/>}>Observer</Button>
+      <Button variant="ghost">Annuler</Button>
+      <Button variant="danger">Supprimer</Button>
+      <Button variant="spark">Live</Button>
+      <Button variant="primary" loading>Chargement</Button>
+      <Button variant="secondary" disabled>Désactivé</Button>
+    </div>
+    <div className="grp"><span className="lab">Tailles + IconButton</span>
+      <Button size="sm">sm</Button><Button size="md">md</Button><Button size="lg">lg</Button>
+      <IconButton label="Voir" variant="solid"><Eye/></IconButton>
+      <IconButton label="Pause" variant="ghost" active><Pause/></IconButton>
+      <IconButton label="Atout" variant="accent"><Pause/></IconButton>
+    </div>
+    <div className="grp"><span className="lab">Badge & Tag</span>
+      <Badge tone="spark" dot>En direct</Badge>
+      <Badge tone="success">Contrat réussi</Badge>
+      <Badge tone="warning">Capot</Badge>
+      <Badge tone="error">Dedans</Badge>
+      <Badge tone="accent" solid>+240</Badge>
+      <Tag selected={sel} onClick={()=>setSel(!sel)}>Tables privées</Tag>
+      <Tag onRemove={()=>{}}>agressif</Tag>
+    </div>
+    <div className="grp"><span className="lab">Card</span>
+      <Card elevated interactive header={<><span>Table #214</span><Badge tone="spark" dot>Live</Badge></>} style={{width:240}}>
+        <div style={{color:'var(--text-2)',fontSize:13}}>Les Atouts · 2 joueurs · 2 robots<br/>Manche 2 / 3 — 1240 pts</div>
+      </Card>
+    </div>
+  </>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo/>);
+</script>
+</body></html>

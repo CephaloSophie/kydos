@@ -1,0 +1,30 @@
+{
+  "name": "@kydos/table-pixi",
+  "version": "11.9.0",
+  "private": true,
+  "type": "module",
+  "description": "Table de belote PixiJS — composant préconfigurable, PARTAGÉ par l'application web et l'application mobile. Aucune des deux applications ne dépend de l'autre.",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./styles.css": "./styles/index.css"
+  },
+  "peerDependencies": {
+    "pixi.js": "^8.19.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "dependencies": {
+    "belote-core": "*"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.9",
+    "typescript": "^5.5.4"
+  }
+}

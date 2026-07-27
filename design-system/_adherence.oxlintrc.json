@@ -1,0 +1,631 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/bidding/**",
+              "components/core/**",
+              "components/devtools/**",
+              "components/feedback/**",
+              "components/forms/**",
+              "components/score/**",
+              "components/table/**",
+              "ui_kits/mobile/**",
+              "ui_kits/web/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Chakra Petch|Manrope|JetBrains Mono))/i]",
+        "message": "Font not provided by the design system. Available: Chakra Petch, Manrope, JetBrains Mono."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnouncePopup'] > JSXAttribute > JSXIdentifier[name!=/^(?:taker|team|atout|contract|kind|visible|key|ref|className|style|children)$/]",
+        "message": "<AnnouncePopup> doesn't accept that prop. Declared props: taker, team, atout, contract, kind, visible."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnouncePopup'] > JSXAttribute[name.name='team'] > Literal[value!=/^(?:a|b)$/]",
+        "message": "<AnnouncePopup> team must be one of 'a' | 'b'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnouncePopup'] > JSXAttribute[name.name='atout'] > Literal[value!=/^(?:hearts|diamonds|spades|clubs|sa|ta)$/]",
+        "message": "<AnnouncePopup> atout must be one of 'hearts' | 'diamonds' | 'spades' | 'clubs' | 'sa' | 'ta'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnouncePopup'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:bid|contre|surcontre)$/]",
+        "message": "<AnnouncePopup> kind must be one of 'bid' | 'contre' | 'surcontre'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnounceEntry'] > JSXAttribute > JSXIdentifier[name!=/^(?:player|team|isRobot|kind|value|suit|round|key|ref|className|style|children)$/]",
+        "message": "<AnnounceEntry> doesn't accept that prop. Declared props: player, team, isRobot, kind, value, suit, round."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnounceEntry'] > JSXAttribute[name.name='team'] > Literal[value!=/^(?:a|b)$/]",
+        "message": "<AnnounceEntry> team must be one of 'a' | 'b'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnounceEntry'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:pass|bid|contre|surcontre)$/]",
+        "message": "<AnnounceEntry> kind must be one of 'pass' | 'bid' | 'contre' | 'surcontre'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='AnnounceEntry'] > JSXAttribute[name.name='suit'] > Literal[value!=/^(?:hearts|diamonds|spades|clubs|sa|ta)$/]",
+        "message": "<AnnounceEntry> suit must be one of 'hearts' | 'diamonds' | 'spades' | 'clubs' | 'sa' | 'ta'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|solid|dot|children|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: tone, solid, dot, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:neutral|accent|success|warning|error|info|spark)$/]",
+        "message": "<Badge> tone must be one of 'neutral' | 'accent' | 'success' | 'warning' | 'error' | 'info' | 'spark'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BidBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:kind|value|suit|team|size|animate|key|ref|className|style|children)$/]",
+        "message": "<BidBadge> doesn't accept that prop. Declared props: kind, value, suit, team, size, animate."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BidBadge'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:pass|bid|contre|surcontre)$/]",
+        "message": "<BidBadge> kind must be one of 'pass' | 'bid' | 'contre' | 'surcontre'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BidBadge'] > JSXAttribute[name.name='suit'] > Literal[value!=/^(?:hearts|diamonds|spades|clubs|sa|ta)$/]",
+        "message": "<BidBadge> suit must be one of 'hearts' | 'diamonds' | 'spades' | 'clubs' | 'sa' | 'ta'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BidBadge'] > JSXAttribute[name.name='team'] > Literal[value!=/^(?:a|b)$/]",
+        "message": "<BidBadge> team must be one of 'a' | 'b'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BidBadge'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<BidBadge> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|iconLeft|iconRight|fullWidth|loading|disabled|children|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, iconLeft, iconRight, fullWidth, loading, disabled, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|ghost|danger|spark)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'secondary' | 'ghost' | 'danger' | 'spark'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:as|elevated|interactive|padding|header|footer|children|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: as, elevated, interactive, padding, header, footer, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute[name.name='padding'] > Literal[value!=/^(?:none|sm|md|lg)$/]",
+        "message": "<Card> padding must be one of 'none' | 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ControlBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:playing|speed|delayBefore|delayAfter|onTogglePlay|onStep|onSpeed|onDelayBefore|onDelayAfter|key|ref|className|style|children)$/]",
+        "message": "<ControlBar> doesn't accept that prop. Declared props: playing, speed, delayBefore, delayAfter, onTogglePlay, onStep, onSpeed, onDelayBefore, onDelayAfter."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Dialog'] > JSXAttribute > JSXIdentifier[name!=/^(?:open|title|onClose|footer|width|children|key|ref|className|style|children)$/]",
+        "message": "<Dialog> doesn't accept that prop. Declared props: open, title, onClose, footer, width, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|label|active|disabled|children|key|ref|className|style|children)$/]",
+        "message": "<IconButton> doesn't accept that prop. Declared props: variant, size, label, active, disabled, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:ghost|solid|accent)$/]",
+        "message": "<IconButton> variant must be one of 'ghost' | 'solid' | 'accent'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='IconButton'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<IconButton> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|hint|error|iconLeft|addonRight|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: label, hint, error, iconLeft, addonRight."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='LogEntry'] > JSXAttribute > JSXIdentifier[name!=/^(?:level|msg|ts|key|ref|className|style|children)$/]",
+        "message": "<LogEntry> doesn't accept that prop. Declared props: level, msg, ts."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PlayingCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:rank|suit|size|faceDown|playable|winning|disabled|raised|onClick|key|ref|className|style|children)$/]",
+        "message": "<PlayingCard> doesn't accept that prop. Declared props: rank, suit, size, faceDown, playable, winning, disabled, raised, onClick."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PlayingCard'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<PlayingCard> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='RecapRow'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|a|b|contract|roundEnd|key|ref|className|style|children)$/]",
+        "message": "<RecapRow> doesn't accept that prop. Declared props: label, a, b, contract, roundEnd."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='ScoreTeam'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|score|color|key|ref|className|style|children)$/]",
+        "message": "<ScoreTeam> doesn't accept that prop. Declared props: name, score, color."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SelectOption'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|label|key|ref|className|style|children)$/]",
+        "message": "<SelectOption> doesn't accept that prop. Declared props: value, label."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Slider'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|min|max|step|onChange|format|disabled|accent|key|ref|className|style|children)$/]",
+        "message": "<Slider> doesn't accept that prop. Declared props: label, value, min, max, step, onChange, format, disabled, accent."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:checked|onChange|label|disabled|id|key|ref|className|style|children)$/]",
+        "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled, id."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FeltSeat'] > JSXAttribute > JSXIdentifier[name!=/^(?:dir|name|team|isRobot|cards|active|key|ref|className|style|children)$/]",
+        "message": "<FeltSeat> doesn't accept that prop. Declared props: dir, name, team, isRobot, cards, active."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='FeltSeat'] > JSXAttribute[name.name='dir'] > Literal[value!=/^(?:north|east|south|west)$/]",
+        "message": "<FeltSeat> dir must be one of 'north' | 'east' | 'south' | 'west'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tag'] > JSXAttribute > JSXIdentifier[name!=/^(?:selected|onRemove|children|key|ref|className|style|children)$/]",
+        "message": "<Tag> doesn't accept that prop. Declared props: selected, onRemove, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='TeamBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|size|showName|points|animate|key|ref|className|style|children)$/]",
+        "message": "<TeamBadge> doesn't accept that prop. Declared props: name, size, showName, points, animate."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|title|message|icon|onClose|action|key|ref|className|style|children)$/]",
+        "message": "<Toast> doesn't accept that prop. Declared props: tone, title, message, icon, onClose, action."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:neutral|accent|success|warning|error|info|spark)$/]",
+        "message": "<Toast> tone must be one of 'neutral' | 'accent' | 'success' | 'warning' | 'error' | 'info' | 'spark'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tooltip'] > JSXAttribute > JSXIdentifier[name!=/^(?:content|side|children|key|ref|className|style|children)$/]",
+        "message": "<Tooltip> doesn't accept that prop. Declared props: content, side, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tooltip'] > JSXAttribute[name.name='side'] > Literal[value!=/^(?:top|bottom|left|right)$/]",
+        "message": "<Tooltip> side must be one of 'top' | 'bottom' | 'left' | 'right'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "AnnouncePopup": {
+        "replaces": []
+      },
+      "AnnounceEntry": {
+        "replaces": []
+      },
+      "Badge": {
+        "replaces": []
+      },
+      "BidBadge": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "ControlBar": {
+        "replaces": []
+      },
+      "Dialog": {
+        "replaces": []
+      },
+      "IconButton": {
+        "replaces": []
+      },
+      "Input": {
+        "replaces": []
+      },
+      "LogEntry": {
+        "replaces": []
+      },
+      "PlayingCard": {
+        "replaces": []
+      },
+      "RecapRow": {
+        "replaces": []
+      },
+      "ScoreTeam": {
+        "replaces": []
+      },
+      "SelectOption": {
+        "replaces": []
+      },
+      "Slider": {
+        "replaces": []
+      },
+      "Switch": {
+        "replaces": []
+      },
+      "FeltSeat": {
+        "replaces": []
+      },
+      "Tag": {
+        "replaces": []
+      },
+      "TeamBadge": {
+        "replaces": []
+      },
+      "Toast": {
+        "replaces": []
+      },
+      "Tooltip": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-dim",
+      "--accent-ghost",
+      "--accent-h",
+      "--accent-l",
+      "--accent-line",
+      "--accent-s",
+      "--accent-strong",
+      "--bg-0",
+      "--bg-1",
+      "--bg-2",
+      "--bg-3",
+      "--bg-4",
+      "--bg-inset",
+      "--bid-bid-bg",
+      "--bid-bid-fg",
+      "--bid-contre-bg",
+      "--bid-contre-fg",
+      "--bid-pass-bg",
+      "--bid-pass-fg",
+      "--bid-surcontre-bg",
+      "--bid-surcontre-fg",
+      "--border-1",
+      "--border-2",
+      "--border-strong",
+      "--card-back",
+      "--card-back-line",
+      "--card-black",
+      "--card-disabled",
+      "--card-face",
+      "--card-face-edge",
+      "--card-playable",
+      "--card-red",
+      "--card-winning",
+      "--control-h",
+      "--control-h-lg",
+      "--control-h-sm",
+      "--disabled-bg",
+      "--disabled-opacity",
+      "--dur-base",
+      "--dur-fast",
+      "--dur-slow",
+      "--ease-in-out",
+      "--ease-out",
+      "--error",
+      "--error-dim",
+      "--error-ghost",
+      "--fab-size",
+      "--felt",
+      "--felt-bright",
+      "--felt-edge",
+      "--felt-line",
+      "--felt-rail",
+      "--focus-ring",
+      "--focus-ring-offset",
+      "--focus-ring-w",
+      "--font-display",
+      "--font-mono",
+      "--font-ui",
+      "--fs-body",
+      "--fs-display",
+      "--fs-h1",
+      "--fs-h2",
+      "--fs-h3",
+      "--fs-mono",
+      "--fs-sm",
+      "--fs-xs",
+      "--fw-bold",
+      "--fw-medium",
+      "--fw-regular",
+      "--fw-semibold",
+      "--glow-accent",
+      "--glow-win",
+      "--info",
+      "--info-dim",
+      "--info-ghost",
+      "--lh-display",
+      "--lh-normal",
+      "--lh-tight",
+      "--log-bg",
+      "--log-debug",
+      "--log-error",
+      "--log-gutter",
+      "--log-info",
+      "--log-trace",
+      "--log-warning",
+      "--ls-caps",
+      "--ls-display",
+      "--r-2xl",
+      "--r-card",
+      "--r-full",
+      "--r-lg",
+      "--r-md",
+      "--r-sm",
+      "--r-xl",
+      "--r-xs",
+      "--safe-bottom",
+      "--safe-top",
+      "--score-band-h",
+      "--shadow-1",
+      "--shadow-2",
+      "--shadow-3",
+      "--shadow-inset",
+      "--shadow-pop",
+      "--shadow-sheet",
+      "--sp-0",
+      "--sp-1",
+      "--sp-10",
+      "--sp-12",
+      "--sp-16",
+      "--sp-2",
+      "--sp-20",
+      "--sp-24",
+      "--sp-3",
+      "--sp-4",
+      "--sp-5",
+      "--sp-6",
+      "--sp-8",
+      "--sp-screen-x",
+      "--sp-screen-y",
+      "--spark",
+      "--spark-dim",
+      "--spark-ghost",
+      "--state-active",
+      "--state-hover",
+      "--state-selected",
+      "--success",
+      "--success-dim",
+      "--success-ghost",
+      "--tabbar-h",
+      "--tap-min",
+      "--team-a",
+      "--team-a-h",
+      "--team-a-l",
+      "--team-a-line",
+      "--team-a-s",
+      "--team-a-soft",
+      "--team-b",
+      "--team-b-h",
+      "--team-b-l",
+      "--team-b-line",
+      "--team-b-s",
+      "--team-b-soft",
+      "--text-1",
+      "--text-2",
+      "--text-3",
+      "--text-inverse",
+      "--text-on-accent",
+      "--topbar-h",
+      "--warning",
+      "--warning-dim",
+      "--warning-ghost",
+      "--z-announce",
+      "--z-base",
+      "--z-cards",
+      "--z-dropdown",
+      "--z-felt",
+      "--z-modal",
+      "--z-overlay",
+      "--z-sticky",
+      "--z-toast",
+      "--z-tooltip"
+    ],
+    "tokenKinds": {
+      "--bg-0": "color",
+      "--bg-1": "color",
+      "--bg-2": "color",
+      "--bg-3": "color",
+      "--bg-4": "color",
+      "--bg-inset": "color",
+      "--text-1": "font",
+      "--text-2": "font",
+      "--text-3": "font",
+      "--text-on-accent": "font",
+      "--text-inverse": "font",
+      "--border-1": "color",
+      "--border-2": "color",
+      "--border-strong": "color",
+      "--accent-h": "other",
+      "--accent-s": "spacing",
+      "--accent-l": "spacing",
+      "--accent": "color",
+      "--accent-strong": "color",
+      "--accent-dim": "color",
+      "--accent-ghost": "color",
+      "--accent-line": "color",
+      "--spark": "color",
+      "--spark-dim": "color",
+      "--spark-ghost": "color",
+      "--success": "color",
+      "--success-dim": "color",
+      "--success-ghost": "color",
+      "--warning": "color",
+      "--warning-dim": "color",
+      "--warning-ghost": "color",
+      "--error": "color",
+      "--error-dim": "color",
+      "--error-ghost": "color",
+      "--info": "color",
+      "--info-dim": "color",
+      "--info-ghost": "color",
+      "--felt": "color",
+      "--felt-bright": "color",
+      "--felt-edge": "color",
+      "--felt-rail": "color",
+      "--felt-line": "color",
+      "--card-face": "color",
+      "--card-face-edge": "color",
+      "--card-red": "color",
+      "--card-black": "color",
+      "--card-back": "color",
+      "--card-back-line": "color",
+      "--card-playable": "color",
+      "--card-winning": "color",
+      "--card-disabled": "other",
+      "--log-error": "color",
+      "--log-warning": "color",
+      "--log-info": "color",
+      "--log-debug": "color",
+      "--log-trace": "color",
+      "--log-bg": "color",
+      "--log-gutter": "color",
+      "--bid-pass-bg": "color",
+      "--bid-pass-fg": "color",
+      "--bid-bid-bg": "color",
+      "--bid-bid-fg": "color",
+      "--bid-contre-bg": "color",
+      "--bid-contre-fg": "color",
+      "--bid-surcontre-bg": "color",
+      "--bid-surcontre-fg": "color",
+      "--team-a-h": "other",
+      "--team-a-s": "spacing",
+      "--team-a-l": "spacing",
+      "--team-b-h": "other",
+      "--team-b-s": "spacing",
+      "--team-b-l": "spacing",
+      "--team-a": "color",
+      "--team-b": "color",
+      "--team-a-soft": "color",
+      "--team-b-soft": "color",
+      "--team-a-line": "color",
+      "--team-b-line": "color",
+      "--state-hover": "color",
+      "--state-active": "color",
+      "--state-selected": "color",
+      "--focus-ring": "color",
+      "--focus-ring-w": "spacing",
+      "--focus-ring-offset": "spacing",
+      "--disabled-opacity": "other",
+      "--disabled-bg": "color",
+      "--sp-0": "other",
+      "--sp-1": "spacing",
+      "--sp-2": "spacing",
+      "--sp-3": "spacing",
+      "--sp-4": "spacing",
+      "--sp-5": "spacing",
+      "--sp-6": "spacing",
+      "--sp-8": "spacing",
+      "--sp-10": "spacing",
+      "--sp-12": "spacing",
+      "--sp-16": "spacing",
+      "--sp-20": "spacing",
+      "--sp-24": "spacing",
+      "--r-xs": "spacing",
+      "--r-sm": "spacing",
+      "--r-md": "spacing",
+      "--r-lg": "spacing",
+      "--r-xl": "spacing",
+      "--r-2xl": "spacing",
+      "--r-card": "spacing",
+      "--r-full": "spacing",
+      "--shadow-1": "shadow",
+      "--shadow-2": "shadow",
+      "--shadow-3": "shadow",
+      "--shadow-pop": "shadow",
+      "--shadow-inset": "shadow",
+      "--glow-accent": "color",
+      "--glow-win": "color",
+      "--font-display": "font",
+      "--font-ui": "font",
+      "--font-mono": "font",
+      "--fs-display": "spacing",
+      "--lh-display": "other",
+      "--ls-display": "spacing",
+      "--fs-h1": "spacing",
+      "--fs-h2": "spacing",
+      "--fs-h3": "spacing",
+      "--fs-body": "spacing",
+      "--fs-sm": "spacing",
+      "--fs-xs": "spacing",
+      "--fs-mono": "spacing",
+      "--lh-tight": "other",
+      "--lh-normal": "other",
+      "--fw-regular": "other",
+      "--fw-medium": "other",
+      "--fw-semibold": "other",
+      "--fw-bold": "other",
+      "--ls-caps": "spacing",
+      "--control-h": "spacing",
+      "--control-h-sm": "spacing",
+      "--control-h-lg": "spacing",
+      "--tap-min": "spacing",
+      "--ease-out": "other",
+      "--ease-in-out": "other",
+      "--dur-fast": "other",
+      "--dur-base": "other",
+      "--dur-slow": "other",
+      "--z-base": "other",
+      "--z-felt": "other",
+      "--z-cards": "other",
+      "--z-announce": "other",
+      "--z-sticky": "other",
+      "--z-dropdown": "other",
+      "--z-overlay": "other",
+      "--z-modal": "other",
+      "--z-toast": "other",
+      "--z-tooltip": "other",
+      "--sp-screen-x": "spacing",
+      "--sp-screen-y": "spacing",
+      "--tabbar-h": "spacing",
+      "--topbar-h": "spacing",
+      "--score-band-h": "spacing",
+      "--fab-size": "spacing",
+      "--safe-top": "color",
+      "--safe-bottom": "color",
+      "--shadow-sheet": "shadow"
+    },
+    "fontFamilies": [
+      "Chakra Petch",
+      "JetBrains Mono",
+      "Manrope"
+    ]
+  }
+}
