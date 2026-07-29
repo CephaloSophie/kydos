@@ -1,3 +1,5 @@
+> **Connexion mobile ↔ serveur** : `docs/mobile-connection.md` — `make check` pour diagnostiquer.
+
 # Belote Contrée — plateforme full-stack
 
 Monorepo : **moteur partagé** (TypeScript) + **couche application** + **backend Node/MongoDB modulaire** + **frontend React** + **app mobile (Vite + Capacitor)**.

@@ -11,6 +11,9 @@
 const BASE: string = (import.meta as { env?: Record<string, string> }).env?.VITE_API_URL || 'http://localhost:4000/api';
 const TOKEN_KEY = 'kydos.mobile.token';
 
+/** URL de base de l'API (exposée pour diagnostic / écran de réglages). */
+export const API_BASE_URL = BASE;
+
 export interface AuthResult { token: string; user: { id: string; username: string; email?: string | null } }
 
 export class ApiError extends Error {
@@ -34,7 +37,13 @@ export class ApiClient {
         },
       });
     } catch {
-      throw new ApiError('Serveur injoignable. Vérifiez votre connexion.', 0);
+      // On expose l'URL RÉELLEMENT contactée : indispensable pour diagnostiquer
+      // sur un device (localhost pointe le téléphone, pas la machine de dev).
+      const host = BASE.replace(/^https?:\/\//, '').split('/')[0];
+      const hint = /localhost|127\.0\.0\.1/.test(BASE)
+        ? ` L'app pointe vers « ${host} » : sur un téléphone, localhost désigne le téléphone. Configurez VITE_API_URL avec l'IP de votre machine (ex. http://192.168.1.42:4000/api).`
+        : ` L'app pointe vers « ${host} ». Vérifiez que le serveur est lancé, accessible sur le réseau, et que le téléphone est sur le même Wi-Fi.`;
+      throw new ApiError(`Serveur injoignable.${hint}`, 0);
     }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {

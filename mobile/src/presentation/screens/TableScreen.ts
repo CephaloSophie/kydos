@@ -21,7 +21,9 @@ import {
 } from 'belote-core';
 import { PixiTable } from '@kydos/table-pixi';
 import { h, clear } from '../../core/dom';
-import { Button } from '../components/ui';
+import { Button, Dialog, Slider } from '../components/ui';
+import { soundService } from '../../services/sound/SoundService';
+import { detectSoundEvents } from '../../services/sound/soundEvents';
 import { GameLoop } from '../../services/gameLoop';
 import { mySeatFromSetup, type GameSetup } from '../../services/gameSetup';
 import { TableSocket, type LiveGameState } from '../../data/TableSocket';
@@ -50,6 +52,16 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const onlineId = new URLSearchParams(location.hash.split('?')[1] ?? '').get('online');
   let mySeat: Seat | null = watch ? null : 0;
   let opponentCards: 'back' | 'faceup' = 'back';
+
+  /* ── SON (voir docs/SOUNDS.md) ─────────────────────────────────────────
+   * Effets déclenchés par diff de vues (detectSoundEvents) — mêmes vues en
+   * local et en ligne. Mélodie d'ambiance par TYPE de table, en boucle.
+   * L'audio est débloqué au premier geste (politique d'autoplay WebView). */
+  let prevSoundView: ReturnType<GameEngine['view']> | null = null;
+  const playDetected = (v: ReturnType<GameEngine['view']>, seat: Seat | null) => {
+    for (const fx of detectSoundEvents(prevSoundView, v, seat)) soundService.playEffect(fx);
+    prevSoundView = v;
+  };
 
 
   /**
@@ -101,7 +113,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   let loop: GameLoop | undefined;
 
   /** Sortie propre : coupe la boucle locale OU la connexion en ligne. */
-  const leaveTable = () => { loop?.dispose(); onlineSocket.disconnect(); reactRoot?.unmount(); router.go(onlineId ? 'online' : 'home'); };
+  const leaveTable = () => { soundService.stopMelody(); loop?.dispose(); onlineSocket.disconnect(); reactRoot?.unmount(); router.go(onlineId ? 'online' : 'home'); };
 
   // --- HUD (fidèle au DS) ---------------------------------------------------
   const scoreEl = h('div', { class: 'row gap-3 mono', style: { fontSize: '11px' } },
@@ -187,6 +199,30 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const spectatorChip = chip('👁 0', { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' });
   spectatorChip.style.display = onlineId ? 'inline-flex' : 'none';
 
+  /**
+   * Réglage du son : chip 🔊 → modal (design system) avec deux curseurs
+   * indépendants — mélodie d'ambiance et effets sonores — persistés localement.
+   */
+  const openSoundSettings = () => {
+    let lastTestAt = 0;
+    const dialog = Dialog({
+      icon: '🔊', title: 'Son de la table',
+      body: h('div', { class: 'col gap-3', style: { minWidth: '260px', textAlign: 'left' } },
+        Slider({ label: 'Mélodie d\'ambiance', value: soundService.melodyVolume(), fill: 'var(--g-gold, var(--c-gold))', onInput: (v) => soundService.setMelodyVolume(v) }),
+        Slider({ label: 'Effets sonores', value: soundService.sfxVolume(), fill: 'var(--g-club, var(--c-success))', onInput: (v) => {
+          soundService.setSfxVolume(v);
+          // Retour immédiat : un petit effet témoin (limité pour ne pas mitrailler).
+          const now = Date.now();
+          if (now - lastTestAt > 350) { lastTestAt = now; soundService.playEffect('card-play'); }
+        } }),
+        h('div', { class: 'text-mute', style: { fontSize: '11px' } }, 'Réglages enregistrés sur cet appareil.')),
+      actions: [Button('Fermer', { variant: 'secondary', size: 'sm', onClick: () => dialog.remove() })],
+      onClose: () => dialog.remove(),
+    });
+    document.body.append(dialog);
+  };
+  const soundChip = h('button', { class: 'chip', title: 'Son de la table', onClick: openSoundSettings }, '🔊');
+
   const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } },
     h('div', { style: { position: 'absolute', top: '0', left: '0', right: '0', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px 0 60px', zIndex: '5' } },
       Button('← Quitter', { variant: 'secondary', size: 'sm', onClick: leaveTable }),
@@ -197,8 +233,19 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     h('div', { class: 'row center gap-2', style: { position: 'absolute', bottom: '12px', left: '60px', right: '22px', height: '38px', justifyContent: 'center' } },
       // Pause + vitesse : uniquement hors ligne (le rythme d'une partie en
       // ligne est piloté par le serveur). En ligne : statut + spectateurs.
-      onlineId ? null : pauseChip, onlineId ? null : speedChip, statusChip, spectatorChip),
+      onlineId ? null : pauseChip, onlineId ? null : speedChip, soundChip, statusChip, spectatorChip),
   );
+
+  // Audio : débloqué au premier geste (autoplay), effets préchargés, mélodie
+  // lancée pour le type de table (local = entraînement ; en ligne, le kind du
+  // lobby affinera). Coupée à la sortie d'écran (navigation quelconque).
+  let melodyKind: string = onlineId ? 'default' : 'local';
+  root.addEventListener('pointerdown', () => {
+    soundService.unlock();
+    soundService.playMelodyForTable(melodyKind);
+  }, { once: true });
+  soundService.preloadEffects();
+  (root as HTMLElement & { _cleanup?: () => void })._cleanup = () => soundService.stopMelody();
 
   // --- Moteur + boucle (démarrés après chargement des robots) ---------------
   let saved = false;
@@ -236,6 +283,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
   const render = (engine: GameEngine, names: string[]) => {
     const v = engine.view();
+    playDetected(v, mySeat);
     // Alimente l'overlay de logs (dernière action détectée dans la vue moteur).
     if (v.phase === 'bidding' && v.bids.length) {
       const b = v.bids[v.bids.length - 1];
@@ -280,6 +328,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     const v = state.view;
     const seat = state.mySeat ?? null;
     currentMySeat = seat;
+    playDetected(v, (seat ?? null) as Seat | null);
     renderPlayersBar((v as unknown as { players?: { seat: number; name: string; type: string; userId: string | null }[] }).players ?? []);
     // NOUS = équipe du spectateur (sièges pairs = A, impairs = B), EUX = l'autre.
     // Pour un spectateur non assis (seat null), on garde A=NOUS par défaut.
@@ -310,7 +359,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       onPlay: seat != null ? (card: Card) => onlineSocket.playCard(card) : undefined,
       // Réaction émise : diffusée à TOUS (serveur) et affichée localement pour
       // l'émetteur. Le serveur renverra le signal, mais la table gère le nonce.
-      onEmote: seat != null ? (fromSeat: Seat, emoji: string) => { onlineSocket.signal('smiley', { emoji }); emoteSignal = { seat: fromSeat, emoji, nonce: ++emoteNonce }; renderOnline(state); } : undefined,
+      onEmote: seat != null ? (fromSeat: Seat, emoji: string) => { onlineSocket.signal('smiley', { emoji }); soundService.playEffect('emote'); emoteSignal = { seat: fromSeat, emoji, nonce: ++emoteNonce }; renderOnline(state); } : undefined,
       emoteSignal,
       opponentCards: 'back', showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: () => { onlineSocket.disconnect(); reactRoot?.unmount(); router.go('online'); },
@@ -332,9 +381,11 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     felt.append(waiting);
 
     onlineSocket.connect(onlineId, {
+      // La mélodie suit le TYPE de la table (hybride/acier/royal), reçu du lobby.
+      onLobby: (lobby) => { melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind); },
       onGame: (state) => { gotState = true; statusChip.textContent = '● En ligne'; waiting.style.display = 'none'; renderOnline(state); },
       onSpectators: (count) => { spectatorChip.textContent = `👁 ${count}`; },
-      onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },
+      onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { soundService.playEffect('emote'); emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },
       onFinished: (info) => { statusChip.textContent = '★ Partie terminée'; showOnlineEnd(info); },
       onSpectatorFull: (info) => toast(`Table pleine (${info.max} spectateurs max)`, 'error'),
       onConnectError: (msg) => toast(`Connexion impossible : ${msg}`),
