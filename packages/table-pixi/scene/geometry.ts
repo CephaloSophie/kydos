@@ -11,8 +11,8 @@ export const DIR_BY_REL: Dir[] = ['south', 'west', 'north', 'east'];
  * DOIVENT partager la même valeur pour que les trajectoires soient cohérentes.
  */
 export function handInset(cardH: number): number {
-  // Ancrage proche du bord : le sud descend vers le bas, le nord monte vers le
-  // haut. Valeur volontairement faible (≈ un tiers de carte) pour coller aux
-  // bords sans que les cartes ne sortent du feutre.
-  return Math.round(cardH * 0.30 + 8);
+  // Ancrage TRÈS proche du bord : les mains (sud/nord) sont poussées aux
+  // extrémités du feutre pour libérer un maximum d'espace au centre (cartes
+  // jouées). Le bas des cartes reste à ~6px du bord — jamais coupé.
+  return Math.round(cardH * 0.06 + 6);
 }

@@ -306,3 +306,51 @@
   70%  { box-shadow: 0 0 0 7px rgba(232, 93, 112, 0);  opacity: .85; }
   100% { box-shadow: 0 0 0 0 rgba(232, 93, 112, 0);   opacity: 1; }
 }
+
+/* ============================================================================
+   Menu de gauche de la table de jeu — icônes uniquement (v11.13.0)
+   Quitter, spectateurs, en ligne, volume, smileys, vitesse, pause regroupés
+   dans une colonne d'icônes à gauche, hors du feutre.
+   ========================================================================== */
+.table-menu {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  z-index: 9; display: flex; flex-direction: column; gap: 8px; align-items: center;
+}
+.table-menu__btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(16, 21, 31, 0.88); border: 1px solid var(--c-line);
+  color: var(--c-text-soft); font-size: 20px; cursor: pointer; position: relative;
+  transition: background .16s ease, transform .1s ease, border-color .16s ease;
+}
+.table-menu__btn:hover { background: rgba(28, 36, 52, 0.95); border-color: rgba(230,196,106,.4); }
+.table-menu__btn:active { transform: scale(0.94); }
+.table-menu__btn.is-online {
+  background: rgba(126,203,152,.14); border-color: rgba(126,203,152,.4); cursor: default;
+}
+.table-menu__dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--c-success); box-shadow: 0 0 6px var(--c-success);
+  animation: table-menu-pulse 2s ease-in-out infinite;
+}
+@keyframes table-menu-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+.table-menu__badge {
+  position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--c-gold, #e6c46a); color: #1a0f00;
+  font: 700 10px/16px var(--f-mono, monospace); text-align: center;
+}
+.table-menu__badge--speed { background: var(--c-info, #6aa8e6); color: #06101c; }
+/* Picker de smileys : popover à droite du bouton */
+.table-menu__picker {
+  position: absolute; left: 52px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-wrap: wrap; gap: 4px; width: 132px; padding: 8px;
+  background: rgba(12, 16, 26, 0.96); border: 1px solid var(--c-line);
+  border-radius: 12px; box-shadow: var(--sh-float, 0 8px 24px rgba(0,0,0,.4)); z-index: 12;
+}
+.table-menu__emoji {
+  width: 28px; height: 28px; border: none; border-radius: 8px;
+  background: rgba(255,255,255,0.06); font-size: 17px; cursor: pointer;
+  transition: background .14s ease, transform .1s ease;
+}
+.table-menu__emoji:hover { background: rgba(255,255,255,0.14); }
+.table-menu__emoji:active { transform: scale(0.9); }

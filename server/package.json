@@ -1,6 +1,6 @@
 {
   "name": "belote-server",
-  "version": "11.11.0",
+  "version": "11.13.0",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

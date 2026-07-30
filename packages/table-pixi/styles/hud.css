@@ -53,8 +53,10 @@
   position: absolute; z-index: 15;
   /* Ancré en HAUT à gauche du feutre. À chaque nouveau pli, le panneau MONTE
      (apparaît en glissant vers le haut) — demande explicite d'Ameur. */
+  /* Aligné au MÊME niveau que le haut de la feuille de score (px-toolbar top:18px)
+     — demande d'Ameur : le panneau monte au niveau du haut de la feuille. */
   top: calc(var(--px-felt-y, 0px) + 18px);
-  left: calc(var(--px-felt-x, 0px) + 22px);
+  left: calc(var(--px-felt-x, 0px) + 10px);
   animation: ky-lasttrick-rise 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes ky-lasttrick-rise {
