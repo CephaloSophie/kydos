@@ -61,6 +61,18 @@ describe('Santé et socle HTTP', () => {
     expect(res.body).toEqual({ ok: true });
   });
 
+  it('GET /api/health (alias testable depuis le device) répond 200 { ok: true }', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+  });
+
+  it('accepte une origine native Capacitor (app mobile sur device)', async () => {
+    const res = await request(app).get('/health').set('Origin', 'capacitor://localhost');
+    expect(res.status).toBe(200);
+    expect(res.headers['access-control-allow-origin']).toBeTruthy();
+  });
+
   it('une route /api inconnue répond 404 en JSON (jamais du HTML)', async () => {
     const res = await request(app).get('/api/n-existe-pas');
     expect(res.status).toBe(404);

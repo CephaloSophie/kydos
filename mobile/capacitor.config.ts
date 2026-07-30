@@ -11,9 +11,13 @@ const config: CapacitorConfig = {
   appId: 'com.cephalosophie.kydosbelote',
   appName: 'Kýdos Belote',
   webDir: 'dist',
-  // L'app est servie depuis le bundle local (pas de serveur de dev embarqué).
+  // Servi depuis le bundle local. En DEV, l'app doit contacter l'API sur HTTP
+  // en clair (choix produit — voir docs/mobile-connection.md) : androidScheme
+  // 'http' évite le blocage « mixed content » de la WebView, et cleartext:true
+  // autorise le trafic HTTP en général.
   server: {
-    androidScheme: 'https',
+    androidScheme: 'http',
+    cleartext: true,
   },
   backgroundColor: '#05070f',
   android: {

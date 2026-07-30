@@ -1,15 +1,15 @@
 # Kýdos Belote — Diagnostic & référentiel de tâches
 
-> **Source de vérité : `docs/tasks/tasks.json`.** Tableau Agile : `docs/tasks/board.html`.
-> Audit croisé : `docs/AUDIT-3AGENTS.md` · Trajectoire : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md`.
+> **Source : `docs/tasks/tasks.json`.** Board : `docs/tasks/board.html`.
+> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md`.
 
-**Projet** Kýdos Belote · **Version** v11.9.0 · **102 tâches** · généré 2026-07-27T04:00:00.000Z
+**Projet** Kýdos Belote · **Version** v11.11.0 · **105 tâches** · généré 2026-07-29T22:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 82 · **En cours** 8 · **À faire** 12 · **Bugs** 20
+- **Terminées** 85 · **En cours** 8 · **À faire** 12 · **Bugs** 21
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-300, KB-301
-- **Points** 308 · **Durée cumulée** 41.1 j
+- **Points** 327 · **Durée** 42.8 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 67 | 196 | 25.9 j |
+| tested | 70 | 215 | 27.7 j |
 | pending | 11 | 39 | 4.2 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -30,7 +30,7 @@
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
 | P0 | 43 | 140 | 20.3 j |
-| P1 | 39 | 111 | 13.6 j |
+| P1 | 42 | 130 | 15.4 j |
 | P2 | 17 | 47 | 5.5 j |
 | P3 | 3 | 10 | 1.6 j |
 
@@ -38,8 +38,8 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 60 | 200 | 27.2 j |
-| bug | 20 | 40 | 4.7 j |
+| feature | 62 | 216 | 28.8 j |
+| bug | 21 | 43 | 4.9 j |
 | test | 7 | 26 | 3.4 j |
 | doc | 6 | 17 | 2.4 j |
 | chore | 5 | 13 | 1.8 j |
@@ -49,13 +49,13 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| Mobile | 37 | 111 | 15.8 j |
+| Mobile | 38 | 114 | 16.1 j |
 | Serveur | 29 | 88 | 11.4 j |
-| IHM (table) | 12 | 35 | 4.1 j |
+| IHM (table) | 13 | 43 | 4.9 j |
 | Documentation | 6 | 17 | 2.4 j |
+| CI/CD | 4 | 22 | 2.2 j |
 | Design / IHM | 4 | 8 | 7.0 h |
 | Refactoring | 4 | 12 | 1.6 j |
-| CI/CD | 3 | 14 | 1.5 j |
 | Tests | 3 | 7 | 1.1 j |
 | Test E2E | 2 | 8 | 1.1 j |
 | Infra | 1 | 3 | 4.0 h |
@@ -72,6 +72,9 @@
 | CI / Outillage | 4 | 19 | 2.1 j |
 | Infra | 4 | 12 | 1.8 j |
 | Capacitor | 2 | 6 | 6.0 h |
+| Mobile (Vite/Capacitor) | 1 | 3 | 2.0 h |
+| Mobile (Web Audio API) | 1 | 8 | 6.0 h |
+| Node / Make / Docs | 1 | 8 | 6.0 h |
 | TypeScript (moteur) | 1 | 3 | 4.0 h |
 
 ### Par version
@@ -96,10 +99,31 @@
 | 10.6.0 | 2 | 8 | 1.1 j |
 | 11.4.0 | 2 | 6 | 7.0 h |
 | 10.2.0 | 1 | 3 | 4.0 h |
+| 11.10.0 | 1 | 8 | 6.0 h |
+| 11.11.0 | 1 | 8 | 6.0 h |
 | 11.9.0 | 1 | 8 | 6.0 h |
+| 11.9.1 | 1 | 3 | 2.0 h |
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v11.11.0 — 1 tâches · 8 pts · 6.0 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-340 | Infrastructure de connexion mobile↔serveur : healthcheck + Makefile + doc 4 cibles | Testée | P1 | feature | CI/CD | Node / Make / Docs | 8 | 6 h |
+
+### v11.10.0 — 1 tâches · 8 pts · 6.0 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-330 | Système sonore de la table — effets, mélodies par table, volumes | Testée | P1 | feature | IHM (table) | Mobile (Web Audio API) | 8 | 6 h |
+
+### v11.9.1 — 1 tâches · 3 pts · 2.0 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-320 | Connexion mobile au serveur — URL configurable (device physique) | Testée | P1 | bug | Mobile | Mobile (Vite/Capacitor) | 3 | 2 h |
 
 ### v11.9.0 — 1 tâches · 8 pts · 6.0 h
 

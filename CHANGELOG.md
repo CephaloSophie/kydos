@@ -2,7 +2,123 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v11.9.0 — Fiabilisation : couverture, TNR serveur, E2E web, CI automatisée (version actuelle)
+## v11.11.0 — Infrastructure de connexion mobile↔serveur : healthcheck + Makefile + doc (version actuelle)
+
+Chantier complet de fiabilisation de la connexion mobile↔serveur (KB-340). Doc
+de référence : **`docs/mobile-connection.md`**.
+
+### Choix produit assumé — HTTP en dev
+`mobile/capacitor.config.ts` bascule en `androidScheme: 'http'` + `cleartext:
+true`. HTTPS uniquement en production, via reverse-proxy Caddy ou tunnel
+Cloudflare (documenté §7).
+
+### `scripts/healthcheck.mjs` — 7 vérifications automatiques
+`make check` diagnostique en 3 s : IP LAN détectée, serveur écoute sur le port,
+`/api/health` répond en local, `/api/health` accessible depuis le réseau, CORS
+accepte `capacitor://localhost`, `mobile/.env` cohérent avec la cible (device /
+emulator / ios-sim / remote), Socket.IO répond, Capacitor configuré HTTP. Chaque
+KO indique la commande exacte pour corriger.
+
+### `Makefile` — workflows unifiés
+- `make help` — liste toutes les cibles regroupées par section.
+- `make check` — le healthcheck.
+- `make dev` — serveur permissif + web en parallèle.
+- **4 cibles mobile** en une commande : `make android-device`,
+  `make android-emulator`, `make ios-sim`, `make ios-device`, `make remote
+  REMOTE=…`. Configure `mobile/.env`, fait `cap sync`, lance l'app.
+- Debug : `make inspect-android` (rappel `chrome://inspect`),
+  `make inspect-ios` (Web Inspector Safari), `make logs-android`
+  (`adb logcat`), `make logs-ios`.
+- Prod : `make prod`, `make build`, `make tnr`, `make coverage`, `make e2e-web`.
+
+### `docs/mobile-connection.md` — guide complet
+9 sections : concepts, prérequis **Mac + Ubuntu**, les 4 cibles pas à pas,
+dev vs prod (variables d'env), debug (inspection, logs), structure du projet,
+production HTTPS (Caddy, Cloudflare), troubleshooting exhaustif, résumé
+5 commandes.
+
+### Divers
+- `set-dev-ip.mjs` : commentaire du `.env` adapté à la cible détectée (device
+  physique / émulateur Android / simulateur iOS).
+- Tests unitaires du healthcheck (`detectLanIp`, URLs par cible) : +7 tests.
+
+### Vérification
+```
+TNR : 14/14 · 359 tests (+7)
+Healthcheck : 3/7 KO sans serveur, 6/7 OK avec serveur mock, tous les KO
+              guident vers la correction.
+```
+
+## v11.10.0 — Sons de la table : effets, mélodies par table, volumes
+
+Système audio complet de la table de jeu mobile (KB-330). Doc : `docs/SOUNDS.md`.
+
+### Technique retenue
+**Web Audio API native, zéro dépendance** : compatible WebView Capacitor et
+navigateur, latence faible, et deux bus de volume indépendants (mélodie /
+effets) via des `GainNode`.
+
+### Effets sonores (10)
+Ma carte, carte d'un autre joueur/robot, émoji, annonce de belote (et rebelote),
+passe, hausse d'annonce, hausse APRÈS réflexion 💭, contré, surcontré, ramassage
+du pli. Déclenchés par un détecteur PUR de diff de vues moteur
+(`soundEvents.ts`, testé) — le même en local et en ligne ; les émotes sonnent au
+signal socket. Rejoindre une partie en cours ne déclenche pas de rafale.
+
+### Mélodies d'ambiance — une par TYPE de table
+En boucle, sur leur propre volume : `default` = **Ode à la joie**, `local`
+(entraînement) = **Für Elise**, `hybride` (équipe) = valse originale,
+`acier`/`competition` = motif de la **5e symphonie**, `royal`/`vip` = arpèges
+façon **Clair de lune**. Compositions du **domaine public** (Beethoven)
+**synthétisées** par `mobile/scripts/generate-sounds.py` (conservé dans le
+repo) : aucun droit d'auteur. La mélodie suit le kind reçu du lobby en ligne et
+se coupe à la sortie d'écran.
+
+### Remplacement facile
+Fichiers à **noms fixes** dans `mobile/public/sounds/` : remplacer un son =
+déposer un fichier du même nom. Mappings centralisés dans `soundConfig.ts`
+(ajouter une mélodie de table = 1 fichier + 1 ligne).
+
+### Réglage des volumes
+Chip 🔊 sur la table → modal du design system avec deux curseurs (mélodie /
+effets, son témoin au réglage), **persistés sur l'appareil** (localStorage).
+Déblocage autoplay au premier geste.
+
+### Vérification
+```
+TNR : 14/14 · 352 tests (+17 : détecteur d'événements + service + config)
+Build mobile : 15 fichiers audio copiés dans dist/sounds/
+```
+
+## v11.9.1 — Connexion mobile au serveur : URL configurable pour device
+
+Correctif du « serveur injoignable » à la connexion sur téléphone physique.
+
+### Cause
+Sur un device Android/iOS physique, `localhost` désigne le TÉLÉPHONE, pas la
+machine de dev. L'URL par défaut `http://localhost:4000/api` ne peut donc pas
+joindre le serveur : il faut l'IP de la machine sur le réseau Wi-Fi local.
+
+### Corrigé / ajouté
+- **`mobile/.env.example`** documenté (device Wi-Fi, émulateur AVD `10.0.2.2`,
+  simulateur iOS, prod).
+- **`mobile/scripts/set-dev-ip.mjs`** (`npm --workspace belote-mobile run
+  set-dev-ip`) : détecte l'IP LAN et génère `mobile/.env` automatiquement.
+- **Message d'erreur réseau explicite** : affiche l'URL réellement contactée et,
+  si c'est localhost, guide vers l'IP de la machine (`API_BASE_URL` exposée).
+- **CORS serveur** : accepte les origines natives Capacitor
+  (`capacitor://localhost`, `ionic://localhost`, `http://localhost`).
+- **Alias `/api/health`** : testable depuis le navigateur du téléphone
+  (`http://<ip>:4000/api/health` → `{"ok":true}`).
+- **Docs** : MOBILE.md §32 (marche à suivre + table des URL), note dev dans
+  `server/.env.example`.
+
+### Vérification
+```
+TNR global : 14/14 · 335 tests (serveur 84→99 : +/api/health, +origine Capacitor)
+```
+
+## v11.9.0 — Fiabilisation : couverture, TNR serveur, E2E web, CI automatisée
 
 Blindage du code mobile et serveur par des tests avec rapports de couverture,
 E2E web, TNR serveur dédié, le tout automatisé en CI et documenté.

@@ -1,6 +1,6 @@
 {
   "name": "belote-mobile",
-  "version": "11.9.0",
+  "version": "11.11.0",
   "private": true,
   "type": "module",
   "description": "Kýdos Belote — application MOBILE (paysage), séparée du web. Design system Claude Design + table Pixi partagée.",
@@ -17,7 +17,8 @@
     "cap:ios": "npm run build && npx cap sync ios && npx cap run ios",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "set-dev-ip": "node scripts/set-dev-ip.mjs"
   },
   "dependencies": {
     "@kydos/table-pixi": "*",

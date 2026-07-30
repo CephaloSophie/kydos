@@ -14,9 +14,14 @@ export function createExpressApplication(): Express {
   const application = express();
   // CORS multi-domaines : autorise chaque origine listée (ou toutes si '*').
   const allowedOrigins = environment.corsOrigins;
+  // Origines des apps natives Capacitor (device/émulateur) : le WebView émet une
+  // origine dédiée qu'il faut accepter en plus des domaines web configurés.
+  const nativeOrigins = ['capacitor://localhost', 'ionic://localhost', 'http://localhost'];
   application.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
+      if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin) || nativeOrigins.includes(origin)) {
+        return callback(null, true);
+      }
       callback(new Error(`origine non autorisée : ${origin}`));
     },
     credentials: true,
@@ -30,6 +35,9 @@ export function createExpressApplication(): Express {
   });
 
   application.get('/health', (_request, response) => response.json({ ok: true }));
+  // Alias sous /api : permet de tester la BASE exacte utilisée par le mobile
+  // (http://<ip>:<port>/api/health) depuis le navigateur du téléphone.
+  application.get('/api/health', (_request, response) => response.json({ ok: true }));
 
   for (const appModule of applicationModules) {
     if (appModule.router) {

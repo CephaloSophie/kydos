@@ -439,3 +439,71 @@ perpendiculaire au joueur ±30° (60°..120°), et un empilement par ordre de je
 
 **Tailles de cartes** — les cartes des trois autres joueurs sont réduites à 70%
 (−30%) de la main du joueur courant.
+
+## 32. Connexion de l'app mobile au serveur (dev device)
+
+L'app lit l'URL de l'API dans `VITE_API_URL` (fichier `mobile/.env`), avec un
+repli sur `http://localhost:4000/api`. Le socket temps réel en dérive
+automatiquement (le suffixe `/api` est retiré).
+
+**⚠️ Sur un device physique, `localhost` désigne le TÉLÉPHONE**, pas la machine
+de dev — d'où l'erreur « serveur injoignable ». Il faut l'IP LAN de la machine.
+
+Marche à suivre :
+
+1. **Générer `mobile/.env`** avec l'IP détectée automatiquement :
+   ```bash
+   npm --workspace belote-mobile run set-dev-ip        # port 4000 par défaut
+   # ou IP/port forcés : node mobile/scripts/set-dev-ip.mjs 4000 192.168.1.42
+   ```
+2. **Lancer le serveur en autorisant l'app** (CORS ouvert en dev) :
+   ```bash
+   CORS_ORIGIN=* npm --workspace belote-server run dev
+   ```
+   Les origines natives Capacitor (`capacitor://localhost`, `http://localhost`)
+   sont de toute façon acceptées par défaut.
+3. **Vérifier la connectivité** depuis le navigateur du téléphone :
+   ouvrir `http://<IP>:4000/api/health` → doit afficher `{"ok":true}`.
+4. **Reconstruire et synchroniser** l'app :
+   ```bash
+   npm --workspace belote-mobile run build && npx cap sync
+   ```
+
+Table des URL selon la cible :
+
+| Cible | VITE_API_URL |
+| --- | --- |
+| Device physique (Wi-Fi) | `http://<IP-machine>:4000/api` |
+| Émulateur Android (AVD) | `http://10.0.2.2:4000/api` |
+| Simulateur iOS | `http://localhost:4000/api` |
+| Navigateur (web dev) | `http://localhost:4000/api` |
+| Production | `https://api.kydosbelote.com/api` |
+
+Le téléphone et la machine doivent être sur le **même réseau Wi-Fi**. Si ça
+bloque encore : pare-feu de la machine (ouvrir le port 4000), ou Wi-Fi
+« invité » qui isole les appareils.
+
+## 33. Sons de la table (v11.10.0)
+
+Audio complet de la table : effets par action (cartes, émoji, belote, passe,
+contré, surcontré, hausses ± réflexion, ramassage), mélodie d'ambiance en boucle
+**par type de table**, et modal 🔊 de réglage des volumes (mélodie / effets)
+persistés sur l'appareil. Web Audio API native, fichiers à noms fixes
+remplaçables dans `mobile/public/sounds/`, générateur de sons dans
+`mobile/scripts/generate-sounds.py`. **Documentation complète : `docs/SOUNDS.md`.**
+
+
+## 34. Connexion mobile ↔ serveur — guide complet (v11.11.0)
+
+Documentation dédiée : **`docs/mobile-connection.md`**. Couvre les 4 cibles
+(device Android, émulateur, simulateur iOS, iPhone), Mac et Ubuntu, dev/debug/prod,
+inspection (`chrome://inspect`, Safari Web Inspector, `adb logcat`).
+
+**Une commande pour tout** : `make help` liste les cibles, `make check` diagnostique
+la connexion (7 vérifications), `make android-device` / `make android-emulator` /
+`make ios-sim` / `make ios-device` lance l'app sur la cible choisie en configurant
+`mobile/.env` automatiquement.
+
+Choix produit : **HTTP en dev** (`androidScheme: 'http'` + `cleartext: true` dans
+`mobile/capacitor.config.ts`). HTTPS uniquement en production, via un
+reverse-proxy Caddy ou un tunnel Cloudflare (cf. `docs/mobile-connection.md` §7).
