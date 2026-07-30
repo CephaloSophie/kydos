@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "11.11.0",
-    "generatedAt": "2026-07-29T22:00:00.000Z",
+    "currentVersion": "11.13.0",
+    "generatedAt": "2026-07-30T09:00:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -4466,6 +4466,367 @@
         }
       ],
       "logs": []
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-350",
+      "title": "Table agrandie + espace bannières pub en bas",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "captures 2026-07-29",
+      "techno": "Mobile/PixiJS",
+      "category": "Design / IHM",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "La table prend plus de place (haut réduit à 42px, côtés resserrés) et le bas réserve 64px pour DEUX emplacements de bannière publicitaire (gauche + droite).",
+      "instructions": [],
+      "acceptance": [
+        "Table plus haute",
+        "Deux emplacements pub visibles en bas"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Felt inset 42/16/64/44 + adBanner gauche/droite."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-351",
+      "title": "Épurer le haut de la table (score, atout, noms retirés)",
+      "module": "home",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1.5 h",
+      "spec": "captures 2026-07-29",
+      "techno": "Mobile",
+      "category": "Design / IHM",
+      "complexity": 2,
+      "duration": "1.5 h",
+      "description": "Retrait des doublons en haut : le score NOUS/EUX (déjà dans la feuille de score), l'atout, et la barre de noms des joueurs. Les noms restent affichés à chaque siège.",
+      "instructions": [],
+      "acceptance": [
+        "Plus de score/atout/noms en haut",
+        "Barre du haut = seulement Quitter"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "scoreEl/trumpEl/playersBar supprimés."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-352",
+      "title": "Rail gauche : spectateurs, pastille en ligne, volume",
+      "module": "home",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1.5 h",
+      "spec": "captures 2026-07-29",
+      "techno": "Mobile",
+      "category": "Design / IHM",
+      "complexity": 2,
+      "duration": "1.5 h",
+      "description": "Déplacement à gauche (rail vertical) du compteur de spectateurs, du statut en ligne (simple pastille verte, sans le mot « online ») et du bouton volume 🔊.",
+      "instructions": [],
+      "acceptance": [
+        "Spectateurs/en-ligne/volume à gauche",
+        "Statut = pastille verte seule"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "statusDot + rail gauche vertical."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-353",
+      "title": "Cartes jouées : valeurs jamais cachées (placement par secteur)",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "captures 2026-07-29",
+      "techno": "PixiJS",
+      "category": "IHM (table)",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Refonte du placement des cartes du pli : chaque carte est décalée vers le siège de son joueur (quatre secteurs distincts autour du centre), inclinaison perpendiculaire ±14°. Les coins (valeur : rang+couleur) restent dégagés — plus aucun risque de cacher une carte dessous.",
+      "instructions": [],
+      "acceptance": [
+        "Aucune valeur cachée",
+        "Cartes réparties par secteur, superposées joliment"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "trickPlacement par direction de siège + jitter léger."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-354",
+      "title": "Mains sud/nord collées aux extrémités",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1 h",
+      "spec": "captures 2026-07-29",
+      "techno": "PixiJS",
+      "category": "IHM (table)",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "Les cartes du joueur (bas) et du partenaire/robot (haut) sont poussées aux extrémités du feutre (handInset réduit à ~6% de la carte) pour libérer un maximum d'espace au centre.",
+      "instructions": [],
+      "acceptance": [
+        "Mains aux extrémités",
+        "Plus d'espace au centre"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "handInset 0.06*cardH+6."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-355",
+      "title": "Dernier pli remonté plus haut",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "0.5 h",
+      "spec": "captures 2026-07-29",
+      "techno": "PixiJS",
+      "category": "IHM (table)",
+      "complexity": 1,
+      "duration": "0.5 h",
+      "description": "Le panneau « Dernier pli » est ancré tout en haut à gauche du feutre (6px du bord).",
+      "instructions": [],
+      "acceptance": [
+        "Dernier pli plus haut"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "px-last-slot top felt-y+6."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-356",
+      "title": "Popup annonce : ne cache plus les cartes, épuré",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "captures 2026-07-29",
+      "techno": "PixiJS",
+      "category": "IHM (table)",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Le popup d'annonce est ancré en haut-centre du feutre (ne couvre plus la main du joueur, visible pendant l'annonce), les textes (titre + consigne) sont retirés, l'input de valeur est réduit, et Passe/Suivre/Demande sont sur une ligne compacte avec le stepper.",
+      "instructions": [],
+      "acceptance": [
+        "Mes cartes visibles pendant l'annonce",
+        "Sans texte, input réduit, actions bien placées"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "px-bid-slot haut-centre + ky-bid__controls inline."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.12.0",
+      "createdAt": "2026-07-29T23:30:00.000Z",
+      "updatedAt": "2026-07-29T23:30:00.000Z",
+      "logs": [],
+      "id": "KB-357",
+      "title": "Étiquettes joueurs/robots plus compactes",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "0.5 h",
+      "spec": "captures 2026-07-29",
+      "techno": "PixiJS",
+      "category": "Design / IHM",
+      "complexity": 1,
+      "duration": "0.5 h",
+      "description": "Le pill de chaque siège (logo + nom) est réduit (logo 32→24, nom 13→11px, marges resserrées) pour prendre moins de place.",
+      "instructions": [],
+      "acceptance": [
+        "Étiquettes plus petites"
+      ],
+      "history": [
+        {
+          "at": "2026-07-29T23:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "SeatsLayer logoSize 24 + nom 11."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.13.0",
+      "createdAt": "2026-07-30T09:00:00.000Z",
+      "updatedAt": "2026-07-30T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-360",
+      "title": "Menu vertical d'icônes à gauche (quitter, spectateurs, en ligne, volume, smileys, vitesse, pause)",
+      "module": "home",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "demande 2026-07-30",
+      "techno": "Mobile/PixiJS",
+      "category": "Design / IHM",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Regroupement de TOUS les contrôles de la table dans un menu vertical d'ICÔNES à gauche : Quitter (🚪), spectateurs (👁 + badge compteur), statut en ligne (pastille verte pulsée), volume (🔊 → modal), smileys (🙂 → picker de réactions câblé à l'émission), et en local vitesse (⏩ + badge ×) et pause (⏸/▶). Le dock d'émotes du HUD est désactivé (plus de doublon de liste). CSS .table-menu dédié.",
+      "instructions": [],
+      "acceptance": [
+        "Tous les contrôles en icônes à gauche",
+        "Le smiley ouvre un picker et émet la réaction",
+        "Une seule liste de smileys (plus de doublon)"
+      ],
+      "history": [
+        {
+          "at": "2026-07-30T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Menu d'icônes .table-menu ; onEmote retiré de PixiTable ; sendEmote câblé au menu."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.13.0",
+      "createdAt": "2026-07-30T09:00:00.000Z",
+      "updatedAt": "2026-07-30T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-361",
+      "title": "Bouton Quitter du haut supprimé — table Pixi agrandie au maximum",
+      "module": "home",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1 h",
+      "spec": "demande 2026-07-30",
+      "techno": "Mobile/PixiJS",
+      "category": "Design / IHM",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "Suppression de la barre du haut (le Quitter est désormais dans le menu de gauche). Le feutre monte à 6px du bord supérieur (au lieu de 42px) pour profiter du maximum d'espace en hauteur. Gauche 60px pour le menu, bas 64px pour les bannières.",
+      "instructions": [],
+      "acceptance": [
+        "Plus de barre en haut",
+        "Table nettement plus haute"
+      ],
+      "history": [
+        {
+          "at": "2026-07-30T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Felt inset 6/14/64/60 ; voile d'attente réaligné."
+        }
+      ]
+    },
+    {
+      "area": "table",
+      "version": "11.13.0",
+      "createdAt": "2026-07-30T09:00:00.000Z",
+      "updatedAt": "2026-07-30T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-362",
+      "title": "Dernier pli aligné au haut de la feuille de score",
+      "module": "table-pixi",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "0.5 h",
+      "spec": "demande 2026-07-30",
+      "techno": "Mobile/PixiJS",
+      "category": "Design / IHM",
+      "complexity": 1,
+      "duration": "0.5 h",
+      "description": "Le panneau « Dernier pli » monte au même niveau que le haut de la feuille de score (top 18px, comme px-toolbar).",
+      "instructions": [],
+      "acceptance": [
+        "Dernier pli au niveau du haut de la feuille de score"
+      ],
+      "history": [
+        {
+          "at": "2026-07-30T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "px-last-slot top felt-y+18 (aligné sur px-toolbar)."
+        }
+      ]
     }
   ]
 }

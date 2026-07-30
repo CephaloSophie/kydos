@@ -3,13 +3,13 @@
 > **Source : `docs/tasks/tasks.json`.** Board : `docs/tasks/board.html`.
 > Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md`.
 
-**Projet** Kýdos Belote · **Version** v11.11.0 · **105 tâches** · généré 2026-07-29T22:00:00.000Z
+**Projet** Kýdos Belote · **Version** v11.13.0 · **116 tâches** · généré 2026-07-30T09:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 85 · **En cours** 8 · **À faire** 12 · **Bugs** 21
+- **Terminées** 96 · **En cours** 8 · **À faire** 12 · **Bugs** 21
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-300, KB-301
-- **Points** 327 · **Durée** 42.8 j
+- **Points** 356 · **Durée** 45.0 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 70 | 215 | 27.7 j |
+| tested | 81 | 244 | 29.9 j |
 | pending | 11 | 39 | 4.2 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -29,8 +29,8 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
+| P1 | 53 | 159 | 17.6 j |
 | P0 | 43 | 140 | 20.3 j |
-| P1 | 42 | 130 | 15.4 j |
 | P2 | 17 | 47 | 5.5 j |
 | P3 | 3 | 10 | 1.6 j |
 
@@ -38,7 +38,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 62 | 216 | 28.8 j |
+| feature | 73 | 245 | 30.9 j |
 | bug | 21 | 43 | 4.9 j |
 | test | 7 | 26 | 3.4 j |
 | doc | 6 | 17 | 2.4 j |
@@ -51,10 +51,10 @@
 |---|---:|---:|---:|
 | Mobile | 38 | 114 | 16.1 j |
 | Serveur | 29 | 88 | 11.4 j |
-| IHM (table) | 13 | 43 | 4.9 j |
+| IHM (table) | 17 | 56 | 5.8 j |
+| Design / IHM | 11 | 24 | 2.1 j |
 | Documentation | 6 | 17 | 2.4 j |
 | CI/CD | 4 | 22 | 2.2 j |
-| Design / IHM | 4 | 8 | 7.0 h |
 | Refactoring | 4 | 12 | 1.6 j |
 | Tests | 3 | 7 | 1.1 j |
 | Test E2E | 2 | 8 | 1.1 j |
@@ -67,11 +67,13 @@
 |---|---:|---:|---:|
 | Mobile (Vite/TS) | 43 | 129 | 18.2 j |
 | Node/Express/Mongo | 30 | 91 | 11.9 j |
-| PixiJS | 12 | 31 | 3.5 j |
+| PixiJS | 17 | 45 | 4.5 j |
 | Documentation | 6 | 17 | 2.4 j |
 | CI / Outillage | 4 | 19 | 2.1 j |
 | Infra | 4 | 12 | 1.8 j |
+| Mobile/PixiJS | 4 | 11 | 6.5 h |
 | Capacitor | 2 | 6 | 6.0 h |
+| Mobile | 2 | 4 | 3.0 h |
 | Mobile (Vite/Capacitor) | 1 | 3 | 2.0 h |
 | Mobile (Web Audio API) | 1 | 8 | 6.0 h |
 | Node / Make / Docs | 1 | 8 | 6.0 h |
@@ -86,6 +88,7 @@
 | 11.2.0 | 9 | 20 | 2.5 j |
 | 10.7.0 | 8 | 21 | 2.8 j |
 | 11.0.0 | 8 | 28 | 4.4 j |
+| 11.12.0 | 8 | 21 | 1.6 j |
 | 11.3.0 | 8 | 21 | 2.8 j |
 | 10.3.0 | 7 | 25 | 3.9 j |
 | 10.1.0 | 6 | 20 | 2.8 j |
@@ -95,6 +98,7 @@
 | 11.0.1 | 4 | 8 | 1.0 j |
 | 11.6.0 | 4 | 13 | 1.5 j |
 | 10.8.0 | 3 | 8 | 1.1 j |
+| 11.13.0 | 3 | 8 | 4.5 h |
 | 11.5.0 | 3 | 12 | 1.5 j |
 | 10.6.0 | 2 | 8 | 1.1 j |
 | 11.4.0 | 2 | 6 | 7.0 h |
@@ -106,6 +110,27 @@
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v11.13.0 — 3 tâches · 8 pts · 4.5 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-360 | Menu vertical d'icônes à gauche (quitter, spectateurs, en ligne, volume, smileys, vitesse, pause) | Testée | P1 | feature | Design / IHM | Mobile/PixiJS | 5 | 3 h |
+| KB-361 | Bouton Quitter du haut supprimé — table Pixi agrandie au maximum | Testée | P1 | feature | Design / IHM | Mobile/PixiJS | 2 | 1 h |
+| KB-362 | Dernier pli aligné au haut de la feuille de score | Testée | P1 | feature | Design / IHM | Mobile/PixiJS | 1 | 0.5 h |
+
+### v11.12.0 — 8 tâches · 21 pts · 1.6 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-350 | Table agrandie + espace bannières pub en bas | Testée | P1 | feature | Design / IHM | Mobile/PixiJS | 3 | 2 h |
+| KB-351 | Épurer le haut de la table (score, atout, noms retirés) | Testée | P1 | feature | Design / IHM | Mobile | 2 | 1.5 h |
+| KB-352 | Rail gauche : spectateurs, pastille en ligne, volume | Testée | P1 | feature | Design / IHM | Mobile | 2 | 1.5 h |
+| KB-353 | Cartes jouées : valeurs jamais cachées (placement par secteur) | Testée | P1 | feature | IHM (table) | PixiJS | 5 | 3 h |
+| KB-354 | Mains sud/nord collées aux extrémités | Testée | P1 | feature | IHM (table) | PixiJS | 2 | 1 h |
+| KB-355 | Dernier pli remonté plus haut | Testée | P1 | feature | IHM (table) | PixiJS | 1 | 0.5 h |
+| KB-356 | Popup annonce : ne cache plus les cartes, épuré | Testée | P1 | feature | IHM (table) | PixiJS | 5 | 3 h |
+| KB-357 | Étiquettes joueurs/robots plus compactes | Testée | P1 | feature | Design / IHM | PixiJS | 1 | 0.5 h |
 
 ### v11.11.0 — 1 tâches · 8 pts · 6.0 h
 

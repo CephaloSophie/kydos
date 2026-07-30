@@ -1,6 +1,6 @@
 {
   "name": "belote-contree",
-  "version": "11.11.0",
+  "version": "11.13.0",
   "private": true,
   "type": "module",
   "workspaces": [

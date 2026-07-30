@@ -2,7 +2,75 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v11.11.0 — Infrastructure de connexion mobile↔serveur : healthcheck + Makefile + doc (version actuelle)
+## v11.13.0 — Menu d'icônes à gauche + table Pixi au maximum (version actuelle)
+
+Table encore plus grande et interface épurée : tous les contrôles regroupés dans
+un menu vertical d'icônes à gauche, barre du haut supprimée.
+
+### Menu vertical d'icônes à gauche (KB-360)
+Tous les contrôles de la table réunis en **icônes** dans une colonne à gauche :
+- 🚪 **Quitter** la table
+- 👁 **Spectateurs** (avec badge compteur)
+- pastille verte **en ligne** (pulsée, sans texte)
+- 🔊 **Volume** (ouvre le modal mélodie/effets)
+- 🙂 **Smileys** (ouvre un picker de réactions, émission câblée)
+- en local : ⏩ **Vitesse** (badge ×) et ⏸/▶ **Pause**
+
+La liste de smileys du dock HUD est désactivée : **une seule** liste, dans le
+menu, plus de doublon.
+
+### Table Pixi agrandie au maximum (KB-361)
+- **Bouton Quitter du haut supprimé** → la barre du haut disparaît.
+- Le feutre **monte à 6px du bord supérieur** (contre 42px) : hauteur de jeu
+  maximale. Gauche 60px pour le menu, bas 64px pour les bannières pub.
+
+### Dernier pli aligné (KB-362)
+Le panneau « Dernier pli » monte **au niveau du haut de la feuille de score**.
+
+### Vérification
+```
+TNR : 14/14 · 362 tests · builds web + table + mobile OK
+```
+
+## v11.12.0 — Refonte ergonomique de la table de jeu
+
+Table plus grande et plus lisible, moins d'éléments qui encombrent, cartes du
+milieu dont les valeurs ne sont jamais cachées, et popup d'annonce qui ne cache
+plus vos cartes. Suite aux retours sur captures.
+
+### La table respire (KB-350 à KB-352)
+- **Table agrandie** — surtout en hauteur (haut réduit, côtés resserrés).
+- **Deux emplacements de bannière publicitaire** réservés en bas (gauche + droite).
+- **Haut épuré** : retrait du score NOUS/EUX (déjà dans la feuille de score), de
+  l'atout, et de la barre de noms (les noms restent à chaque siège).
+- **Rail gauche** : spectateurs, statut en ligne (simple **pastille verte**, sans
+  le mot « online »), et volume 🔊 regroupés à gauche.
+
+### Cartes jouées — valeurs jamais cachées (KB-353)
+Nouveau placement du pli : chaque carte se décale vers le **siège de son joueur**
+(quatre secteurs distincts autour du centre), inclinaison perpendiculaire ±14°.
+Les **coins (rang + couleur) restent dégagés** — plus aucun risque de masquer la
+valeur d'une carte dessous, tout en gardant une superposition naturelle.
+
+### Plus d'espace au centre (KB-354, KB-355)
+- Mains du joueur (bas) et du partenaire (haut) **collées aux extrémités**.
+- Panneau **« Dernier pli » remonté** tout en haut à gauche.
+
+### Popup d'annonce repensé (KB-356)
+- **Ancré en haut-centre** : ne couvre plus votre main — vous voyez vos cartes en
+  annonçant.
+- **Textes retirés** (titre et consigne), **input de valeur réduit**.
+- **Passe / Suivre / Demande** sur une ligne compacte avec le sélecteur de valeur.
+
+### Étiquettes compactes (KB-357)
+Logo + nom de chaque joueur/robot réduits (logo 32→24, nom 13→11px).
+
+### Vérification
+```
+TNR : 14/14 · 362 tests · builds web + table + mobile OK
+```
+
+## v11.11.0 — Infrastructure de connexion mobile↔serveur : healthcheck + Makefile + doc
 
 Chantier complet de fiabilisation de la connexion mobile↔serveur (KB-340). Doc
 de référence : **`docs/mobile-connection.md`**.

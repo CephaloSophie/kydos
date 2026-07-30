@@ -46,8 +46,6 @@ export function BidPanel({ view, mySeat, onBid }: BidPanelProps) {
 
   return (
     <div className="ky-bid ky-bid--fixed">
-      <h4 className="ky-bid__title">À vous d'annoncer</h4>
-
       {/* Suits + partner-suit icon + reflexion icon — icons only, fixed positions */}
       <div className="ky-bid__suits ky-bid__suits--6">
         {SUIT_LIST.map((s) => (
@@ -72,20 +70,16 @@ export function BidPanel({ view, mySeat, onBid }: BidPanelProps) {
         </button>
       </div>
 
-      {/* Fixed hint — same text, same height, always */}
-      <div className="ky-bid__hint ky-bid__hint--fixed">Choisissez une couleur ou «&nbsp;Répéter&nbsp;» pour annoncer.</div>
 
-      {/* Value stepper: [−] value [+], capot after 180 */}
-      <div className="ky-bid__stepper">
-        <button className="ky-bid__stepbtn" onClick={() => setStep(stepDown(view, step))} aria-label="Baisser">−</button>
-        <div className={`ky-bid__stepval ${step === CAPOT ? 'is-capot' : ''}`}>
-          {step === CAPOT ? '👑 CAPOT' : step}
+      {/* Valeur + actions sur une ligne compacte */}
+      <div className="ky-bid__controls">
+        <div className="ky-bid__stepper">
+          <button className="ky-bid__stepbtn" onClick={() => setStep(stepDown(view, step))} aria-label="Baisser">−</button>
+          <div className={`ky-bid__stepval ${step === CAPOT ? 'is-capot' : ''}`}>
+            {step === CAPOT ? '👑' : step}
+          </div>
+          <button className="ky-bid__stepbtn" onClick={() => setStep(stepUp(view, step))} aria-label="Monter">+</button>
         </div>
-        <button className="ky-bid__stepbtn" onClick={() => setStep(stepUp(view, step))} aria-label="Monter">+</button>
-      </div>
-
-      {/* Three fixed actions */}
-      <div className="ky-bid__row ky-bid__row--cta">
         <button className="ky-bid__pass" onClick={() => { onBid({ action: 'pass' }); reset(); }}>Passe</button>
         <button className="ky-bid__suivre" disabled={!suivre}
           title="Surenchérir de 10 avec la couleur de votre camp, sans réflexion"

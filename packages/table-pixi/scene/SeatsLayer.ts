@@ -66,10 +66,10 @@ export class SeatsLayer extends Container {
       node.removeChildren(); node.rotation = 0;
       const isHoriz = dir === 'south' || dir === 'north';
 
-      // --- Pill ---
-      const nameTxt = T(m.name.slice(0, 8), 13, t.text, '700');
-      const logoSize = 32;
-      const gap = 8, padL = 4, padR = 12, padY = 4;
+      // --- Pill (compact : logo + nom réduits pour prendre moins de place) ---
+      const nameTxt = T(m.name.slice(0, 8), 11, t.text, '700');
+      const logoSize = 24;
+      const gap = 6, padL = 4, padR = 10, padY = 3;
       const pillW = padL + logoSize + gap + nameTxt.width + padR;
       const pillH = logoSize + padY * 2; // 40 = --station-h
 

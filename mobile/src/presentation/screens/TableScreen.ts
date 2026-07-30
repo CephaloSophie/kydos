@@ -16,7 +16,7 @@
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import {
-  ContreeRules, DEFAULT_PARTIE, GameEngine, SUIT_SYMBOL, createAlgorithm, makeRobot, robotFromFiche,
+  ContreeRules, DEFAULT_PARTIE, GameEngine, createAlgorithm, makeRobot, robotFromFiche,
   type Bid, type Card, type EnginePlayer, type Seat,
 } from 'belote-core';
 import { PixiTable } from '@kydos/table-pixi';
@@ -36,9 +36,6 @@ import { toDomain } from '../../data/RobotRepository';
 
 const rules = new ContreeRules();
 const GREEK = ['Athéna', 'Borée', 'Calliope', 'Damon'];
-
-const chip = (content: HTMLElement[] | string, style: Record<string, string>, onClick?: () => void) =>
-  h('div', { class: 'row gap-1 mono', onClick, style: { padding: '6px 14px', borderRadius: 'var(--r-md)', fontSize: '10px', cursor: onClick ? 'pointer' : 'default', ...style } }, ...(Array.isArray(content) ? content : [content]));
 
 export function TableScreen(ctx: AppContext): HTMLElement {
   const { router, api } = ctx;
@@ -116,17 +113,14 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const leaveTable = () => { soundService.stopMelody(); loop?.dispose(); onlineSocket.disconnect(); reactRoot?.unmount(); router.go(onlineId ? 'online' : 'home'); };
 
   // --- HUD (fidèle au DS) ---------------------------------------------------
-  const scoreEl = h('div', { class: 'row gap-3 mono', style: { fontSize: '11px' } },
-    h('span', { style: { color: 'var(--c-success)' } }, 'NOUS 0'),
-    h('span', { style: { color: 'var(--c-text-faint)' } }, '/'),
-    h('span', { style: { color: 'var(--c-danger)' } }, 'EUX 0'));
-  const trumpEl = h('div', { class: 'badge badge--gold', style: { visibility: 'hidden' } }, '♥ Atout');
 
   // Emplacement réservé du DS → montage du composant table Pixi.
   const mount = h('div', { id: 'game-table-mount', 'data-slot': 'table-component', style: { position: 'absolute', inset: '0' } });
   const felt = h('div', {
     class: 'center', style: {
-      position: 'absolute', inset: '52px 22px 58px 60px', borderRadius: 'var(--r-2xl)', overflow: 'hidden',
+      // Table AU MAXIMUM : plus de barre en haut → le feutre monte à 6px du bord
+      // haut. Gauche 60px : place du menu d'icônes vertical. Bas 64px : bannières.
+      position: 'absolute', inset: '6px 14px 64px 60px', borderRadius: 'var(--r-2xl)', overflow: 'hidden',
       background: 'radial-gradient(520px 300px at 50% 45%, #2b8a52, #17673d 70%)', border: '2px solid rgba(230,196,106,.5)', boxShadow: 'inset 0 0 60px rgba(0,0,0,.35), var(--sh-float)',
     },
   }, mount);
@@ -134,30 +128,10 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   // --- Smileys / réactions (mode en ligne) ---------------------------------
 
   // Barre des joueurs (mode en ligne) : chaque nom humain ouvre son profil.
-  const playersBar = h('div', { class: 'row gap-2', style: {
-    position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', zIndex: '9',
-    padding: '4px 8px', borderRadius: 'var(--r-pill)', background: 'rgba(10,15,26,.85)',
-    border: '1px solid var(--c-line)', display: 'none', maxWidth: '92%', flexWrap: 'wrap', justifyContent: 'center',
-  } });
-  felt.append(playersBar);
-
-  const renderPlayersBar = (players: { seat: number; name: string; type: string; userId: string | null }[]) => {
-    clear(playersBar);
-    if (!players.length) { playersBar.style.display = 'none'; return; }
-    playersBar.style.display = 'flex';
-    players.forEach((pl) => {
-      const clickable = pl.type === 'human' && pl.userId;
-      playersBar.append(h('span', {
-        style: {
-          fontSize: '10px', fontFamily: 'var(--f-mono)', padding: '2px 7px', borderRadius: '999px',
-          color: clickable ? 'var(--c-gold)' : 'var(--c-text-soft)',
-          border: '1px solid ' + (clickable ? 'rgba(230,196,106,.4)' : 'var(--c-line)'),
-          cursor: clickable ? 'pointer' : 'default',
-        },
-        onClick: clickable ? () => openPlayerProfile(api, pl.userId!, pl.name) : undefined,
-      }, (pl.type === 'robot' ? '🤖 ' : '') + pl.name));
-    });
-  };
+  // Barre de noms du haut RETIRÉE (demande ergonomie) : les noms des joueurs
+  // restent affichés à côté de chaque siège sur la table. renderPlayersBar
+  // devient inerte pour préserver les points d'appel.
+  const renderPlayersBar = (_players: { seat: number; name: string; type: string; userId: string | null }[]) => { /* no-op */ };
 
 
   /**
@@ -187,53 +161,79 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     logLines.scrollTop = logLines.scrollHeight;
   };
 
-  const pauseChip = chip([h('span', { class: 'gold' }, '⏸'), h('span', {}, ' Pause')], { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' }, () => {
-    if (!loop) return;
-    const paused = loop.togglePause();
-    pauseChip.textContent = paused ? '▶ Reprendre' : '⏸ Pause';
-  });
-  const speedChip = chip('Vitesse 1×', { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' }, () => {
-    if (loop) speedChip.textContent = `Vitesse ${loop.cycleSpeed()}×`;
-  });
-  const statusChip = chip(watch ? '● Vous regardez' : '● Partie en cours', { background: 'rgba(126,203,152,.14)', border: '1px solid rgba(126,203,152,.35)', color: 'var(--c-success)' });
-  const spectatorChip = chip('👁 0', { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' });
-  spectatorChip.style.display = onlineId ? 'inline-flex' : 'none';
 
-  /**
-   * Réglage du son : chip 🔊 → modal (design system) avec deux curseurs
-   * indépendants — mélodie d'ambiance et effets sonores — persistés localement.
-   */
+  /** Bouton d'icône du menu de gauche. */
+  const iconBtn = (glyph: string, title: string, onClick?: () => void, extra: Record<string, string> = {}) =>
+    h('button', { class: 'table-menu__btn', title, onClick, style: extra }, glyph);
+
+  /** Emplacement de banniere publicitaire (bas de l'ecran, gauche/droite). */
+  const adBanner = (side: string) => h('div', { 'data-ad-slot': side, style: {
+    flex: '1', borderRadius: 'var(--r-lg)', border: '1px dashed rgba(255,255,255,.12)',
+    background: 'rgba(255,255,255,.03)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--c-text-faint)',
+  } }, `Emplacement pub ${side}`);
+
   const openSoundSettings = () => {
     let lastTestAt = 0;
     const dialog = Dialog({
       icon: '🔊', title: 'Son de la table',
       body: h('div', { class: 'col gap-3', style: { minWidth: '260px', textAlign: 'left' } },
-        Slider({ label: 'Mélodie d\'ambiance', value: soundService.melodyVolume(), fill: 'var(--g-gold, var(--c-gold))', onInput: (v) => soundService.setMelodyVolume(v) }),
+        Slider({ label: 'Melodie', value: soundService.melodyVolume(), fill: 'var(--g-gold, var(--c-gold))', onInput: (v) => soundService.setMelodyVolume(v) }),
         Slider({ label: 'Effets sonores', value: soundService.sfxVolume(), fill: 'var(--g-club, var(--c-success))', onInput: (v) => {
           soundService.setSfxVolume(v);
-          // Retour immédiat : un petit effet témoin (limité pour ne pas mitrailler).
           const now = Date.now();
           if (now - lastTestAt > 350) { lastTestAt = now; soundService.playEffect('card-play'); }
         } }),
-        h('div', { class: 'text-mute', style: { fontSize: '11px' } }, 'Réglages enregistrés sur cet appareil.')),
+        h('div', { class: 'text-mute', style: { fontSize: '11px' } }, 'Reglages enregistres sur cet appareil.')),
       actions: [Button('Fermer', { variant: 'secondary', size: 'sm', onClick: () => dialog.remove() })],
       onClose: () => dialog.remove(),
     });
     document.body.append(dialog);
   };
-  const soundChip = h('button', { class: 'chip', title: 'Son de la table', onClick: openSoundSettings }, '🔊');
+
+  // Emotes : picker ouvert au clic sur le smiley ; envoi via sendEmote (cable
+  // quand la table en ligne est prete). En local, pas d'emotes.
+  const SMILEYS = ['👍', '😂', '😮', '😎', '😅', '👏', '🤔', '🔥'];
+  let sendEmote: ((emoji: string) => void) | null = null;
+  const emotePicker = h('div', { class: 'table-menu__picker', style: { display: 'none' } },
+    ...SMILEYS.map((e2) => h('button', { class: 'table-menu__emoji', onClick: () => {
+      sendEmote?.(e2); emotePicker.style.display = 'none';
+    } }, e2)));
+  const smileyBtn = iconBtn('🙂', 'Reactions', () => {
+    emotePicker.style.display = emotePicker.style.display === 'none' ? 'flex' : 'none';
+  });
+  const smileyWrap = h('div', { style: { position: 'relative', display: onlineId ? 'block' : 'none' } }, smileyBtn, emotePicker);
+
+  const quitIcon = iconBtn('🚪', 'Quitter la table', leaveTable);
+  const spectatorIcon = iconBtn('👁', 'Spectateurs', undefined, { position: 'relative' });
+  const spectatorCount = h('span', { class: 'table-menu__badge' }, '0');
+  spectatorIcon.append(spectatorCount);
+  const onlineIcon = h('div', { class: 'table-menu__btn is-online', title: watch ? 'Vous regardez' : 'En ligne' },
+    h('span', { class: 'table-menu__dot' }));
+  const soundIcon = iconBtn('🔊', 'Son de la table', openSoundSettings);
+  const speedBadge = h('span', { class: 'table-menu__badge table-menu__badge--speed' }, '1×');
+  const pauseIcon = iconBtn('⏸', 'Pause', () => { if (!loop) return; const p2 = loop.togglePause(); pauseIcon.textContent = p2 ? '▶' : '⏸'; pauseIcon.title = p2 ? 'Reprendre' : 'Pause'; });
+  const speedIcon = iconBtn('⏩', 'Vitesse 1×', () => { if (!loop) return; const sp = loop.cycleSpeed(); speedIcon.title = `Vitesse ${sp}×`; speedBadge.textContent = `${sp}×`; });
+  speedIcon.append(speedBadge);
+
+  const leftMenu = h('div', { class: 'table-menu' },
+    quitIcon,
+    onlineId ? spectatorIcon : null,
+    onlineId ? onlineIcon : null,
+    soundIcon,
+    onlineId ? smileyWrap : null,
+    onlineId ? null : pauseIcon,
+    onlineId ? null : speedIcon,
+  );
 
   const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } },
-    h('div', { style: { position: 'absolute', top: '0', left: '0', right: '0', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px 0 60px', zIndex: '5' } },
-      Button('← Quitter', { variant: 'secondary', size: 'sm', onClick: leaveTable }),
-      h('div', { class: 'row gap-3' }, scoreEl, trumpEl)),
     felt,
+    leftMenu,
     // Overlay de logs : réservé au REJEU/local. Jamais en ligne.
     onlineId ? null : logsOverlay,
-    h('div', { class: 'row center gap-2', style: { position: 'absolute', bottom: '12px', left: '60px', right: '22px', height: '38px', justifyContent: 'center' } },
-      // Pause + vitesse : uniquement hors ligne (le rythme d'une partie en
-      // ligne est piloté par le serveur). En ligne : statut + spectateurs.
-      onlineId ? null : pauseChip, onlineId ? null : speedChip, soundChip, statusChip, spectatorChip),
+    // Bas de l'écran : deux emplacements de bannière publicitaire (gauche/droite).
+    h('div', { style: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '56px', display: 'flex', gap: '10px', padding: '4px 14px 8px', zIndex: '4' } },
+      adBanner('gauche'), adBanner('droite')),
   );
 
   // Audio : débloqué au premier geste (autoplay), effets préchargés, mélodie
@@ -274,7 +274,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
         if (saved) return;
         saved = true;
         api.saveGame({ replay: engine.toReplay(), logs: [], mode: 'local', winner: engine.partieWinner }).catch(() => {});
-        statusChip.textContent = `★ Terminé — équipe ${engine.partieWinner}`;
+        toast(`★ Partie terminée — victoire de l'équipe ${engine.partieWinner}`, 'success');
       },
     });
     render(engine, players.map((p) => p.name));
@@ -294,9 +294,6 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       const last = v.currentTrick[v.currentTrick.length - 1];
       appendLog(`[jeu] ${names[last.seat] ?? `S${last.seat}`} joue ${last.card.rank}${last.card.suit[0].toUpperCase()}`);
     }
-    (scoreEl.children[0] as HTMLElement).textContent = `NOUS ${v.cumulative.A}`;
-    (scoreEl.children[2] as HTMLElement).textContent = `EUX ${v.cumulative.B}`;
-    if (v.trump) { trumpEl.textContent = `${SUIT_SYMBOL[v.trump]} Atout`; trumpEl.style.visibility = 'visible'; } else trumpEl.style.visibility = 'hidden';
 
     const myTurn = mySeat != null && engine.turn === mySeat && !v.awaitingCollect;
     reactRoot ??= createRoot(mount);
@@ -330,14 +327,6 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     currentMySeat = seat;
     playDetected(v, (seat ?? null) as Seat | null);
     renderPlayersBar((v as unknown as { players?: { seat: number; name: string; type: string; userId: string | null }[] }).players ?? []);
-    // NOUS = équipe du spectateur (sièges pairs = A, impairs = B), EUX = l'autre.
-    // Pour un spectateur non assis (seat null), on garde A=NOUS par défaut.
-    const usIsA = seat == null || seat % 2 === 0;
-    const usScore = usIsA ? (v.cumulative?.A ?? 0) : (v.cumulative?.B ?? 0);
-    const themScore = usIsA ? (v.cumulative?.B ?? 0) : (v.cumulative?.A ?? 0);
-    (scoreEl.children[0] as HTMLElement).textContent = `NOUS ${usScore}`;
-    (scoreEl.children[2] as HTMLElement).textContent = `EUX ${themScore}`;
-    if (v.trump) { trumpEl.textContent = `${SUIT_SYMBOL[v.trump]} Atout`; trumpEl.style.visibility = 'visible'; } else trumpEl.style.visibility = 'hidden';
     for (const line of state.logs ?? []) if (line?.msg) appendLog(line.msg);
 
     const myTurn = seat != null && v.turn === seat && !v.awaitingCollect;
@@ -351,15 +340,22 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     });
 
     reactRoot ??= createRoot(mount);
+    // Le smiley du menu de gauche émet une réaction (diffusée à tous par le
+    // serveur) et l'affiche localement pour l'émetteur.
+    sendEmote = seat != null ? (emoji: string) => {
+      onlineSocket.signal('smiley', { emoji });
+      soundService.playEffect('emote');
+      emoteSignal = { seat: seat as Seat, emoji, nonce: ++emoteNonce };
+      renderOnline(state);
+    } : null;
     reactRoot.render(createElement(PixiTable, {
       view: v, names: (v as unknown as { playerNames?: string[] }).playerNames ?? ['A', 'B', 'C', 'D'],
       hands, mySeat: seat,
       legal: myTurn && v.phase === 'playing' ? (state.legal ?? []) : [],
       onBid: seat != null ? (b: Omit<Bid, 'seat'>) => onlineSocket.submitBid(b) : undefined,
       onPlay: seat != null ? (card: Card) => onlineSocket.playCard(card) : undefined,
-      // Réaction émise : diffusée à TOUS (serveur) et affichée localement pour
-      // l'émetteur. Le serveur renverra le signal, mais la table gère le nonce.
-      onEmote: seat != null ? (fromSeat: Seat, emoji: string) => { onlineSocket.signal('smiley', { emoji }); soundService.playEffect('emote'); emoteSignal = { seat: fromSeat, emoji, nonce: ++emoteNonce }; renderOnline(state); } : undefined,
+      // Les émotes passent par le MENU DE GAUCHE (pas le dock HUD) : on ne passe
+      // pas onEmote à PixiTable pour éviter deux listes de smileys.
       emoteSignal,
       opponentCards: 'back', showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: () => { onlineSocket.disconnect(); reactRoot?.unmount(); router.go('online'); },
@@ -367,12 +363,11 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   };
 
   if (onlineId) {
-    statusChip.textContent = '● Connexion…';
     let gotState = false;
     // Voile d'attente tant qu'aucun état de partie n'est reçu (table encore en
     // lobby, ou connexion en cours) — évite d'afficher un tapis vide.
     const waiting = h('div', { class: 'center col gap-3', style: {
-      position: 'absolute', inset: '52px 22px 58px 60px', borderRadius: 'var(--r-2xl)', zIndex: '6',
+      position: 'absolute', inset: '6px 14px 64px 60px', borderRadius: 'var(--r-2xl)', zIndex: '6',
       background: 'rgba(6,10,20,.72)', backdropFilter: 'blur(4px)', textAlign: 'center',
     } },
       h('div', { class: 'title', style: { fontSize: '16px', color: 'var(--c-gold)' } }, 'En attente de la partie…'),
@@ -383,15 +378,14 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     onlineSocket.connect(onlineId, {
       // La mélodie suit le TYPE de la table (hybride/acier/royal), reçu du lobby.
       onLobby: (lobby) => { melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind); },
-      onGame: (state) => { gotState = true; statusChip.textContent = '● En ligne'; waiting.style.display = 'none'; renderOnline(state); },
-      onSpectators: (count) => { spectatorChip.textContent = `👁 ${count}`; },
+      onGame: (state) => { gotState = true; waiting.style.display = 'none'; renderOnline(state); },
+      onSpectators: (count) => { spectatorCount.textContent = `${count}`; },
       onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { soundService.playEffect('emote'); emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },
-      onFinished: (info) => { statusChip.textContent = '★ Partie terminée'; showOnlineEnd(info); },
+      onFinished: (info) => { showOnlineEnd(info); },
       onSpectatorFull: (info) => toast(`Table pleine (${info.max} spectateurs max)`, 'error'),
       onConnectError: (msg) => toast(`Connexion impossible : ${msg}`),
     });
     // Si rien n'arrive au bout de 6 s, on informe sans bloquer (table pas lancée).
-    setTimeout(() => { if (!gotState) statusChip.textContent = '● En attente du lancement'; }, 6000);
     return root;
   }
 
