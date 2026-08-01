@@ -3,8 +3,8 @@
 ## 1. Avant d'écrire une ligne
 
 1. Lire `docs/ai/SPEC.md` (produit) puis `docs/ai/ARCHITECTURE.md` (technique).
-2. Ouvrir le référentiel de tâches `docs/tasks/tasks.json`
-   (tableau : `npx serve docs/tasks` → `board.html`).
+2. Ouvrir le référentiel de tâches `board/tasks.json`
+   (tableau : `npx serve board` → `board.html`).
 3. Rapprocher la demande d'une tâche existante — enrichir ses `instructions`
    si c'est la même chose, en créer une sinon.
 4. Mettre à jour `status`, `updatedAt` et `history` de la tâche.
@@ -29,7 +29,7 @@
 npm run tnr                     # tout vert
 # bump des package.json + web/src/version.ts
 # entrée CHANGELOG.md
-# mise à jour docs/ + docs/tasks/tasks.json
+# mise à jour docs/ + board/tasks.json
 ```
 
 ## 4. Ajouter un module serveur

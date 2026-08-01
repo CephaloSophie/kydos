@@ -2,7 +2,33 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.1.0 — Économie de jetons complète : prélèvement au lancement + codes promo (version actuelle)
+## v12.1.2 — README enrichi (cap sync expliqué) + board/ à la racine (version actuelle)
+
+- **`npx cap sync android` expliqué** : ce que la commande fait concrètement
+  (copie du bundle, mise à jour des plugins natifs, sérialisation de la config),
+  et la différence avec `cap run` et `cap open`.
+- **Référentiel déplacé** : `docs/tasks/` → **`board/`** à la racine du projet
+  (`board/tasks.json`, `board/board.html`, `board/BACKLOG.md`). Toutes les
+  références mises à jour (README, CONTRIBUTING, SPEC, CHANGELOG, ROADMAP, board
+  lui-même).
+
+## v12.1.1 — README : guide device & debug (Ubuntu + macOS)
+
+Documentation développeur enrichie dans le README (aucun changement de code) :
+- **Activer le mode développeur** sur une tablette/téléphone Android (7 clics sur
+  le numéro de build, débogage USB).
+- **Connexion USB** avec `adb devices` — sections **Ubuntu** (plugdev, install
+  adb) et **macOS** (platform-tools via brew).
+- **Ouvrir Android Studio** avec Capacitor (`npx cap open android`).
+- **Resynchroniser après une modification** (rebuild + `cap sync`, raccourcis
+  `cap:android`/Makefile, purge du cache).
+- **Inspecter depuis Chrome** (`chrome://inspect`) une device connectée :
+  console, réseau, éléments.
+- **Voir les logs natifs** (`adb logcat`, `make logs-android`).
+- **Débugguer dans Android Studio** (Logcat, points d'arrêt natifs) + note iOS
+  (Safari Web Inspector, logs Xcode).
+
+## v12.1.0 — Économie de jetons complète : prélèvement au lancement + codes promo
 
 Le système de jetons fonctionne de bout en bout : mise prélevée **au démarrage**
 de la partie, rechargement par **code promo**, accès porte-monnaie au clic.
@@ -556,7 +582,7 @@ plugins récente, meilleure prise en charge des WebViews).
 L'application web est **inchangée** : seul l'enrobage natif diffère.
 
 ### Board Agile complet (KB-251)
-Le référentiel `docs/tasks/` devient un vrai board Agile.
+Le référentiel `board/` devient un vrai board Agile.
 
 - `tasks.json` enrichi de nouvelles dimensions par tâche : **techno**,
   **catégorie** Agile fine (Mobile, Serveur, Tests, TNR, Test E2E,
@@ -920,7 +946,7 @@ réglages, cerveaux.
 appelant en production — les gains sont versés mais les mises ne sont jamais
 prélevées (tâche KB-071).
 
-### Référentiel de tâches — `docs/tasks/`
+### Référentiel de tâches — `board/`
 - **`tasks.json`** — base de vérité : 44 tâches avec identifiant, domaine,
   module, type, statut, priorité, version cible, estimation, spécification,
   instructions, critères d'acceptation, dates, **historique horodaté** et

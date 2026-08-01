@@ -2,7 +2,7 @@
 
 Trajectoire produit **après v11.8.0**, priorisée à partir de l'audit croisé
 (`docs/AUDIT-3AGENTS.md`). Source de vérité produit : `docs/ai/SPEC.md`.
-Suivi opérationnel des tâches : `docs/tasks/board.html` + `tasks.json`.
+Suivi opérationnel des tâches : `board/board.html` + `tasks.json`.
 
 Les priorités suivent l'échelle projet : **P0** (bloquant) · **P1** (important,
 prochain jalon) · **P2** (souhaitable) · **P3** (cap lointain).

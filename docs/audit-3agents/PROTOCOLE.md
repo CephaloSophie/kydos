@@ -1,7 +1,7 @@
 # Protocole des 3 agents — analyse indépendante puis confrontation
 
 Trois revues INDÉPENDANTES du projet Kýdos Belote, chacune partant de la même
-vérité terrain (transcripts /mnt/transcripts, docs docs/ai + docs/tasks, et le
+vérité terrain (transcripts /mnt/transcripts, docs docs/ai + board, et le
 code sous /home/claude/belote), mais avec une GRILLE DE LECTURE distincte. Elles
 ne communiquent pas pendant la phase d'analyse. Ensuite, confrontation (« arène »)
 pour réconcilier constats, combler les angles morts, et produire :
