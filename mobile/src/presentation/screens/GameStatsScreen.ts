@@ -40,7 +40,7 @@ function compareBar(label: string, a: number, b: number) {
 }
 
 export function GameStatsScreen(ctx: AppContext): HTMLElement {
-  const { router, api } = ctx;
+  const { router, api, ads } = ctx;
   const id = new URLSearchParams(location.hash.split('?')[1] ?? '').get('id');
 
   const body = h('div', { class: 'col gap-3' }, h('div', { class: 'text-mute', style: { fontSize: '12px' } }, 'Chargement des statistiques…'));
@@ -135,7 +135,7 @@ export function GameStatsScreen(ctx: AppContext): HTMLElement {
 
     // Rejouer.
     body.append(h('div', { class: 'row center', style: { marginTop: '4px' } },
-      Button('▶ Rejouer cette partie', { onClick: () => router.go(`replay?id=${g.id}`) })));
+      Button('▶ Rejouer cette partie', { onClick: async () => { await ads.beforeLaunchSaved(); router.go(`replay?id=${g.id}`); } })));
   };
 
   if (!id) {

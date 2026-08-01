@@ -38,7 +38,7 @@ const rules = new ContreeRules();
 const GREEK = ['Athéna', 'Borée', 'Calliope', 'Damon'];
 
 export function TableScreen(ctx: AppContext): HTMLElement {
-  const { router, api } = ctx;
+  const { router, api, ads } = ctx;
   // Mode « regarder » demandé via l'URL : on saute le dialogue et on lance
   // directement une partie 4 robots avec la première écurie de l'utilisateur.
   const watch = location.hash.includes('watch=1');
@@ -275,6 +275,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
         saved = true;
         api.saveGame({ replay: engine.toReplay(), logs: [], mode: 'local', winner: engine.partieWinner }).catch(() => {});
         toast(`★ Partie terminée — victoire de l'équipe ${engine.partieWinner}`, 'success');
+        void ads.afterGame(); // interstitiel après la partie (ignoré si VIP)
       },
     });
     render(engine, players.map((p) => p.name));
@@ -381,7 +382,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       onGame: (state) => { gotState = true; waiting.style.display = 'none'; renderOnline(state); },
       onSpectators: (count) => { spectatorCount.textContent = `${count}`; },
       onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { soundService.playEffect('emote'); emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },
-      onFinished: (info) => { showOnlineEnd(info); },
+      onFinished: (info) => { showOnlineEnd(info); void ads.afterGame(); },
       onSpectatorFull: (info) => toast(`Table pleine (${info.max} spectateurs max)`, 'error'),
       onConnectError: (msg) => toast(`Connexion impossible : ${msg}`),
     });

@@ -9,7 +9,7 @@ import type { AppContext } from '../context';
 import type { ServerGame } from '../../data/ApiClient';
 
 export function HistoryScreen(ctx: AppContext): HTMLElement {
-  const { router, api } = ctx;
+  const { router, api, ads } = ctx;
 
   // Portée : mes parties (créées ou où je joue) / mes robots / mon équipe / publiques.
   type Scope = 'mine' | 'myrobots' | 'team' | 'public';
@@ -51,7 +51,7 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
       // Actions : voir les stats détaillées / rejouer.
       h('div', { class: 'row gap-2', style: { marginTop: '2px' } },
         Button('📊 Statistiques', { variant: 'secondary', size: 'sm', onClick: () => router.go(`gamestats?id=${g.id}`) }),
-        Button('▶ Rejouer', { variant: 'ghost', size: 'sm', onClick: () => router.go(`replay?id=${g.id}`) })),
+        Button('▶ Rejouer', { variant: 'ghost', size: 'sm', onClick: async () => { await ads.beforeLaunchSaved(); router.go(`replay?id=${g.id}`); } })),
     );
   };
 

@@ -9,6 +9,8 @@ import { h, clear } from '../../core/dom';
 import { Button, Badge, Dialog } from '../components/ui';
 import { api, type ServerWalletTransaction } from '../../data/ApiClient';
 import { claimDaily, readWallet } from '../../services/wallet';
+import { VIP_PLANS, type VipPlan } from '../../services/ads';
+import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
 
 const KIND_LABELS: Record<ServerWalletTransaction['kind'], string> = {
@@ -26,11 +28,14 @@ const KIND_COLORS: Record<ServerWalletTransaction['kind'], string> = {
 };
 
 export function WalletScreen(ctx: AppContext): HTMLElement {
-  const { router } = ctx;
+  const { router, ads, vip } = ctx;
 
   const balanceEl = h('div', { class: 'title', style: { fontSize: '48px', color: 'var(--c-gold)', margin: '4px 0' } }, '◆ …');
   const dailyStateEl = h('div', { class: 'text-mute', style: { fontSize: '12px', marginTop: '4px' } }, 'Chargement…');
   const claimBtn = Button('Débloquer +500 ◆', { onClick: onClaim });
+  const rewardBtn = Button('🎬 Regarder une pub (+100 ◆)', { variant: 'secondary', onClick: onWatchReward });
+  const vipStateEl = h('div', { class: 'text-mute', style: { fontSize: '12px', marginBottom: '8px' } }, 'Chargement…');
+  const vipPlansEl = h('div', { class: 'col gap-2' });
   const historyEl = h('div', { class: 'col gap-2', style: { marginTop: '12px' } }, h('div', { class: 'text-mute', style: { fontSize: '11px' } }, '…'));
 
   async function refresh() {
@@ -40,6 +45,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
       ? 'Votre récompense quotidienne de 500 ◆ est disponible.'
       : 'Récompense déjà réclamée aujourd\'hui — revenez demain.';
     (claimBtn as HTMLButtonElement).disabled = !w.canClaim;
+    await refreshVip();
     // Journal des transactions (si serveur disponible).
     if (api.isAuthenticated()) {
       try {
@@ -68,6 +74,47 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
     }
   }
 
+  async function refreshVip() {
+    const s = await vip.status();
+    vipStateEl.textContent = s.isVip && s.expiresAt
+      ? `\u2b50 Statut VIP actif jusqu'au ${new Date(s.expiresAt).toLocaleDateString('fr-FR')} \u2014 aucune publicit\u00e9.`
+      : 'Vous n\u2019\u00eates pas VIP. Passez VIP pour supprimer toutes les publicit\u00e9s.';
+    clear(vipPlansEl);
+    for (const plan of VIP_PLANS) {
+      vipPlansEl.append(h('div', { class: 'between', style: { padding: '8px 12px', borderRadius: 'var(--r-lg)', background: 'var(--c-veil-04)', border: '1px solid var(--c-line)' } },
+        h('div', {}, h('span', { style: { fontSize: '13px', fontWeight: '700' } }, plan.label),
+          h('span', { class: 'text-mute', style: { fontSize: '11px', marginLeft: '8px' } }, `${plan.costTokens.toLocaleString('fr-FR')} \u25c6`)),
+        Button('Choisir', { size: 'sm', onClick: () => onBuyVip(plan) })));
+    }
+  }
+
+  async function onWatchReward() {
+    const r = await ads.watchRewarded();
+    await refresh();
+    if (r.rewarded) toast(`+${r.amount} \u25c6 cr\u00e9dit\u00e9s !`, 'success');
+    else toast('Pub non termin\u00e9e \u2014 aucune r\u00e9compense.', 'error');
+  }
+
+  async function onBuyVip(plan: VipPlan) {
+    const w = await readWallet();
+    if (w.balance < plan.costTokens) { toast(`Solde insuffisant (${plan.costTokens.toLocaleString('fr-FR')} \u25c6 requis).`, 'error'); return; }
+    const dlg = Dialog({
+      icon: '\u2b50', title: `Passer VIP \u2014 ${plan.label}`,
+      body: `Confirmer l'achat pour ${plan.costTokens.toLocaleString('fr-FR')} \u25c6 ? Aucune publicit\u00e9 pendant ${plan.label}.`,
+      actions: [
+        Button('Annuler', { variant: 'secondary', size: 'sm', onClick: () => dlg.remove() }),
+        Button('Confirmer', { size: 'sm', onClick: async () => {
+          dlg.remove();
+          await vip.purchase(plan.id);
+          await refresh();
+          toast(`\u2b50 Vous \u00eates VIP pour ${plan.label} !`, 'success');
+        } }),
+      ],
+      onClose: () => dlg.remove(),
+    });
+    root.append(dlg);
+  }
+
   async function onClaim() {
     const res = await claimDaily();
     await refresh();
@@ -93,7 +140,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
         h('div', { class: 'eyebrow' }, 'SOLDE'),
         balanceEl,
         dailyStateEl,
-        h('div', { style: { marginTop: '12px' } }, claimBtn)),
+        h('div', { class: 'col gap-2', style: { marginTop: '12px' } }, claimBtn, rewardBtn)),
       h('div', { class: 'card' },
         h('div', { class: 'eyebrow' }, 'BARÈME'),
         h('div', { class: 'col gap-2', style: { marginTop: '6px', fontSize: '12px', color: 'var(--c-text-soft)' } },
@@ -102,6 +149,10 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
           h('div', {}, Badge('2H+2R', 'neutral'), ' Mise 150 ◆ · gain 225 ◆ pour l\'humain gagnant.'),
           h('div', {}, Badge('4R', 'neutral'), ' Mise 50 ◆ / robot · gain 150 ◆ par robot gagnant.'),
           h('div', { class: 'text-mute', style: { fontSize: '10px', marginTop: '6px' } }, 'Le mode entraînement (local) est gratuit.')))),
+    h('div', { class: 'card', style: { marginTop: '12px', border: '1px solid rgba(230,196,106,.35)' } },
+      h('div', { class: 'eyebrow', style: { marginBottom: '6px', color: 'var(--c-gold)' } }, '⭐ STATUT VIP — SANS PUBLICITÉ'),
+      vipStateEl,
+      vipPlansEl),
     h('div', { class: 'card', style: { marginTop: '12px' } },
       h('div', { class: 'eyebrow', style: { marginBottom: '6px' } }, 'HISTORIQUE'),
       historyEl),

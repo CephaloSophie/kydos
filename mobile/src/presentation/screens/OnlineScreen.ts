@@ -29,7 +29,7 @@ const KINDS: Record<TableKind, { label: string; tagline: string; glyph: string; 
 const SEAT_LABELS = ['A', 'B', 'C', 'D'];
 
 export function OnlineScreen(ctx: AppContext): HTMLElement {
-  const { router, api } = ctx;
+  const { router, api, ads } = ctx;
   const listEl = h('div', { class: 'col gap-2' }, h('div', { class: 'text-mute', style: { fontSize: '12px' } }, 'Chargement des tables…'));
   let myRobots: { id: string; name: string }[] = [];
   let myUserId: string | null = null;
@@ -204,6 +204,7 @@ export function OnlineScreen(ctx: AppContext): HTMLElement {
       const need = KINDS[kind].robots;
       if (selectedRobots.length !== need) { err.textContent = need === 2 ? 'Sélectionnez exactement deux robots.' : 'Sélectionnez votre robot partenaire.'; return; }
       try {
+        await ads.beforeCreateTable(); // interstitiel avant création (ignoré si VIP)
         await api.createTable({ kind, visibility, robotIds: selectedRobots, forTeam: visibility === 'private' });
         backdrop.remove();
         reload();

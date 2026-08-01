@@ -43,3 +43,16 @@ export async function claimDaily(): Promise<{ claimed: boolean; balance: number;
     return { claimed: r.claimed, balance: r.balance, source: 'local' };
   }
 }
+
+/**
+ * Crédite une récompense de jetons (pub récompensée). Le crédit local est
+ * immédiat (démo/offline). Un endpoint serveur dédié aux récompenses pub est
+ * prévu (économie serveur, tranche ultérieure) : quand il existera, on
+ * l'appellera ici en priorité, comme pour claimDaily.
+ */
+export async function creditReward(amount: number): Promise<{ balance: number; source: 'server' | 'local' }> {
+  // Crédit local (source de vérité en démo). Réutilise le store dailyTokens.
+  const balance = localBalance() + Math.max(0, Math.round(amount));
+  try { localStorage.setItem('kydos.tokens', String(balance)); } catch { /* stockage indispo */ }
+  return { balance, source: 'local' };
+}

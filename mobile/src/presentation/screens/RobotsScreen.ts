@@ -11,7 +11,7 @@ import type { AppContext } from '../context';
 import type { Robot } from '../../domain/entities/Robot';
 
 export function RobotsScreen(ctx: AppContext): HTMLElement {
-  const { router, robotService, api } = ctx;
+  const { router, robotService, api, ads } = ctx;
 
   const robotCard = (r: Robot) => h('div', { class: 'card' },
     h('div', { class: 'row gap-3', style: { marginBottom: '12px' } },
@@ -98,7 +98,7 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
       h('div', { class: 'row gap-2' }, Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }), Button('+ Nouveau', { size: 'sm', onClick: () => router.go('create') }))),
     grid,
     h('div', { class: 'row gap-3', style: { marginTop: '12px' } },
-      Button('Lancer une partie', { block: true, onClick: () => router.go('table') }),
+      Button('Lancer une partie', { block: true, onClick: async () => { await ads.beforeTraining(); router.go('table'); } }),
       Button('▶ Match entre robots', { variant: 'ghost', block: true, onClick: openRobotMatchDialog })),
   );
 }

@@ -11,6 +11,7 @@ import type { ApiClient } from '../data/ApiClient';
 import type { RobotService } from '../domain/usecases/RobotService';
 import type { TeamService } from '../domain/usecases/TeamService';
 import type { Translate, Lang } from '../data/i18n';
+import type { AdManager, VipService } from '../services/ads';
 
 export interface AppState { lang: Lang; screen: string }
 
@@ -22,4 +23,8 @@ export interface AppContext {
   robotService: RobotService;
   teamService: TeamService;
   t: Translate;
+  /** Orchestrateur publicitaire (bannière, interstitiels, App Open, récompensées). */
+  ads: AdManager;
+  /** Statut VIP (masque toute publicité). */
+  vip: VipService;
 }
