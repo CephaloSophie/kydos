@@ -80,6 +80,40 @@ export class WalletService {
     userDocument.wallet.transactions.push({ kind, amount, balance, at: new Date(), game: gameId } as any);
     await userDocument.save();
   }
+
+  /**
+   * Prélève les mises de PLUSIEURS utilisateurs au lancement d'une partie.
+   * Vérifie d'ABORD tous les soldes (aucun prélèvement partiel), puis débite. En
+   * cas d'échec en cours de route, REMBOURSE les débits déjà effectués — l'appel
+   * est donc « tout ou rien ».
+   * @param stakes  montant par utilisateur (Map userId → jetons), voir stakesByUser
+   */
+  async stakeGame(stakes: Map<string, number>, gameId?: string): Promise<{ debited: Map<string, number> }> {
+    const entries = [...stakes.entries()].filter(([, amount]) => amount > 0);
+    if (entries.length === 0) return { debited: new Map() };
+
+    // 1) Vérification préalable de TOUS les soldes.
+    for (const [userId, amount] of entries) {
+      const userDocument = await UserModel.findById(userId);
+      const balance = userDocument?.wallet?.tokens ?? 0;
+      if (balance < amount) throw badRequest(`solde insuffisant (${amount} ◆ requis)`);
+    }
+
+    // 2) Débit effectif, avec remboursement si un débit échoue.
+    const debited = new Map<string, number>();
+    try {
+      for (const [userId, amount] of entries) {
+        await this.stake(userId, amount, gameId);
+        debited.set(userId, amount);
+      }
+    } catch (error) {
+      for (const [userId, amount] of debited) {
+        try { await this.credit(userId, amount, gameId, 'refund'); } catch { /* best-effort */ }
+      }
+      throw error;
+    }
+    return { debited };
+  }
 }
 
 export const walletService = new WalletService();

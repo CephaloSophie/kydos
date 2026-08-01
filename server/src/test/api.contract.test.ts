@@ -49,6 +49,7 @@ const PROTECTED: [string, string][] = [
   ['post', '/api/competitions'],
   ['get', '/api/wallet'],
   ['post', '/api/wallet/claim'],
+  ['post', '/api/promo/redeem'],
   ['get', '/api/analytics/me'],
   ['get', '/api/brains'],
   ['get', '/api/users/search'],

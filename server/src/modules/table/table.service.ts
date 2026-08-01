@@ -5,6 +5,8 @@ import { UserModel } from '../user/user.model.js';
 import { singleGameLockService } from '../game/singleGameLock.service.js';
 import { eligibilityService } from './eligibility.service.js';
 import { serializeTable, createEmptySeats, teamOfSeatIndex } from './table.serializer.js';
+import { walletService } from '../wallet/wallet.service.js';
+import { stakesByUser, type GameEconomyContext, type SeatEconomy } from '../../shared/gameEconomy.js';
 import { createLogger } from '../../core/logger.js';
 import { badRequest, conflict, forbidden, notFound, unauthorized } from '../../core/HttpError.js';
 
@@ -312,13 +314,31 @@ export class TableService {
     if (!tableDocument) throw notFound();
     if (String(tableDocument.owner) !== userId) throw forbidden('seul le créateur démarre');
     if (tableDocument.seats.some((seat: any) => seat.kind === 'empty')) throw badRequest('4 places requises');
+
+    // Économie : PRÉLÈVEMENT des mises au lancement (mise humain 100 ◆, robot
+    // 50 ◆). Tout ou rien : si un joueur n'a pas de quoi payer, la partie ne
+    // démarre pas et personne n'est débité. Le gain est crédité en fin de partie.
+    const stakes = stakesByUser(this.economyContext(tableDocument));
+    await walletService.stakeGame(stakes, String(tableDocument._id));
+
     tableDocument.status = 'playing';
     tableDocument.startsAt = new Date(Date.now() + START_DELAY_MS);
     this.markActivity(tableDocument);
     await tableDocument.save();
-    logger.info('départ programmé', { table: String(tableDocument._id) });
+    logger.info('départ programmé', { table: String(tableDocument._id), staked: stakes.size });
     this.broadcastTable(tableDocument);
     return { tableId: String(tableDocument._id), startDelayMs: START_DELAY_MS, table: serializeTable(tableDocument) };
+  }
+
+  /** Construit le contexte d'économie (mode online) à partir des sièges. */
+  private economyContext(tableDocument: any): GameEconomyContext {
+    const seats: SeatEconomy[] = tableDocument.seats.map((seat: any) => ({
+      kind: seat.kind === 'robot' ? 'robot' : 'human',
+      team: teamOfSeatIndex(seat.index),
+      ownerUserId: seat.kind === 'human' && seat.user ? String(seat.user) : undefined,
+      robotOwnerUserId: seat.kind === 'robot' && seat.ownerId ? String(seat.ownerId) : undefined,
+    }));
+    return { mode: 'online', seats, winner: null };
   }
 
   startIdleSweeper() {

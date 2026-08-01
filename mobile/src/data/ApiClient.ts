@@ -106,6 +106,8 @@ export class ApiClient {
   // --- Wallet -------------------------------------------------------------
   wallet() { return this.call<ServerWallet>('/wallet'); }
   claimDailyTokens() { return this.call<{ claimed: boolean; balance: number; reward: number }>('/wallet/claim', { method: 'POST' }); }
+  /** Recharge des jetons via un code promo (12 chiffres, tirets ignorés). */
+  redeemPromo(code: string) { return this.call<{ tokens: number; balance: number }>('/promo/redeem', { method: 'POST', body: JSON.stringify({ code }) }); }
 
   // --- Teams --------------------------------------------------------------
   listTeams() { return this.call<{ teams: ServerTeamSummary[] }>('/teams'); }
@@ -166,7 +168,7 @@ export interface ServerTeamDetail {
   myRole: TeamRoleClient | null;
 }
 
-export interface ServerWalletTransaction { kind: 'daily' | 'game_stake' | 'game_win' | 'refund'; amount: number; balance: number; at: string; game: string | null }
+export interface ServerWalletTransaction { kind: 'daily' | 'game_stake' | 'game_win' | 'refund' | 'promo'; amount: number; balance: number; at: string; game: string | null }
 
 export interface ServerWallet {
   balance: number;

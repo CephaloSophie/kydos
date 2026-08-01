@@ -119,7 +119,7 @@ La version implémentée pour chaque module est indiquée entre crochets ;
   cours… »** tant qu'elle vit ; dès qu'elle finit, elle bascule vers
   l'historique.
 
-### 3.9 Économie de jetons [v10.3.0 — /wallet + récompense quotidienne ; PAYOUTS branchés ; PRÉLÈVEMENT de mise NON branché ⚠️]
+### 3.9 Économie de jetons [v12.1.0 — /wallet + quotidien + PAYOUTS + PRÉLÈVEMENT au lancement + codes promo ✓]
 - **Récompense quotidienne** de 500 jetons — l'utilisateur clique sur la
   pastille pour débloquer, crédit immédiat, une fois par jour, côté SERVEUR
   (localStorage seulement en fallback offline).
@@ -217,7 +217,7 @@ pour qu'elle redevienne fidèle. Détail complet dans `CHANGELOG.md`.
 Issues de l'analyse croisée (voir `docs/AUDIT-3AGENTS.md`). Priorités dans
 `docs/ROADMAP.md` et `docs/tasks/`.
 
-- **P1 — Économie asymétrique** : payouts versés, mises non prélevées (§3.9).
+- ~~P1 — Économie asymétrique~~ : CORRIGÉ v12.1 (prélèvement au lancement, §3.9).
 - **P1 — Édition de robot** absente (créer/supprimer OK, modifier NON).
 - **P2 — Robot favori** : champ présent mais non câblé pour la reprise auto.
 - **P2 — Parité web** : le web n'a pas les fonctionnalités online v11.

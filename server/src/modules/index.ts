@@ -10,6 +10,7 @@ import { analyticsModule } from './analytics/index.js';
 import { competitionModule } from './competition/index.js';
 import { brainModule } from './brain/index.js';
 import { walletModule } from './wallet/index.js';
+import { promoModule } from './promo/index.js';
 
 /**
  * Registre des modules applicatifs.
@@ -27,4 +28,5 @@ export const applicationModules: AppModule[] = [
   competitionModule,
   brainModule,
   walletModule,
+  promoModule,
 ];

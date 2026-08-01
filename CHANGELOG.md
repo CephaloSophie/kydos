@@ -2,7 +2,50 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.0.0 — Publicité multi-fournisseurs + VIP sans publicité (version actuelle)
+## v12.1.0 — Économie de jetons complète : prélèvement au lancement + codes promo (version actuelle)
+
+Le système de jetons fonctionne de bout en bout : mise prélevée **au démarrage**
+de la partie, rechargement par **code promo**, accès porte-monnaie au clic.
+Documentation : **docs/WALLET.md** + section AdMob test/prod dans **docs/ADS.md**.
+
+### Prélèvement des mises au lancement (KB-380 / corrige KB-300)
+`walletService.stakeGame()` débite la mise de chaque joueur au démarrage de la
+table (100 ◆ humain, 50 ◆ robot ; entraînement local gratuit). **Tout ou rien** :
+tous les soldes sont vérifiés d'abord ; si un débit échoue, les débits déjà faits
+sont **remboursés** (transaction `refund`). La partie est refusée si un joueur
+n'a pas de quoi payer. Corrige l'asymétrie historique (gains versés sans mise).
+
+### Codes promo de rechargement (KB-381)
+- Modèle Mongo `PromoCode` : **code 12 chiffres**, valeur en jetons, **date de
+  validité** (1 semaine, 1 mois…), quota d'utilisations, **anti-rejeu par
+  personne**, activation/désactivation, libellé.
+- Endpoint `POST /api/promo/redeem` (normalise les tirets), erreurs explicites
+  (inconnu, expiré, épuisé, déjà utilisé).
+- **Seed** : 3 codes de démo (`1111-2222-3333` 500 ◆/7 j, `4444-5555-6666`
+  2 000 ◆/30 j, `9999-8888-7777` 10 000 ◆/30 j).
+- Mobile : carte « Recharger avec un code » dans le porte-monnaie, champ affichant
+  un **tiret tous les 4 chiffres** (valeur envoyée = chiffres seuls).
+
+### Accès porte-monnaie + doc (KB-382)
+- La pastille ◆ en haut **ouvre la page Mon porte-monnaie** (quotidien, promo,
+  VIP, pub récompensée regroupés) au lieu de débloquer directement.
+- **docs/ADS.md** : section AdMob mode TEST (inscription, pubs de test visibles
+  sur device) et passage en PRODUCTION, pas à pas.
+- **docs/WALLET.md** : économie, prélèvement, codes promo, VIP.
+
+### Vérification
+```
+TNR : 14/14 · 392 tests (+8 : promo serveur + promoCode mobile + contrat)
+TNR serveur : 4/4 · 206 tests
+```
+
+### Note d'intégration
+Le prélèvement au lancement et la redemption réelle des codes touchent MongoDB :
+leur exécution complète est couverte par le job CI `tnr-server`
+(`MONGOMS_AVAILABLE=1`). La logique pure (format promo, balance) est testée
+partout.
+
+## v12.0.0 — Publicité multi-fournisseurs + VIP sans publicité
 
 Monétisation complète de l'application mobile : bannière, interstitiels, App
 Open, pubs récompensées, et statut VIP. Architecture modulaire — change de

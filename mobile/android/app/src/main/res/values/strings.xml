@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Kýdos Belote</string>
+    <string name="title_activity_main">Kýdos Belote</string>
+    <string name="package_name">com.cephalosophie.kydosbelote</string>
+    <string name="custom_url_scheme">com.cephalosophie.kydosbelote</string>
+</resources>

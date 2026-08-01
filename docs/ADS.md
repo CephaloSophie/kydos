@@ -70,20 +70,68 @@ Les SDK publicitaires n'existent que sur device (Android/iOS). En web/dev, le
 fournisseur nul est utilisé (aucune pub). Sur natif, installez le plugin puis
 `npx cap sync`.
 
-### AdMob (défaut)
+### AdMob (défaut) — mode TEST puis PROD
+
+Objectif : t'inscrire sur AdMob, voir **de vraies pubs de test** renvoyées par
+Google sur ton device, puis passer en production sans changer le code métier.
+
+#### Étape 1 — Inscription AdMob (gratuit)
+
+1. Va sur https://admob.google.com et crée un compte (lié à un compte Google).
+2. **Ajoute une application** (Apps -> Add app). Même non publiée, choisis « pas
+   encore sur un store » : AdMob te donne un **App ID**
+   `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY`.
+3. **Crée une unité par format** (Bannière, Interstitiel, Récompensée, App Open).
+   Chacune donne un **unit ID** `ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ`.
+
+#### Étape 2 — Installer le plugin
 
 ```bash
 npm i @capacitor-community/admob
 npx cap sync
 ```
-- **Android** : ajoutez l'App ID dans `mobile/android/app/src/main/AndroidManifest.xml` :
+
+#### Étape 3 — Déclarer l'App ID natif
+
+- **Android** — `mobile/android/app/src/main/AndroidManifest.xml`, dans `<application>` :
   ```xml
   <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
-             android:value="ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy"/>
+             android:value="ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"/>
   ```
-- **iOS** : ajoutez `GADApplicationIdentifier` dans `Info.plist`.
-- Renseignez vos unit IDs dans `AD_UNITS.admob`. En développement, laissez
-  `TEST_MODE = true` (identifiants de test Google déjà fournis).
+- **iOS** — `mobile/ios/App/App/Info.plist` :
+  ```xml
+  <key>GADApplicationIdentifier</key>
+  <string>ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY</string>
+  ```
+
+#### Étape 4 — MODE TEST (voir de vraies pubs de test)
+
+**Ne touche à rien** : `adConfig.ts` a déjà `TEST_MODE = true` et les
+**identifiants de test publics de Google** dans `AD_UNITS.admob`. Ce sont de
+vraies unités qui renvoient des pubs de démonstration (bandeau « Test Ad »), sans
+risque d'invalidation de compte.
+
+Emplacements de test visibles dans l'app :
+- **Bannière** : bas de tout écran hors table (accueil, robots, porte-monnaie).
+- **Récompensée** : bouton « Regarder une pub » dans le porte-monnaie.
+- **Interstitiel** : fin de partie, ou avant de créer une table.
+- **App Open** : avant une partie d'entraînement (« Lancer une partie »).
+
+Build sur device : `make android-device` (ou `make ios-device`). Chaque pub
+affiche « **Test Ad** » : comportement attendu.
+
+> En `TEST_MODE`, même avec de vrais unit IDs, le plugin force les pubs de test.
+> Ne clique jamais sur une vraie pub avec ton compte en prod (invalidation).
+
+#### Étape 5 — PASSER EN PRODUCTION
+
+1. Renseigne **tes** unit IDs (Android + iOS) dans `AD_UNITS.admob` (`adConfig.ts`).
+2. Mets `TEST_MODE = false`.
+3. Vérifie que l'App ID natif (étape 3) est bien le tien.
+4. `npx cap sync` puis rebuild device.
+
+Le code métier (AdManager, emplacements, VIP) ne change pas : seule la config
+bascule test -> prod.
 
 ### AppLovin MAX
 

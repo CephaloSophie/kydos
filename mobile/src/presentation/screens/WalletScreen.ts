@@ -9,6 +9,7 @@ import { h, clear } from '../../core/dom';
 import { Button, Badge, Dialog } from '../components/ui';
 import { api, type ServerWalletTransaction } from '../../data/ApiClient';
 import { claimDaily, readWallet } from '../../services/wallet';
+import { formatPromoCode, digitsOnly, isCompleteCode } from '../../services/promoCode';
 import { VIP_PLANS, type VipPlan } from '../../services/ads';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
@@ -18,6 +19,7 @@ const KIND_LABELS: Record<ServerWalletTransaction['kind'], string> = {
   game_stake: 'Mise de partie',
   game_win: 'Gain de partie',
   refund: 'Remboursement',
+  promo: 'Code promo',
 };
 
 const KIND_COLORS: Record<ServerWalletTransaction['kind'], string> = {
@@ -25,6 +27,7 @@ const KIND_COLORS: Record<ServerWalletTransaction['kind'], string> = {
   game_stake: 'var(--c-danger)',
   game_win: 'var(--c-success)',
   refund: 'var(--c-text-soft)',
+  promo: 'var(--c-success)',
 };
 
 export function WalletScreen(ctx: AppContext): HTMLElement {
@@ -34,6 +37,20 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
   const dailyStateEl = h('div', { class: 'text-mute', style: { fontSize: '12px', marginTop: '4px' } }, 'Chargement…');
   const claimBtn = Button('Débloquer +500 ◆', { onClick: onClaim });
   const rewardBtn = Button('🎬 Regarder une pub (+100 ◆)', { variant: 'secondary', onClick: onWatchReward });
+  // Champ code promo : affichage formaté (tiret tous les 4 chiffres), valeur
+  // envoyée = chiffres seuls. Le formatage est purement présentationnel.
+  const promoInput = h('input', {
+    type: 'text', inputmode: 'numeric', placeholder: '1234-5678-9012', maxlength: '14',
+    class: 'input', style: { fontFamily: 'var(--f-mono)', letterSpacing: '.14em', textAlign: 'center' },
+  }) as HTMLInputElement;
+  promoInput.addEventListener('input', () => {
+    const caretEnd = promoInput.selectionStart === promoInput.value.length;
+    promoInput.value = formatPromoCode(promoInput.value);
+    if (caretEnd) promoInput.setSelectionRange(promoInput.value.length, promoInput.value.length);
+    (promoBtn as HTMLButtonElement).disabled = !isCompleteCode(promoInput.value);
+  });
+  const promoBtn = Button('Valider le code', { onClick: onRedeemPromo });
+  (promoBtn as HTMLButtonElement).disabled = true;
   const vipStateEl = h('div', { class: 'text-mute', style: { fontSize: '12px', marginBottom: '8px' } }, 'Chargement…');
   const vipPlansEl = h('div', { class: 'col gap-2' });
   const historyEl = h('div', { class: 'col gap-2', style: { marginTop: '12px' } }, h('div', { class: 'text-mute', style: { fontSize: '11px' } }, '…'));
@@ -85,6 +102,22 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
         h('div', {}, h('span', { style: { fontSize: '13px', fontWeight: '700' } }, plan.label),
           h('span', { class: 'text-mute', style: { fontSize: '11px', marginLeft: '8px' } }, `${plan.costTokens.toLocaleString('fr-FR')} \u25c6`)),
         Button('Choisir', { size: 'sm', onClick: () => onBuyVip(plan) })));
+    }
+  }
+
+  async function onRedeemPromo() {
+    const code = digitsOnly(promoInput.value);
+    if (!isCompleteCode(code)) { toast('Code incomplet (12 chiffres).', 'error'); return; }
+    if (!api.isAuthenticated()) { toast('Connectez-vous pour utiliser un code.', 'error'); return; }
+    (promoBtn as HTMLButtonElement).disabled = true;
+    try {
+      const r = await api.redeemPromo(code);
+      promoInput.value = '';
+      await refresh();
+      toast(`+${r.tokens.toLocaleString('fr-FR')} \u25c6 cr\u00e9dit\u00e9s !`, 'success');
+    } catch (e) {
+      toast((e as Error).message || 'Code refus\u00e9.', 'error');
+      (promoBtn as HTMLButtonElement).disabled = false;
     }
   }
 
@@ -149,6 +182,10 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
           h('div', {}, Badge('2H+2R', 'neutral'), ' Mise 150 ◆ · gain 225 ◆ pour l\'humain gagnant.'),
           h('div', {}, Badge('4R', 'neutral'), ' Mise 50 ◆ / robot · gain 150 ◆ par robot gagnant.'),
           h('div', { class: 'text-mute', style: { fontSize: '10px', marginTop: '6px' } }, 'Le mode entraînement (local) est gratuit.')))),
+    h('div', { class: 'card', style: { marginTop: '12px', border: '1px solid rgba(126,203,152,.3)' } },
+      h('div', { class: 'eyebrow', style: { marginBottom: '6px', color: 'var(--c-success)' } }, '🎟 RECHARGER AVEC UN CODE'),
+      h('div', { class: 'text-mute', style: { fontSize: '11px', marginBottom: '8px' } }, 'Saisissez un code de 12 chiffres pour créditer des jetons.'),
+      h('div', { class: 'col gap-2' }, promoInput, promoBtn)),
     h('div', { class: 'card', style: { marginTop: '12px', border: '1px solid rgba(230,196,106,.35)' } },
       h('div', { class: 'eyebrow', style: { marginBottom: '6px', color: 'var(--c-gold)' } }, '⭐ STATUT VIP — SANS PUBLICITÉ'),
       vipStateEl,
