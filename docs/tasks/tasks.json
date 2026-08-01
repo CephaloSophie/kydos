@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "12.0.0",
-    "generatedAt": "2026-08-01T09:00:00.000Z",
+    "currentVersion": "12.1.0",
+    "generatedAt": "2026-08-01T14:00:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -4051,16 +4051,16 @@
       "area": "server",
       "module": "wallet",
       "type": "bug",
-      "status": "pending",
+      "status": "tested",
       "priority": "P1",
-      "version": "11.8.0",
+      "version": "12.1.0",
       "estimate": "3h",
       "spec": "AUDIT-3AGENTS",
       "techno": "Node/Express/Mongo",
       "category": "Serveur",
       "complexity": 3,
       "duration": "3 h",
-      "description": "CONV-1 de l'audit : les gains sont versés en fin de partie mais la mise n'est jamais prélevée (walletService.stake() est du code mort). Brancher le prélèvement au lancement des parties online/compétition (miroir des payouts), refuser le lancement si solde insuffisant. Alternative assumée : geler l'économie et le documenter.",
+      "description": "CONV-1 de l'audit : les gains sont versés en fin de partie mais la mise n'est jamais prélevée (walletService.stake() est du code mort). Brancher le prélèvement au lancement des parties online/compétition (miroir des payouts), refuser le lancement si solde insuffisant. Alternative assumée : geler l'économie et le documenter. [v12.1 CORRIGÉ : walletService.stakeGame() prélève les mises au lancement dans startTable, tout-ou-rien avec remboursement.]",
       "instructions": [
         "Appeler walletService.stake() au lancement (online/compétition)",
         "Refus si solde insuffisant + message",
@@ -4072,13 +4072,19 @@
         "Aucune création monétaire"
       ],
       "createdAt": "2026-07-27T02:00:00.000Z",
-      "updatedAt": "2026-07-27T02:00:00.000Z",
+      "updatedAt": "2026-08-01T14:00:00.000Z",
       "history": [
         {
           "at": "2026-07-27T02:00:00.000Z",
           "status": "pending",
           "by": "audit-3agents",
           "note": "Audit croisé : convergence des 3 agents. Défaut de fond n°1."
+        },
+        {
+          "at": "2026-08-01T14:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Prélèvement au lancement branché — asymétrie corrigée."
         }
       ],
       "logs": []
@@ -4963,6 +4969,109 @@
           "status": "tested",
           "by": "claude",
           "note": "watchRewarded + docs/ADS.md + tests."
+        }
+      ]
+    },
+    {
+      "area": "economy",
+      "version": "12.1.0",
+      "createdAt": "2026-08-01T14:00:00.000Z",
+      "updatedAt": "2026-08-01T14:00:00.000Z",
+      "logs": [],
+      "id": "KB-380",
+      "title": "Prélèvement des mises au lancement de la partie",
+      "module": "wallet",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "docs/WALLET.md",
+      "techno": "Node/Express/Mongo + Mobile",
+      "category": "Économie",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "walletService.stakeGame() prélève la mise de chaque joueur au démarrage (startTable) : vérifie tous les soldes d'abord (aucun débit partiel), débite, rembourse si un débit échoue. Corrige l'asymétrie KB-300 (gains versés sans mise). Barème 100◆ humain / 50◆ robot, mode local gratuit.",
+      "instructions": [],
+      "acceptance": [
+        "Mise prélevée au lancement",
+        "Tout-ou-rien avec remboursement",
+        "Partie refusée si solde insuffisant"
+      ],
+      "history": [
+        {
+          "at": "2026-08-01T14:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "stakeGame + economyContext + câblage startTable."
+        }
+      ]
+    },
+    {
+      "area": "economy",
+      "version": "12.1.0",
+      "createdAt": "2026-08-01T14:00:00.000Z",
+      "updatedAt": "2026-08-01T14:00:00.000Z",
+      "logs": [],
+      "id": "KB-381",
+      "title": "Codes promo de rechargement (12 chiffres, validité, quota)",
+      "module": "promo",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1 j",
+      "spec": "docs/WALLET.md",
+      "techno": "Node/Express/Mongo + Mobile",
+      "category": "Économie",
+      "complexity": 8,
+      "duration": "1 j",
+      "description": "Modèle Mongo PromoCode (code 12 chiffres, tokens, expiresAt, maxRedemptions, redeemedBy, active, label), service (normalisation/validation/redemption anti-rejeu), controller + routes + module, endpoint POST /api/promo/redeem, seed de 3 codes de démo. Mobile : API redeemPromo, utilitaire de formatage (tiret tous les 4 chiffres), carte de saisie dans le porte-monnaie.",
+      "instructions": [],
+      "acceptance": [
+        "Code 12 chiffres crédite les jetons",
+        "Validité + quota + anti-rejeu par personne",
+        "Affichage à tirets, valeur = chiffres seuls",
+        "3 codes de démo au seed"
+      ],
+      "history": [
+        {
+          "at": "2026-08-01T14:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "PromoCode model/service/controller/routes + promoCode.ts + WalletScreen."
+        }
+      ]
+    },
+    {
+      "area": "economy",
+      "version": "12.1.0",
+      "createdAt": "2026-08-01T14:00:00.000Z",
+      "updatedAt": "2026-08-01T14:00:00.000Z",
+      "logs": [],
+      "id": "KB-382",
+      "title": "Pastille jetons → page porte-monnaie + doc AdMob test/prod",
+      "module": "home",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "docs/WALLET.md",
+      "techno": "Node/Express/Mongo + Mobile",
+      "category": "Économie",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "La pastille ◆ du haut ouvre la page Mon porte-monnaie (au lieu du claim direct) : quotidien, promo, VIP, pub récompensée regroupés. Documentation AdMob mode test (inscription, pubs de test visibles sur device) et passage en production (docs/ADS.md). docs/WALLET.md créé.",
+      "instructions": [],
+      "acceptance": [
+        "Clic jetons ouvre le porte-monnaie",
+        "Doc test/prod AdMob claire",
+        "docs/WALLET.md complet"
+      ],
+      "history": [
+        {
+          "at": "2026-08-01T14:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "TopBar nav + docs/ADS.md §4 + docs/WALLET.md."
         }
       ]
     }

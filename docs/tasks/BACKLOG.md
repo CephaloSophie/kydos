@@ -1,15 +1,15 @@
 # Kýdos Belote — Diagnostic & référentiel de tâches
 
 > **Source : `docs/tasks/tasks.json`.** Board : `docs/tasks/board.html`.
-> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md`.
+> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md` · Jetons : `docs/WALLET.md`.
 
-**Projet** Kýdos Belote · **Version** v12.0.0 · **120 tâches** · généré 2026-08-01T09:00:00.000Z
+**Projet** Kýdos Belote · **Version** v12.1.0 · **123 tâches** · généré 2026-08-01T14:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 100 · **En cours** 8 · **À faire** 12 · **Bugs** 21
-- **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-300, KB-301
-- **Points** 382 · **Durée** 48.0 j
+- **Terminées** 104 · **En cours** 8 · **À faire** 11 · **Bugs** 21
+- **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-301
+- **Points** 398 · **Durée** 49.8 j
 
 ## Répartitions
 
@@ -17,8 +17,8 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 85 | 270 | 32.9 j |
-| pending | 11 | 39 | 4.2 j |
+| tested | 89 | 289 | 35.0 j |
+| pending | 10 | 36 | 3.9 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
 | onprocess | 5 | 10 | 1.4 j |
@@ -29,7 +29,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| P1 | 57 | 185 | 20.6 j |
+| P1 | 60 | 201 | 22.3 j |
 | P0 | 43 | 140 | 20.3 j |
 | P2 | 17 | 47 | 5.5 j |
 | P3 | 3 | 10 | 1.6 j |
@@ -38,7 +38,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 77 | 271 | 33.9 j |
+| feature | 80 | 287 | 35.7 j |
 | bug | 21 | 43 | 4.9 j |
 | test | 7 | 26 | 3.4 j |
 | doc | 6 | 17 | 2.4 j |
@@ -58,6 +58,7 @@
 | Monétisation | 4 | 26 | 3.0 j |
 | Refactoring | 4 | 12 | 1.6 j |
 | Tests | 3 | 7 | 1.1 j |
+| Économie | 3 | 16 | 1.8 j |
 | Test E2E | 2 | 8 | 1.1 j |
 | Infra | 1 | 3 | 4.0 h |
 | Observabilité | 1 | 5 | 5.0 h |
@@ -74,6 +75,7 @@
 | Infra | 4 | 12 | 1.8 j |
 | Mobile (Capacitor/Ads SDK) | 4 | 26 | 3.0 j |
 | Mobile/PixiJS | 4 | 11 | 6.5 h |
+| Node/Express/Mongo + Mobile | 3 | 16 | 1.8 j |
 | Capacitor | 2 | 6 | 6.0 h |
 | Mobile | 2 | 4 | 3.0 h |
 | Mobile (Vite/Capacitor) | 1 | 3 | 2.0 h |
@@ -86,8 +88,8 @@
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
 | 11.1.0 | 10 | 34 | 5.6 j |
-| 11.8.0 | 10 | 37 | 3.4 j |
 | 11.2.0 | 9 | 20 | 2.5 j |
+| 11.8.0 | 9 | 34 | 3.0 j |
 | 10.7.0 | 8 | 21 | 2.8 j |
 | 11.0.0 | 8 | 28 | 4.4 j |
 | 11.12.0 | 8 | 21 | 1.6 j |
@@ -100,6 +102,7 @@
 | 11.0.1 | 4 | 8 | 1.0 j |
 | 11.6.0 | 4 | 13 | 1.5 j |
 | 12.0.0 | 4 | 26 | 3.0 j |
+| 12.1.0 | 4 | 19 | 2.1 j |
 | 10.8.0 | 3 | 8 | 1.1 j |
 | 11.13.0 | 3 | 8 | 4.5 h |
 | 11.5.0 | 3 | 12 | 1.5 j |
@@ -113,6 +116,15 @@
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v12.1.0 — 4 tâches · 19 pts · 2.1 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-300 | Économie — prélever la mise au lancement (équilibrer les payouts) | Testée | P1 | bug | Serveur | Node/Express/Mongo | 3 | 3 h |
+| KB-380 | Prélèvement des mises au lancement de la partie | Testée | P1 | feature | Économie | Node/Express/Mongo + Mobile | 5 | 4 h |
+| KB-381 | Codes promo de rechargement (12 chiffres, validité, quota) | Testée | P1 | feature | Économie | Node/Express/Mongo + Mobile | 8 | 1 j |
+| KB-382 | Pastille jetons → page porte-monnaie + doc AdMob test/prod | Testée | P1 | feature | Économie | Node/Express/Mongo + Mobile | 3 | 2 h |
 
 ### v12.0.0 — 4 tâches · 26 pts · 3.0 j
 
@@ -168,11 +180,10 @@
 |---|---|---|---|---|---|---|---:|---:|
 | KB-310 | Fiabilisation — couverture, TNR serveur, E2E web, CI automatisée | Testée | P1 | test | CI/CD | CI / Outillage | 8 | 6 h |
 
-### v11.8.0 — 10 tâches · 37 pts · 3.4 j
+### v11.8.0 — 9 tâches · 34 pts · 3.0 j
 
 | ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
 |---|---|---|---|---|---|---|---:|---:|
-| KB-300 | Économie — prélever la mise au lancement (équilibrer les payouts) | À faire | P1 | bug | Serveur | Node/Express/Mongo | 3 | 3 h |
 | KB-301 | Édition d'un robot (updateRobot serveur + mobile) | À faire | P1 | feature | Serveur | Node/Express/Mongo | 5 | 4 h |
 | KB-302 | Robot favori — câbler la reprise automatique de siège | À faire | P2 | feature | Serveur | Node/Express/Mongo | 3 | 2 h |
 | KB-303 | ELO réel des robots (classement gagné/perdu) | À faire | P2 | feature | Serveur | Node/Express/Mongo | 8 | 5 h |

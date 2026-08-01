@@ -21,6 +21,7 @@ import { gameProjectionService } from './modules/analytics/gameProjection.servic
 import { TeamModel } from './modules/team/team.model.js';
 import { InvitationModel } from './modules/invitation/invitation.model.js';
 import { CompetitionTableModel } from './modules/competition/competition.model.js';
+import { PromoCodeModel } from './modules/promo/promo.model.js';
 import { TableModel } from './modules/table/table.model.js';
 import { DAILY_REWARD } from './shared/gameEconomy.js';
 
@@ -194,6 +195,16 @@ export async function seedDatabase() {
     config: { manches: 2 },
   });
   console.log('[seed] table de lobby publique : 2 sièges libres');
+
+  // ── 10. Codes promo de démonstration (rechargement de jetons) ──────────
+  await PromoCodeModel.deleteMany({});
+  const nowMs = Date.now();
+  await PromoCodeModel.create([
+    { code: '111122223333', tokens: 500, expiresAt: new Date(nowMs + 7 * 86_400_000), maxRedemptions: 1000, label: 'Bienvenue (7 j)' },
+    { code: '444455556666', tokens: 2000, expiresAt: new Date(nowMs + 30 * 86_400_000), maxRedemptions: 500, label: 'Promo 30 j' },
+    { code: '999988887777', tokens: 10000, expiresAt: new Date(nowMs + 30 * 86_400_000), maxRedemptions: 50, label: 'Gros lot' },
+  ]);
+  console.log('[seed] 3 codes promo : 1111-2222-3333 (500), 4444-5555-6666 (2000), 9999-8888-7777 (10000)');
 
   console.log('\n[seed] terminé ✓  — connecte-toi avec  ameur / belote123  (ou  invite / belote123 )');
 }

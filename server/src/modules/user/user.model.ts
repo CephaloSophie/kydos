@@ -10,7 +10,7 @@ import mongoose, { Schema, model, type InferSchemaType } from 'mongoose';
  */
 const WalletTransactionSchema = new Schema(
   {
-    kind: { type: String, enum: ['daily', 'game_stake', 'game_win', 'refund'], required: true },
+    kind: { type: String, enum: ['daily', 'game_stake', 'game_win', 'refund', 'promo'], required: true },
     amount: { type: Number, required: true },
     balance: { type: Number, required: true },
     game: { type: Schema.Types.ObjectId, ref: 'Game', default: null },

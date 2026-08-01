@@ -6,38 +6,29 @@
  * SERVEUR-PREMIER via `services/wallet.ts` (fallback local hors-ligne).
  * ========================================================================== */
 import { h } from '../../core/dom';
-import { Robot, Dialog, Button } from './ui';
-import { readWallet, claimDaily } from '../../services/wallet';
+import { Robot } from './ui';
+import { readWallet } from '../../services/wallet';
 import { api } from '../../data/ApiClient';
 
 /** Niveau dérivé du solde (démo) — 1 niveau par tranche de 500 ◆ débloquée. */
 const levelOf = (balance: number) => Math.max(1, Math.floor(balance / 500) + 1);
 
 export function TopBar(mount: HTMLElement): HTMLElement {
-  const coin = h('div', { class: 'coin', style: { cursor: 'pointer' }, title: 'Débloquer les 500 jetons du jour' }, '◆ 0');
+  const coin = h('div', { class: 'coin', style: { cursor: 'pointer' }, title: 'Ouvrir mon porte-monnaie' }, '◆ 0');
   const level = h('span', { style: { fontSize: '11px', color: 'var(--c-text-soft)' } }, 'Niv. 1');
 
   const paint = async () => {
     const state = await readWallet();
     coin.textContent = `◆ ${state.balance.toLocaleString('fr-FR')}`;
-    coin.style.opacity = state.canClaim ? '1' : '.72';
+    // Léger rappel visuel si la récompense quotidienne est disponible.
+    coin.style.opacity = state.canClaim ? '1' : '.82';
     level.textContent = `Niv. ${levelOf(state.balance)}`;
   };
   void paint();
 
-  coin.addEventListener('click', async () => {
-    const res = await claimDaily();
-    await paint();
-    if (res.claimed) {
-      const dlg = Dialog({
-        icon: '◆', title: '+500 jetons !',
-        body: 'Votre récompense quotidienne est créditée. Revenez demain pour la prochaine.',
-        actions: [Button('Parfait', { size: 'sm', onClick: () => dlg.remove() })],
-        onClose: () => dlg.remove(),
-      });
-      mount.append(dlg);
-    }
-  });
+  // Cliquer sur les jetons → page « Mon porte-monnaie » (déblocage quotidien,
+  // code promo, VIP, pub récompensée y sont regroupés).
+  coin.addEventListener('click', () => { location.hash = '#/wallet'; });
 
   // Indicateur « partie en cours » : pastille LIVE animée (style enregistrement)
   // à côté du logo. Masquée s'il n'y a pas de partie active. Cliquer reprend.

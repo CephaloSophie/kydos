@@ -27,6 +27,7 @@ export default defineConfig({
           'src/**/gameEconomy.test.ts',
           'src/**/profileHelpers.test.ts',
           'src/**/scoreLogic.test.ts',
+          'src/**/promo.service.test.ts',
           'src/test/api.contract.test.ts',
           'src/core/logger.test.ts',
         ],
