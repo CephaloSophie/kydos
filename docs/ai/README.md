@@ -159,13 +159,13 @@ npm --workspace belote-mobile run cap:android
 
 ## 8. Référentiel de tâches (obligatoire)
 
-`docs/tasks/tasks.json` est la **base de vérité des tâches** : diagnostic
+`board/tasks.json` est la **base de vérité des tâches** : diagnostic
 serveur/mobile, tâches faites, manquantes, bugs, priorités, versions,
 estimations, historique et journaux.
 
-- `docs/tasks/BACKLOG.md` — lecture humaine du diagnostic.
-- `docs/tasks/board.html` — tableau interactif (recherche, filtres, détail avec
-  historique et journaux). `npx serve docs/tasks` puis ouvrir `board.html`.
+- `board/BACKLOG.md` — lecture humaine du diagnostic.
+- `board/board.html` — tableau interactif (recherche, filtres, détail avec
+  historique et journaux). `npx serve board` puis ouvrir `board.html`.
 
 **Toute session de travail DOIT** : lire `tasks.json`, rapprocher chaque
 demande d'une tâche existante (enrichir ses `instructions`) ou en créer une,

@@ -38,7 +38,7 @@ n'est appelé nulle part en production. Conséquence : **création monétaire** 
 chaque partie. Décision requise : brancher le prélèvement (pour équilibrer les
 payouts déjà en place) **ou** geler l'économie et le documenter.
 
-### CONV-2 — Les docs/tasks mentent sur l'existant (P1)
+### CONV-2 — Les board mentent sur l'existant (P1)
 - La **SPEC** était gelée à v10.4 et affirmait que « le jeu temps réel mobile
   passe par le web » — **faux depuis v11** (mobile natif). *(Corrigé dans cette
   livraison.)*
@@ -73,7 +73,7 @@ payouts déjà en place) **ou** geler l'économie et le documenter.
   depuis v10.4 » et « Défaillances connues ».
 - README : bandeau d'état + pointeurs (`SPEC`, `ROADMAP`, cet audit, `CHANGELOG`).
 - `docs/ROADMAP.md` créé (trajectoire priorisée).
-- `docs/tasks/tasks.json` : tâches resynchronisées + nouvelles tâches de
+- `board/tasks.json` : tâches resynchronisées + nouvelles tâches de
   défaillance (économie, édition robot, favori câblé, parité web, ELO, CI
   visuelle/DB).
 

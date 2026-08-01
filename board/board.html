@@ -238,7 +238,7 @@
     .then(function(d){DATA=d;boot();})
     .catch(function(){
       document.getElementById('board').innerHTML='<div class="loadbox"><b>Impossible de lire <code>tasks.json</code> automatiquement.</b><br>'+
-        "C'est normal si la page est ouverte depuis le disque (file://). Sélectionnez le fichier, ou servez le dossier : <code>npx serve docs/tasks</code>.<br><br>"+
+        "C'est normal si la page est ouverte depuis le disque (file://). Sélectionnez le fichier, ou servez le dossier : <code>npx serve board</code>.<br><br>"+
         '<input type="file" id="picker" accept="application/json" /></div>';
       document.getElementById('picker').addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){DATA=JSON.parse(rd.result);boot();};rd.readAsText(f);});
     });

@@ -24,7 +24,8 @@ belote/
 │                         paysage uniquement. Empaquetée avec CAPACITOR (voir mobile/capacitor/).
 ├─ wslogs/                Moniteur temps réel (dev) : sessions actives, logs web services
 │                         et WebSockets. HTML autonome + endpoint serveur /api/monitor.
-├─ docs/                  Documentation (docs/ai/*) + référentiel de tâches (docs/tasks/).
+├─ docs/                  Documentation (docs/ai/*) + guides (ADS.md, WALLET.md, SOUNDS.md, mobile-connection.md).
+├─ board/                 Référentiel de tâches (tasks.json, board.html, BACKLOG.md).
 └─ docker-compose.yml     MongoDB
 ```
 
@@ -161,6 +162,170 @@ npm --workspace belote-mobile run cap:ios        # build + sync + run iOS
 Détails complets, verrouillage de l'orientation paysage et build de production :
 voir **`mobile/capacitor/README.md`**. Les dossiers natifs `mobile/android/` et
 `mobile/ios/` sont générés (non versionnés) — on les recrée avec `npx cap add`.
+
+> Guide connexion complet (4 cibles, dépannage) : **`docs/mobile-connection.md`**.
+> Une commande pour diagnostiquer : `make check`.
+
+## Tester sur un device physique (tablette / téléphone)
+
+### Activer le mode développeur sur ta tablette
+
+Sur la tablette :
+
+- Paramètres → À propos de la tablette
+- Clique **7 fois** sur **Numéro de build**
+- Retourne dans Paramètres → **Options développeur**
+- Active :
+  - ✅ Débogage USB
+  - ✅ Installation via USB (si disponible)
+
+### Connecter la tablette en USB — Ubuntu
+
+Branche la tablette, puis :
+
+```bash
+adb devices
+```
+
+Résultat attendu :
+
+```
+List of devices attached
+XXXXXXXX    device
+```
+
+Si tu vois `unauthorized` : regarde la tablette et accepte la fenêtre
+**Autoriser le débogage USB**.
+
+Si `adb` n'existe pas :
+
+```bash
+sudo apt install adb
+```
+
+Si le device n'apparaît pas du tout (Ubuntu), ajoute ton utilisateur au groupe
+`plugdev` puis rouvre ta session :
+
+```bash
+sudo usermod -aG plugdev $USER
+```
+
+### Connecter la tablette en USB — macOS
+
+`adb` arrive avec les **Android Platform Tools** :
+
+```bash
+brew install --cask android-platform-tools   # ou via Android Studio > SDK
+adb devices
+```
+
+Même résultat attendu que sur Ubuntu. En cas d'`unauthorized`, accepte la
+fenêtre sur la tablette. Sur Mac, aucun pilote USB à installer (contrairement à
+Windows) — le device est reconnu directement.
+
+### Ouvrir Android Studio avec Capacitor
+
+```bash
+npx cap open android
+```
+
+(Sur macOS, pour iOS : `npx cap open ios` ouvre Xcode.)
+
+## Resynchroniser après une modification
+
+Le code JS de l'app est **empaqueté** dans le projet natif au moment du build.
+Donc **après chaque modification** du code mobile, il faut reconstruire puis
+recopier dans le natif — sinon le device continue d'exécuter l'ancienne version.
+
+```bash
+# 1) Rebuild le bundle web de l'app mobile
+npm --workspace belote-mobile run build
+
+# 2) Copie le bundle dans le projet natif + met à jour les plugins Capacitor
+npx cap sync android       # Android uniquement
+npx cap sync ios           # iOS uniquement
+npx cap sync               # les deux
+```
+
+**Que fait `npx cap sync android` exactement ?**
+
+1. **Copie** le contenu de `mobile/dist/` (le build web) dans
+   `mobile/android/app/src/main/assets/public/` — c'est ce que la WebView charge.
+2. **Met à jour les plugins Capacitor natifs** installés (npm → code Java/Kotlin) :
+   si tu as ajouté un plugin (ex. `@capacitor-community/admob`), `cap sync` crée
+   les fichiers natifs correspondants.
+3. **Met à jour** le fichier de configuration `capacitor.config.ts` → la version
+   sérialisée dans le projet Android.
+
+Après un `cap sync`, tu peux relancer depuis Android Studio (**Run** ou
+**Debug**) ou en ligne de commande :
+
+```bash
+npx cap run android        # build + install + lance sur le device connecté
+npx cap open android       # ouvre juste Android Studio sur le projet
+```
+
+Raccourcis Makefile (configure aussi l'IP/.env selon la cible) :
+
+```bash
+make android-device        # tablette/téléphone Android
+make android-emulator      # émulateur AVD
+make ios-sim               # simulateur iOS (macOS)
+make ios-device            # iPhone physique (macOS)
+```
+
+Si l'écran ne change pas après un `cap sync` : **désinstalle l'ancienne app** du
+device puis relance (le cache de config/JS traîne parfois).
+
+## Inspecter depuis Chrome (PC) une device connectée
+
+C'est l'outil le plus puissant : les **DevTools Chrome complets** sur la WebView
+de l'app (console, réseau, éléments, sources).
+
+1. Sur la tablette : Options développeur → **Débogage USB** activé.
+2. Branche la tablette, accepte la fenêtre d'autorisation.
+3. Sur le PC, dans **Chrome**, ouvre : `chrome://inspect`
+4. Ta device apparaît ; clique **inspect** sous la ligne « Kýdos Belote ».
+5. Tu obtiens les DevTools :
+   - **Console** : les `console.log` de l'app et les erreurs JS.
+   - **Network** : chaque requête (statut, en-têtes CORS, réponse) — idéal pour
+     diagnostiquer une connexion serveur qui échoue.
+   - **Elements / Sources** : le DOM et le code.
+
+Rappel Makefile : `make inspect-android` affiche la marche à suivre.
+
+## Voir les logs natifs (mode debug)
+
+Pour les logs bas-niveau (crash natif, WebView, pont Capacitor) :
+
+```bash
+# Tout : WebView + console JS + erreurs
+adb logcat -v time chromium:V console:V *:E
+
+# Raccourci Makefile
+make logs-android
+```
+
+Filtres utiles : `chromium:V` (WebView), `console:V` (les `console.log` de l'app),
+`Capacitor:V` (le pont natif).
+
+## Débugguer dans Android Studio
+
+1. Ouvre le projet : `npx cap open android`.
+2. Sélectionne ta device (physique ou émulateur) dans la barre du haut.
+3. Lance en **Debug** (l'icône « bug » ▶, ou Shift+F9) au lieu de Run.
+4. Onglet **Logcat** (bas de la fenêtre) : filtre par ton package
+   `com.kydosbelote…` et par niveau (Error/Warn) pour isoler les messages.
+5. Pour poser des **points d'arrêt côté natif** (Java/Kotlin), clique dans la
+   marge du fichier et relance en Debug.
+6. Pour débugguer le **code web** (le gros de l'app), utilise plutôt
+   `chrome://inspect` (section précédente) : c'est là que vivent le JS, le réseau
+   et le DOM.
+
+> iOS (macOS) : pour inspecter la WebView, active sur l'iPhone
+> Réglages → Safari → Avancé → **Inspecteur Web**, puis sur le Mac
+> Safari → Développement → *ton iPhone* → Kýdos Belote. Logs natifs via Xcode
+> (Window → Devices and Simulators → Open Console) ou `make logs-ios`.
 
 ## Moniteur temps réel (wslogs, mode dev)
 

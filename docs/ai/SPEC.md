@@ -208,14 +208,14 @@ pour qu'elle redevienne fidèle. Détail complet dans `CHANGELOG.md`.
 - **Parties 100% robots** côté serveur.
 - **Packaging Capacitor** (remplace Cordova) : `mobile/capacitor.config.ts`,
   scripts `cap:*`, `mobile/capacitor/README.md`.
-- **Board Agile complet** (`docs/tasks/board.html` + `tasks.json` enrichi :
+- **Board Agile complet** (`board/board.html` + `tasks.json` enrichi :
   techno, catégorie, complexité en points Fibonacci, durée).
 - **Moniteur temps réel** (`wslogs/`) : sessions actives + logs services/WS.
 
 ## 8. Défaillances connues & priorités (au 2026-07-26)
 
 Issues de l'analyse croisée (voir `docs/AUDIT-3AGENTS.md`). Priorités dans
-`docs/ROADMAP.md` et `docs/tasks/`.
+`docs/ROADMAP.md` et `board/`.
 
 - ~~P1 — Économie asymétrique~~ : CORRIGÉ v12.1 (prélèvement au lancement, §3.9).
 - **P1 — Édition de robot** absente (créer/supprimer OK, modifier NON).
