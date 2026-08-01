@@ -1,15 +1,15 @@
 # Kýdos Belote — Diagnostic & référentiel de tâches
 
 > **Source : `docs/tasks/tasks.json`.** Board : `docs/tasks/board.html`.
-> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md`.
+> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md`.
 
-**Projet** Kýdos Belote · **Version** v11.13.0 · **116 tâches** · généré 2026-07-30T09:00:00.000Z
+**Projet** Kýdos Belote · **Version** v12.0.0 · **120 tâches** · généré 2026-08-01T09:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 96 · **En cours** 8 · **À faire** 12 · **Bugs** 21
+- **Terminées** 100 · **En cours** 8 · **À faire** 12 · **Bugs** 21
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-300, KB-301
-- **Points** 356 · **Durée** 45.0 j
+- **Points** 382 · **Durée** 48.0 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 81 | 244 | 29.9 j |
+| tested | 85 | 270 | 32.9 j |
 | pending | 11 | 39 | 4.2 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -29,7 +29,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| P1 | 53 | 159 | 17.6 j |
+| P1 | 57 | 185 | 20.6 j |
 | P0 | 43 | 140 | 20.3 j |
 | P2 | 17 | 47 | 5.5 j |
 | P3 | 3 | 10 | 1.6 j |
@@ -38,7 +38,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 73 | 245 | 30.9 j |
+| feature | 77 | 271 | 33.9 j |
 | bug | 21 | 43 | 4.9 j |
 | test | 7 | 26 | 3.4 j |
 | doc | 6 | 17 | 2.4 j |
@@ -55,6 +55,7 @@
 | Design / IHM | 11 | 24 | 2.1 j |
 | Documentation | 6 | 17 | 2.4 j |
 | CI/CD | 4 | 22 | 2.2 j |
+| Monétisation | 4 | 26 | 3.0 j |
 | Refactoring | 4 | 12 | 1.6 j |
 | Tests | 3 | 7 | 1.1 j |
 | Test E2E | 2 | 8 | 1.1 j |
@@ -71,6 +72,7 @@
 | Documentation | 6 | 17 | 2.4 j |
 | CI / Outillage | 4 | 19 | 2.1 j |
 | Infra | 4 | 12 | 1.8 j |
+| Mobile (Capacitor/Ads SDK) | 4 | 26 | 3.0 j |
 | Mobile/PixiJS | 4 | 11 | 6.5 h |
 | Capacitor | 2 | 6 | 6.0 h |
 | Mobile | 2 | 4 | 3.0 h |
@@ -97,6 +99,7 @@
 | 10.4.0 | 4 | 9 | 1.2 j |
 | 11.0.1 | 4 | 8 | 1.0 j |
 | 11.6.0 | 4 | 13 | 1.5 j |
+| 12.0.0 | 4 | 26 | 3.0 j |
 | 10.8.0 | 3 | 8 | 1.1 j |
 | 11.13.0 | 3 | 8 | 4.5 h |
 | 11.5.0 | 3 | 12 | 1.5 j |
@@ -110,6 +113,15 @@
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v12.0.0 — 4 tâches · 26 pts · 3.0 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-370 | Architecture publicitaire multi-fournisseurs (AdProvider + registre + config) | Testée | P1 | feature | Monétisation | Mobile (Capacitor/Ads SDK) | 8 | 1 j |
+| KB-371 | AdManager — orchestration des emplacements + règles métier | Testée | P1 | feature | Monétisation | Mobile (Capacitor/Ads SDK) | 8 | 1 j |
+| KB-372 | Statut VIP (sans publicité) — achat par jetons | Testée | P1 | feature | Monétisation | Mobile (Capacitor/Ads SDK) | 5 | 4 h |
+| KB-373 | Pubs récompensées + bannière + documentation | Testée | P1 | feature | Monétisation | Mobile (Capacitor/Ads SDK) | 5 | 4 h |
 
 ### v11.13.0 — 3 tâches · 8 pts · 4.5 h
 

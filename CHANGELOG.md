@@ -2,7 +2,53 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v11.13.0 — Menu d'icônes à gauche + table Pixi au maximum (version actuelle)
+## v12.0.0 — Publicité multi-fournisseurs + VIP sans publicité (version actuelle)
+
+Monétisation complète de l'application mobile : bannière, interstitiels, App
+Open, pubs récompensées, et statut VIP. Architecture modulaire — change de
+réseau en une ligne. Documentation : **docs/ADS.md**.
+
+### Architecture multi-fournisseurs (KB-370)
+Module `mobile/src/services/ads/` en couches nettes : interface `AdProvider`,
+**4 fournisseurs** (Google **AdMob** par défaut, AppLovin MAX, Unity Ads, Meta
+Audience Network) + fournisseur nul (web/dev). Registre/fabrique piloté par
+`adConfig.ACTIVE_NETWORK` : **changer de réseau = une ligne**. Chaque plugin
+natif est en **dépendance douce** (import dynamique) : l'app compile et tourne
+même sans le plugin installé.
+
+### AdManager — orchestration (KB-371)
+Point d'entrée unique appelé par EMPLACEMENT :
+- **Interstitiels** : après chaque partie, avant de créer une table, avant de
+  lancer une partie sauvegardée (avec anti-spam entre deux).
+- **App Open** : avant une partie d'entraînement, et après **3 min** de
+  navigation hors table (au prochain accès à un écran éligible).
+- **Bannière adaptive** : bas de l'écran hors table, **rafraîchie toutes les
+  60 s**, emplacement unique.
+- **Récompensées** : récompense quotidienne, ou **+100 ◆** par visionnage.
+
+### VIP — sans publicité (KB-372)
+Un VIP ne voit **aucune** publicité. Barème en jetons : **600 ◆ / 1 jour**,
+**4 500 ◆ / 10 jours**, **30 000 ◆ / 30 jours**. Un achat pendant une période
+active **prolonge** (cumule). Serveur-premier avec fallback local. UI d'achat +
+statut dans le porte-monnaie.
+
+### Récompensées, bannière & doc (KB-373)
+Bouton pub récompensée dans le wallet, bannière branchée sur le routeur,
+**docs/ADS.md** (architecture, installation SDK par réseau, changement de
+fournisseur, VIP, emplacements, réglages).
+
+### Vérification
+```
+TNR : 14/14 · 384 tests (+22 : VipService + AdManager)
+```
+
+### Note d'intégration
+Les vraies pubs s'affichent uniquement sur device natif après installation du
+plugin (`npm i @capacitor-community/admob && npx cap sync` pour AdMob) et
+renseignement de vos unit IDs. En web/dev, aucune pub (fournisseur nul). Détails
+dans docs/ADS.md.
+
+## v11.13.0 — Menu d'icônes à gauche + table Pixi au maximum
 
 Table encore plus grande et interface épurée : tous les contrôles regroupés dans
 un menu vertical d'icônes à gauche, barre du haut supprimée.

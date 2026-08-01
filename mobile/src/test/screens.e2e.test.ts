@@ -23,6 +23,7 @@ import { RobotRepository } from '../data/RobotRepository';
 import { RobotService } from '../domain/usecases/RobotService';
 import { TeamService } from '../domain/usecases/TeamService';
 import { makeT } from '../data/i18n';
+import { AdManager, VipService } from '../services/ads';
 import type { AppContext, AppState } from '../presentation/context';
 
 import { LoginScreen } from '../presentation/screens/LoginScreen';
@@ -43,11 +44,14 @@ function makeContext(): AppContext {
   const bus = new EventBus();
   const store = new Store<AppState>({ lang: 'fr', screen: 'home' });
   const router = new Router(() => {}, () => api.isAuthenticated());
+  const vip = new VipService(api);
+  const ads = new AdManager({ bus, vip, onReward: () => {}, hasClaimedDaily: () => true });
   return {
     router, store, bus, api,
     robotService: new RobotService(new RobotRepository(api), bus),
     teamService: new TeamService(api, bus),
     t: makeT(() => store.state.lang),
+    ads, vip,
   };
 }
 

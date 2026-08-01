@@ -17,6 +17,9 @@ import { RobotRepository } from './data/RobotRepository';
 import { RobotService } from './domain/usecases/RobotService';
 import { TeamService } from './domain/usecases/TeamService';
 import { makeT } from './data/i18n';
+import { AdManager, VipService } from './services/ads';
+import { creditReward } from './services/wallet';
+import { readWallet } from './services/wallet';
 import { clear } from './core/dom';
 import type { AppContext, AppState } from './presentation/context';
 import { LoginScreen } from './presentation/screens/LoginScreen';
@@ -44,10 +47,26 @@ const robotService = new RobotService(robotRepository, bus);
 const teamService = new TeamService(api, bus);
 const t = makeT(() => store.state.lang);
 
+// --- 2b. Publicité + VIP ----------------------------------------------------
+// VIP masque toute publicité ; AdManager orchestre les emplacements. Le crédit
+// des récompenses est délégué au wallet (le module ads ignore l'économie).
+const vip = new VipService(api);
+const ads = new AdManager({
+  bus,
+  vip,
+  onReward: async (amount) => { await creditReward(amount); },
+  hasClaimedDaily: async () => !(await readWallet()).canClaim,
+});
+
 // --- 3. Présentation --------------------------------------------------------
 const viewport = document.getElementById('viewport')!;
 const router = new Router((name, route) => {
   store.set({ screen: name });
+  // Publicité : signaler le changement d'écran (minuterie App Open) et gérer la
+  // bannière — visible hors table de jeu, masquée sur la table/en ligne.
+  ads.notifyScreen(name);
+  if (name === 'table' || name === 'online' || name === 'login') void ads.hideBanner();
+  else void ads.showBanner();
   // Nettoyage de l'écran sortant (abonnements aux évènements, timers…).
   const outgoing = viewport.firstElementChild as (HTMLElement & { _cleanup?: () => void }) | null;
   outgoing?._cleanup?.();
@@ -57,7 +76,10 @@ const router = new Router((name, route) => {
     .catch((e) => viewport.append(Object.assign(document.createElement('div'), { textContent: `Erreur: ${(e as Error).message}`, className: 'text-mute' })));
 }, () => api.isAuthenticated());
 
-const ctx: AppContext = { router, store, bus, api, robotService, teamService, t };
+const ctx: AppContext = { router, store, bus, api, robotService, teamService, t, ads, vip };
+
+// Initialise la publicité en arrière-plan (SDK natif + préchargements).
+void ads.initialize();
 
 // Routes (avec métadonnées pour l'éventail de navigation permanent).
 router
