@@ -15,9 +15,11 @@ import type { ApiClient, ServerUserProfile } from '../../data/ApiClient';
 
 /**
  * Ouvre la popup de profil pour `userId`. `username` sert de titre le temps du
- * chargement. Retourne l'élément backdrop (déjà ajouté au DOM par l'appelant).
+ * chargement. `vipInfo` (optionnel) affiche un badge VIP + date d'expiration
+ * quand on ouvre le profil de l'utilisateur courant (Mon profil).
+ * Retourne l'élément backdrop (déjà ajouté au DOM par l'appelant).
  */
-export function openPlayerProfile(api: ApiClient, userId: string, username?: string): HTMLElement {
+export function openPlayerProfile(api: ApiClient, userId: string, username?: string, vipInfo?: { isVip: boolean; expiresAt: string | null }): HTMLElement {
   type Tab = 'infos' | 'robots' | 'stats';
   let tab: Tab = 'infos';
   let profile: ServerUserProfile | null = null;
@@ -47,6 +49,20 @@ export function openPlayerProfile(api: ApiClient, userId: string, username?: str
     if (!profile) return;
     clear(bodyEl);
     if (tab === 'infos') {
+      // Bandeau VIP (uniquement pour le profil courant si le vip est actif).
+      if (vipInfo?.isVip && vipInfo.expiresAt) {
+        bodyEl.append(h('div', { style: {
+          display: 'flex', alignItems: 'center', gap: '10px',
+          padding: '10px 14px', marginBottom: '8px',
+          borderRadius: 'var(--r-lg)', border: '1px solid rgba(230,196,106,.5)',
+          background: 'linear-gradient(90deg, rgba(230,196,106,.16), rgba(230,196,106,.06))',
+        } },
+          h('span', { style: { fontSize: '22px' } }, '⭐'),
+          h('div', { class: 'col' },
+            h('span', { style: { fontSize: '13px', fontWeight: '700', color: 'var(--c-gold)' } }, 'Statut VIP actif'),
+            h('span', { class: 'text-mute', style: { fontSize: '11px' } },
+              `Sans publicité jusqu'au ${new Date(vipInfo.expiresAt).toLocaleDateString('fr-FR')}`))));
+      }
       bodyEl.append(h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' } },
         statTile(`Niv. ${profile.level}`, 'Niveau', 'var(--c-gold)'),
         statTile(profile.rank, 'Rang', 'var(--c-info)'),

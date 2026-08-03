@@ -3,13 +3,13 @@
 > **Source : `board/tasks.json`.** Board : `board/board.html`.
 > Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md` · Jetons : `docs/WALLET.md`.
 
-**Projet** Kýdos Belote · **Version** v12.1.0 · **123 tâches** · généré 2026-08-01T14:00:00.000Z
+**Projet** Kýdos Belote · **Version** v12.2.1 · **136 tâches** · généré 2026-08-03T15:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 104 · **En cours** 8 · **À faire** 11 · **Bugs** 21
+- **Terminées** 117 · **En cours** 8 · **À faire** 11 · **Bugs** 25
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-301
-- **Points** 398 · **Durée** 49.8 j
+- **Points** 419 · **Durée** 51.3 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 89 | 289 | 35.0 j |
+| tested | 102 | 310 | 36.6 j |
 | pending | 10 | 36 | 3.9 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -29,21 +29,26 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| P1 | 60 | 201 | 22.3 j |
+| P1 | 64 | 214 | 23.3 j |
 | P0 | 43 | 140 | 20.3 j |
-| P2 | 17 | 47 | 5.5 j |
+| P2 | 26 | 55 | 6.1 j |
 | P3 | 3 | 10 | 1.6 j |
 
 ### Par type
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 80 | 287 | 35.7 j |
-| bug | 21 | 43 | 4.9 j |
+| feature | 82 | 291 | 36.0 j |
+| bug | 25 | 55 | 5.8 j |
 | test | 7 | 26 | 3.4 j |
 | doc | 6 | 17 | 2.4 j |
 | chore | 5 | 13 | 1.8 j |
 | refactor | 4 | 12 | 1.6 j |
+| 3 | 2 | 0 | 0.0 h |
+| 5 | 2 | 0 | 0.0 h |
+| 1 | 1 | 0 | 0.0 h |
+| 2 | 1 | 0 | 0.0 h |
+| docs | 1 | 5 | 3.0 h |
 
 ### Par catégorie
 
@@ -51,8 +56,9 @@
 |---|---:|---:|---:|
 | Mobile | 38 | 114 | 16.1 j |
 | Serveur | 29 | 88 | 11.4 j |
+| Design / IHM | 17 | 24 | 2.1 j |
 | IHM (table) | 17 | 56 | 5.8 j |
-| Design / IHM | 11 | 24 | 2.1 j |
+| Bugs / UX | 7 | 21 | 1.6 j |
 | Documentation | 6 | 17 | 2.4 j |
 | CI/CD | 4 | 22 | 2.2 j |
 | Monétisation | 4 | 26 | 3.0 j |
@@ -70,11 +76,12 @@
 | Mobile (Vite/TS) | 43 | 129 | 18.2 j |
 | Node/Express/Mongo | 30 | 91 | 11.9 j |
 | PixiJS | 17 | 45 | 4.5 j |
+| Mobile/PixiJS | 10 | 11 | 6.5 h |
+| Mobile/Ads | 7 | 21 | 1.6 j |
 | Documentation | 6 | 17 | 2.4 j |
 | CI / Outillage | 4 | 19 | 2.1 j |
 | Infra | 4 | 12 | 1.8 j |
 | Mobile (Capacitor/Ads SDK) | 4 | 26 | 3.0 j |
-| Mobile/PixiJS | 4 | 11 | 6.5 h |
 | Node/Express/Mongo + Mobile | 3 | 16 | 1.8 j |
 | Capacitor | 2 | 6 | 6.0 h |
 | Mobile | 2 | 4 | 3.0 h |
@@ -95,8 +102,10 @@
 | 11.12.0 | 8 | 21 | 1.6 j |
 | 11.3.0 | 8 | 21 | 2.8 j |
 | 10.3.0 | 7 | 25 | 3.9 j |
+| 12.2.1 | 7 | 21 | 1.6 j |
 | 10.1.0 | 6 | 20 | 2.8 j |
 | 10.5.0 | 6 | 16 | 2.2 j |
+| 12.2.0 | 6 | 0 | 0.0 h |
 | 11.7.0 | 5 | 10 | 1.1 j |
 | 10.4.0 | 4 | 9 | 1.2 j |
 | 11.0.1 | 4 | 8 | 1.0 j |
@@ -116,6 +125,29 @@
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v12.2.1 — 7 tâches · 21 pts · 1.6 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-400 | AdMobProvider aligné sur l'API v6 (App Open + consent RGPD) | Testée | P1 | bug | Bugs / UX | Mobile/Ads | 5 | 3 h |
+| KB-401 | VIP débite réellement les jetons (achat + cumul) | Testée | P1 | bug | Bugs / UX | Mobile/Ads | 3 | 2 h |
+| KB-402 | VIP visible : badge couronne sur avatar + bandeau dans le profil | Testée | P1 | feature | Bugs / UX | Mobile/Ads | 3 | 2 h |
+| KB-405 | Training : respecter la visibilité des cartes des robots | Testée | P1 | bug | Bugs / UX | Mobile/Ads | 2 | 1 h |
+| KB-403 | Version de l'app dans l'écran À propos | Testée | P2 | feature | Bugs / UX | Mobile/Ads | 1 | 0.5 h |
+| KB-404 | Message clair quand pub récompensée échoue | Testée | P2 | bug | Bugs / UX | Mobile/Ads | 2 | 1 h |
+| KB-406 | Documentation ADS refondue : MODE TEST vs MODE PRODUCTION séparés | Testée | P2 | docs | Bugs / UX | Mobile/Ads | 5 | 3 h |
+
+### v12.2.0 — 6 tâches · 0 pts · 0.0 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-390 | Retrait des 2 bannières de la table + agrandissement | Testée | P2 | 2 | Design / IHM | Mobile/PixiJS | 0 | Suppression des deux emplacements pub (gauche/droite) en bas de la table de jeu : la bannière unique app-wide (AdMob) est gérée ailleurs. L'espace récupéré agrandit la hauteur du feutre (bas 64px → 8px). |
+| KB-391 | Popup d'annonce au-dessus des cartes du joueur | Testée | P2 | 1 | Design / IHM | Mobile/PixiJS | 0 | Le panneau d'annonce (bid) passe du haut du feutre au bas, juste au-dessus de la main du joueur (sud), jugé plus esthétique et à portée de pouce. |
+| KB-392 | Icônes SVG épurées pour le menu de la table | Testée | P2 | 3 | Design / IHM | Mobile/PixiJS | 0 | Remplacement des emojis du menu gauche (quitter, spectateurs, son, réactions, pause, vitesse) par des icônes SVG en trait, nettes et colorables (icons.ts). Fini l'emoji porte pour quitter. |
+| KB-393 | Indicateur VIP visible en jeu (halo autour du logo) | Testée | P2 | 5 | Design / IHM | Mobile/PixiJS | 0 | Un joueur VIP est signalé à la table par un halo doré autour de son pastille/logo, visible par tous. vipSeats propagé PixiTable → scene → SeatsLayer. Le halo de mon siège est câblé (VIP local) ; le VIP des joueurs distants nécessitera un champ serveur (suite). |
+| KB-394 | Menu profil ergonomique (niveau/avatar → profil + déconnexion) | Testée | P2 | 5 | Design / IHM | Mobile/PixiJS | 0 | Clic sur le bloc niveau/avatar de la barre supérieure : feuille déroulante mobile (ProfileMenu) avec Mon profil, Mon porte-monnaie, Déconnexion. Conçu pour être simple à étendre (une entrée = un objet). Ferme au clic extérieur. |
+| KB-395 | Documentation ADS clarifiée (voir pubs de test sur device) | Testée | P2 | 3 | Design / IHM | Mobile/PixiJS | 0 | Ajout d'un « Démarrage express » ultra-explicite dans docs/ADS.md : voir des pubs de test sur device en 10 min (plugin, App ID de test Google, config déjà bonne, lancement, où voir chaque pub), avec les pièges à éviter. Clarifie quoi installer où. |
 
 ### v12.1.0 — 4 tâches · 19 pts · 2.1 j
 

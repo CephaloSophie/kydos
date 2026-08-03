@@ -4,6 +4,231 @@ Module publicitaire de l'application mobile : bannière adaptive, interstitiels,
 App Open, pubs récompensées, et statut **VIP** (sans publicité). Architecture
 modulaire multi-fournisseurs — change de réseau en **une ligne** de configuration.
 
+> 💡 **Tu veux tester les pubs sur ton téléphone AVANT de publier l'app sur le
+> Play Store ?** C'est exactement le but du **MODE TEST** ci-dessous — aucun
+> compte AdMob nécessaire, aucune app publiée nécessaire, juste ton device et
+> l'App ID de test public de Google.
+
+---
+
+## 🚀 MODE TEST — voir des pubs sur mon device (≈ 15 min)
+
+**Objectif** : afficher **de vraies pubs de test Google** sur ta tablette/téléphone
+Android. Aucun compte AdMob nécessaire, aucun risque de suspension.
+
+### Ce qu'il faut savoir avant de commencer
+
+- Les pubs ne s'affichent **QUE sur device natif (Android/iOS)**. En navigateur
+  web (`npm run dev`), c'est normal qu'il n'y ait aucune pub — le SDK n'existe
+  pas hors device.
+- Tu n'as **pas besoin d'un compte AdMob** pour le mode test. Google fournit un
+  App ID et des unit IDs de test PUBLICS, utilisables tels quels.
+- **Pièges les plus fréquents** (dans cet ordre de fréquence sur tablette Samsung
+  en France) :
+  1. **App ID manquant dans AndroidManifest** → l'app **crash au lancement**.
+  2. **Consentement RGPD non affiché** → le SDK refuse de charger les pubs (silencieux).
+  3. **Plugin dans une version incompatible** → API différente (v6+ requise).
+  4. **App en pause** ou **device sans réseau**.
+
+### Étape 1 — Installer le plugin (une seule fois, à la racine du projet)
+
+```bash
+npm i @capacitor-community/admob@^6
+npm --workspace belote-mobile run build
+npx cap sync android
+```
+
+> Version **v6+** obligatoire — l'API a changé pour l'App Open (`loadAppOpen` /
+> `isAppOpenLoaded` / `showAppOpen`) et pour les événements récompensés. Le code
+> fourni est aligné sur v6.
+
+### Étape 2 — Déclarer l'App ID de test dans AndroidManifest
+
+Ouvre `mobile/android/app/src/main/AndroidManifest.xml` et ajoute, à l'intérieur
+de la balise `<application>` (avant `</application>`) :
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3940256099942544~3347511713" />
+```
+
+> ⚠️ **Sans cette ligne, l'app crash au lancement.** C'est un requis STRICT
+> d'AdMob depuis 2019 : pas d'App ID = crash immédiat.
+>
+> `ca-app-pub-3940256099942544~3347511713` est l'**App ID public de test de
+> Google**, utilisable tel quel en développement. Aucun compte n'est nécessaire
+> pour l'utiliser — c'est fait pour ça.
+>
+> iOS : même principe dans `Info.plist`, clé `GADApplicationIdentifier`, valeur
+> `ca-app-pub-3940256099942544~1458002511`.
+
+### Étape 3 — Vérifier la configuration (déjà correcte par défaut)
+
+Dans `mobile/src/services/ads/adConfig.ts` :
+
+```ts
+export const ACTIVE_NETWORK: AdNetwork = 'admob';   // fournisseur actif
+export const TEST_MODE = true;                       // pubs de test
+```
+
+Les unit IDs de test Google sont déjà renseignés dans `AD_UNITS.admob` — **tu
+n'as rien à modifier**. Ces IDs renvoient des pubs de démonstration marquées
+« **Test Ad** », sans risque.
+
+### Étape 4 — Rebuild et lancer sur le device
+
+```bash
+npm --workspace belote-mobile run build
+npx cap sync android
+npx cap run android
+# ou : make android-device
+```
+
+### Étape 5 — Accepter le consentement RGPD au premier lancement
+
+⚠️ **Le piège le plus fréquent en France.** Au premier lancement, une **fenêtre
+Google de consentement RGPD** peut apparaître (parce que tu es dans l'EEA).
+**Tu DOIS l'accepter** pour que les pubs se chargent :
+
+- Si tu la refuses (ou fermes sans répondre), **aucune pub ne se chargera** — et
+  aucun message d'erreur ne t'expliquera pourquoi. C'est silencieux.
+- Si tu ne la vois pas apparaître, c'est OK : le SDK a considéré que le
+  consentement n'était pas requis (mode test, hors EEA, déjà donné).
+- Pour tester à nouveau : désinstalle l'app, réinstalle.
+
+### Étape 6 — Où voir chaque type de pub dans l'app
+
+| Type | Comment le déclencher |
+| --- | --- |
+| **Bannière** | Écran d'accueil, « Mes robots », porte-monnaie… — en bas. |
+| **Récompensée** | Porte-monnaie → bouton « 🎬 Regarder une pub ». |
+| **Interstitiel** | Termine une partie d'entraînement, **ou** crée une table en ligne. |
+| **App Open** | Clique « Lancer une partie » (entraînement). |
+
+Chaque pub affiche « **Test Ad** » : **c'est le comportement CORRECT et
+ATTENDU** — pas un bug.
+
+### Dépannage — les pubs ne s'affichent toujours pas
+
+Dans l'ordre à vérifier :
+
+1. **Vérifie le logcat Android** :
+   ```bash
+   adb logcat -v time Ads:V AdMob:V *:E | grep -i "ad\|admob"
+   ```
+   Cherche des messages `Ad failed to load` avec un code d'erreur (0=INTERNAL_ERROR,
+   1=INVALID_REQUEST, 2=NETWORK_ERROR, 3=NO_FILL, 8=NOT_READY).
+2. **Test dans un émulateur AVD** avec Google Play (pas juste AOSP) — certaines
+   pubs exigent Play Services à jour.
+3. **Reset RGPD** : désinstalle l'app, réinstalle, accepte le consentement au
+   premier lancement.
+4. **Vérifie que le device a une connexion réseau** (les pubs se téléchargent).
+5. **Vérifie que `TEST_MODE = true`** dans `adConfig.ts` (sinon Google refuse les
+   pubs sur un device sans compte AdMob configuré).
+
+Si un message dans le logcat te dit `The Google Mobile Ads SDK was initialized
+incorrectly` ou similaire : l'**App ID de l'étape 2 est mal placé** ou absent.
+
+### ⚠️ À NE JAMAIS FAIRE en mode test
+
+- Ne mets **pas** `TEST_MODE = false` tant que tu es en développement.
+- Ne clique **JAMAIS** sur une vraie pub (pas Test Ad) avec ton compte AdMob →
+  Google peut suspendre ton compte pour « clics invalides ».
+- Ne mets pas tes vrais unit IDs de production tant que tu n'as pas validé le
+  mode test — même en `TEST_MODE = true`, éviter la confusion.
+
+---
+
+## 🚀 MODE PRODUCTION — passer aux vraies pubs
+
+Quand le mode test fonctionne, voici comment passer en production.
+
+### Étape 1 — Créer un compte AdMob
+
+Va sur https://admob.google.com et inscris-toi (gratuit, avec un compte Google
+existant). Aucune app publiée n'est requise pour créer un compte.
+
+### Étape 2 — Créer une app AdMob
+
+**Apps → Add app**. Choisis « **Non, l'app n'est pas encore sur un store** » si
+tu n'as pas encore publié sur Play Store. AdMob te donne un **App ID de
+production** de la forme `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY`.
+
+### Étape 3 — Créer une unité par format
+
+Toujours dans AdMob, dans ton app : **Ad units → Create ad unit**. Crée une
+unité pour chaque format :
+
+- **Banner**
+- **Interstitial**
+- **Rewarded**
+- **App open**
+
+Chaque unité te donne un **unit ID de production** de la forme
+`ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ`.
+
+### Étape 4 — Remplacer l'App ID dans AndroidManifest
+
+Remplace le meta-data de l'étape 2 (mode test) par TON App ID de production :
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY" />
+```
+
+### Étape 5 — Renseigner tes unit IDs et désactiver le mode test
+
+Dans `mobile/src/services/ads/adConfig.ts` :
+
+```ts
+export const TEST_MODE = false;   // ← passe à false
+
+export const AD_UNITS = {
+  admob: {
+    android: {
+      banner:       'ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ',
+      interstitial: 'ca-app-pub-XXXXXXXXXXXXXXXX/AAAAAAAAAA',
+      rewarded:     'ca-app-pub-XXXXXXXXXXXXXXXX/BBBBBBBBBB',
+      appOpen:      'ca-app-pub-XXXXXXXXXXXXXXXX/CCCCCCCCCC',
+    },
+    ios: { /* tes IDs iOS si l'app est aussi iOS */ },
+  },
+  // ...
+};
+```
+
+### Étape 6 — Rebuild et tester
+
+```bash
+npm --workspace belote-mobile run build
+npx cap sync android
+npx cap run android
+```
+
+**Tu verras désormais de vraies pubs** (sans le bandeau « Test Ad »).
+
+### Étape 7 — Checklist avant publication sur le Play Store
+
+- [ ] AdMob compte lié à un compte de paiement (sinon les revenus s'accumulent
+      sans versement).
+- [ ] Politique de confidentialité de l'app à jour (obligatoire pour AdMob).
+- [ ] Consentement RGPD configuré côté AdMob (User Messaging Platform, dans
+      AdMob → Confidentialité et messagerie).
+- [ ] Test final sur un device NON développeur (avec un compte Google différent
+      du tien pour éviter les clics invalides accidentels).
+
+### Différences code entre TEST et PROD
+
+**Aucune** — le code métier (AdManager, emplacements, VIP) ne change pas. Seuls
+changent :
+- **`TEST_MODE`** dans `adConfig.ts` (`true` → `false`)
+- **`AD_UNITS.admob.android` (et `.ios`)** dans `adConfig.ts` (test IDs → tes IDs)
+- **`APPLICATION_ID`** dans AndroidManifest.xml (test App ID → ton App ID)
+
+---
+
 ## 1. Principe & architecture
 
 Tout passe par un point d'entrée unique — **`AdManager`** — que les écrans
@@ -70,68 +295,11 @@ Les SDK publicitaires n'existent que sur device (Android/iOS). En web/dev, le
 fournisseur nul est utilisé (aucune pub). Sur natif, installez le plugin puis
 `npx cap sync`.
 
-### AdMob (défaut) — mode TEST puis PROD
+### AdMob (défaut)
 
-Objectif : t'inscrire sur AdMob, voir **de vraies pubs de test** renvoyées par
-Google sur ton device, puis passer en production sans changer le code métier.
-
-#### Étape 1 — Inscription AdMob (gratuit)
-
-1. Va sur https://admob.google.com et crée un compte (lié à un compte Google).
-2. **Ajoute une application** (Apps -> Add app). Même non publiée, choisis « pas
-   encore sur un store » : AdMob te donne un **App ID**
-   `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY`.
-3. **Crée une unité par format** (Bannière, Interstitiel, Récompensée, App Open).
-   Chacune donne un **unit ID** `ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ`.
-
-#### Étape 2 — Installer le plugin
-
-```bash
-npm i @capacitor-community/admob
-npx cap sync
-```
-
-#### Étape 3 — Déclarer l'App ID natif
-
-- **Android** — `mobile/android/app/src/main/AndroidManifest.xml`, dans `<application>` :
-  ```xml
-  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID"
-             android:value="ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"/>
-  ```
-- **iOS** — `mobile/ios/App/App/Info.plist` :
-  ```xml
-  <key>GADApplicationIdentifier</key>
-  <string>ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY</string>
-  ```
-
-#### Étape 4 — MODE TEST (voir de vraies pubs de test)
-
-**Ne touche à rien** : `adConfig.ts` a déjà `TEST_MODE = true` et les
-**identifiants de test publics de Google** dans `AD_UNITS.admob`. Ce sont de
-vraies unités qui renvoient des pubs de démonstration (bandeau « Test Ad »), sans
-risque d'invalidation de compte.
-
-Emplacements de test visibles dans l'app :
-- **Bannière** : bas de tout écran hors table (accueil, robots, porte-monnaie).
-- **Récompensée** : bouton « Regarder une pub » dans le porte-monnaie.
-- **Interstitiel** : fin de partie, ou avant de créer une table.
-- **App Open** : avant une partie d'entraînement (« Lancer une partie »).
-
-Build sur device : `make android-device` (ou `make ios-device`). Chaque pub
-affiche « **Test Ad** » : comportement attendu.
-
-> En `TEST_MODE`, même avec de vrais unit IDs, le plugin force les pubs de test.
-> Ne clique jamais sur une vraie pub avec ton compte en prod (invalidation).
-
-#### Étape 5 — PASSER EN PRODUCTION
-
-1. Renseigne **tes** unit IDs (Android + iOS) dans `AD_UNITS.admob` (`adConfig.ts`).
-2. Mets `TEST_MODE = false`.
-3. Vérifie que l'App ID natif (étape 3) est bien le tien.
-4. `npx cap sync` puis rebuild device.
-
-Le code métier (AdManager, emplacements, VIP) ne change pas : seule la config
-bascule test -> prod.
+Voir les sections **🚀 MODE TEST** et **🚀 MODE PRODUCTION** en haut de ce
+document pour la procédure complète pas-à-pas (inscription, App ID, unit IDs,
+mode test sans compte, passage en production).
 
 ### AppLovin MAX
 

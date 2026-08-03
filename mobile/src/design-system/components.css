@@ -320,10 +320,11 @@
   width: 44px; height: 44px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   background: rgba(16, 21, 31, 0.88); border: 1px solid var(--c-line);
-  color: var(--c-text-soft); font-size: 20px; cursor: pointer; position: relative;
-  transition: background .16s ease, transform .1s ease, border-color .16s ease;
+  color: var(--c-text-soft); cursor: pointer; position: relative;
+  transition: background .16s ease, transform .1s ease, border-color .16s ease, color .16s ease;
 }
-.table-menu__btn:hover { background: rgba(28, 36, 52, 0.95); border-color: rgba(230,196,106,.4); }
+.table-menu__btn svg { width: 22px; height: 22px; display: block; }
+.table-menu__btn:hover { background: rgba(28, 36, 52, 0.95); border-color: rgba(230,196,106,.4); color: var(--c-text); }
 .table-menu__btn:active { transform: scale(0.94); }
 .table-menu__btn.is-online {
   background: rgba(126,203,152,.14); border-color: rgba(126,203,152,.4); cursor: default;
@@ -354,3 +355,40 @@
 }
 .table-menu__emoji:hover { background: rgba(255,255,255,0.14); }
 .table-menu__emoji:active { transform: scale(0.9); }
+
+/* ============================================================================
+   Menu profil (feuille déroulante depuis la barre supérieure) — v12.2.0
+   ========================================================================== */
+.profile-menu {
+  min-width: 190px; padding: 6px;
+  background: rgba(14, 19, 30, 0.98); border: 1px solid var(--c-line);
+  border-radius: 14px; box-shadow: var(--sh-float, 0 12px 32px rgba(0,0,0,.5));
+  display: flex; flex-direction: column; gap: 2px;
+  animation: profile-menu-in .14s ease-out;
+}
+@keyframes profile-menu-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.profile-menu__item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border: none; border-radius: 10px;
+  background: transparent; color: var(--c-text); font: 600 14px var(--f-ui, inherit);
+  cursor: pointer; text-align: left; width: 100%;
+  transition: background .14s ease;
+}
+.profile-menu__item svg { width: 20px; height: 20px; flex: 0 0 auto; color: var(--c-text-soft); }
+.profile-menu__item:hover { background: rgba(255,255,255,.06); }
+.profile-menu__item:active { background: rgba(255,255,255,.1); }
+.profile-menu__item.is-danger { color: var(--c-danger); }
+.profile-menu__item.is-danger svg { color: var(--c-danger); }
+.profile-menu__item.is-danger:hover { background: rgba(231,111,111,.12); }
+
+/* ============================================================================
+   Badge VIP (couronne au-dessus du logo robot de la barre supérieure) — v12.2.1
+   ========================================================================== */
+.vip-crown {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; line-height: 1;
+  background: linear-gradient(135deg, #f5d47a, #e6a94a);
+  border-radius: 50%; box-shadow: 0 0 6px rgba(240,196,106,.7);
+  z-index: 2;
+}

@@ -11,6 +11,8 @@ import './styles/index.css';
 export interface PixiTableProps {
   view: EngineView;
   names: string[];
+  /** Sièges VIP (halo doré autour du logo), indexé par siège absolu 0..3. */
+  vipSeats?: boolean[];
   hands: (Card[] | null)[];
   mySeat: Seat | null;
   legal?: Card[];
@@ -25,6 +27,9 @@ export interface PixiTableProps {
   /** Fine-grained overrides on top of the named theme. */
   themeOverrides?: Partial<PixiTableTheme>;
   opponentCards?: 'hidden' | 'back' | 'faceup';
+  /** Coéquipier caché (défaut: true — règle belote). En entraînement avec
+   *  visibilité 'all', on peut le mettre à false pour tout révéler. */
+  partnerFaceDown?: boolean;
   showMenu?: boolean;
   showScoreSheet?: boolean;
   forceLandscape?: boolean;
@@ -167,7 +172,7 @@ export function PixiTable(props: PixiTableProps) {
     const scene = sceneRef.current; const app = appRef.current;
     if (!scene || !app || !app.renderer) return;
     applySize();
-    scene.update({ view, names, hands, legal, mySeat: (mySeat ?? 0) as Seat, showDemandeInPlay, showReflexion, partnerFaceDown: true });
+    scene.update({ view, names, hands, legal, mySeat: (mySeat ?? 0) as Seat, showDemandeInPlay, showReflexion, partnerFaceDown: props.partnerFaceDown ?? true, vipSeats: props.vipSeats });
   };
   renderRef.current = renderScene;
   useEffect(renderScene);

@@ -56,3 +56,17 @@ export async function creditReward(amount: number): Promise<{ balance: number; s
   try { localStorage.setItem('kydos.tokens', String(balance)); } catch { /* stockage indispo */ }
   return { balance, source: 'local' };
 }
+
+/**
+ * DÉBITE des jetons du solde (achat VIP, autres dépenses). Lève si solde
+ * insuffisant. Débit LOCAL immédiat ; un endpoint serveur générique de dépense
+ * arrivera dans une prochaine tranche d'économie serveur.
+ */
+export async function spendTokens(amount: number, _kind = 'spend'): Promise<{ balance: number; source: 'server' | 'local' }> {
+  const cost = Math.max(0, Math.round(amount));
+  const before = localBalance();
+  if (before < cost) throw new Error('Solde insuffisant');
+  const balance = before - cost;
+  try { localStorage.setItem('kydos.tokens', String(balance)); } catch { /* stockage indispo */ }
+  return { balance, source: 'local' };
+}

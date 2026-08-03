@@ -2,7 +2,109 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.1.2 — README enrichi (cap sync expliqué) + board/ à la racine (version actuelle)
+## v12.2.1 — Correctifs AdMob v6 + VIP débit/cumul + training visible + doc refondue (version actuelle)
+
+Grosse tranche de correctifs suite au retour terrain de la tablette Samsung.
+
+### AdMob : passage à l'API v6+ (KB-400)
+Refonte du fournisseur AdMob pour la **version v6 du plugin** (celle installée) :
+- **App Open** utilise maintenant `loadAppOpen` / `isAppOpenLoaded` / `showAppOpen`
+  (les méthodes v5 n'existent plus, ça expliquait pourquoi elle ne s'affichait
+  jamais).
+- **Consentement RGPD** géré automatiquement (`requestConsentInfo` + `showConsentForm`).
+  **C'était le vrai blocage sur les pubs en France** : sans consentement, le SDK
+  refuse de charger les pubs silencieusement.
+- Préchargement systématique avant chaque affichage récompensé.
+- Chaque échec renvoie une **raison** exploitable (plugin-missing, unavailable,
+  cancelled, error).
+
+### VIP débite et cumule (KB-401)
+`VipService.purchase()` **débite maintenant les jetons** via un callback
+`spendTokens` injecté. Atomique : solde insuffisant → erreur, rien n'est prolongé.
+Le cumul (2 × 1 jour = 2 jours) est vérifié par un test dédié.
+
+### VIP visible partout (KB-402)
+- **Couronne dorée ⭐** sur le petit robot avatar de la barre supérieure.
+- **Bandeau doré** dans « Mon profil » (onglet Infos) avec la date d'expiration.
+- Rafraîchi automatiquement au focus de la fenêtre.
+
+### Message clair pour la pub récompensée (KB-404)
+Fini le générique « Pub non terminée — aucune récompense ». Selon la raison
+réelle :
+- « Plugin AdMob non installé sur ce device »
+- « Pub indisponible — réessayez dans quelques secondes »
+- « Pub interrompue — regardez-la entièrement pour la récompense »
+- « Impossible de charger la pub — vérifiez votre connexion »
+
+### Training : cartes visibles respecte le choix (KB-405)
+L'option de visibilité du dialogue d'entraînement était **ignorée** (dos codé
+en dur). Maintenant :
+- **`none`** → dos (comportement normal)
+- **`robots`** → cartes des robots visibles
+- **`all`** → tout visible, y compris le coéquipier (via `partnerFaceDown`
+  désormais paramétrable dans PixiTable)
+
+### Version de l'app dans À propos (KB-403)
+`mobile/src/version.ts` créé comme source de vérité. Carte version en bas de
+l'écran À propos : « Kýdos Belote v12.2.1 ».
+
+### Documentation ADS refondue (KB-406)
+`docs/ADS.md` restructuré en deux sections indépendantes :
+- **🚀 MODE TEST** (6 étapes) : voir des pubs de test sur ton device en 15 min,
+  sans compte AdMob, avec le **piège RGPD explicitement documenté**.
+- **🚀 MODE PRODUCTION** (7 étapes) : inscription AdMob, unit IDs, passage aux
+  vraies pubs.
+- **Section dépannage** avec logcat, codes d'erreur AdMob, checklist de reset.
+- Message clair d'entrée : **pas besoin d'être publié sur le Play Store pour
+  tester**.
+
+### Vérification
+```
+TNR : 14/14 · 395 tests · +3 tests VIP (débit, cumul 2x1j, solde insuffisant)
+```
+
+## v12.2.0 — Table épurée, icônes SVG, VIP en jeu, menu profil
+
+Finitions d'interface : table agrandie, annonce repositionnée, icônes SVG,
+signalement VIP à la table, menu profil ergonomique, doc ADS clarifiée.
+
+### Table de jeu (KB-390, KB-391)
+- **Deux bannières pub retirées** du bas de la table (la bannière unique app-wide
+  est gérée ailleurs) -> le feutre **gagne en hauteur** (bas 64px -> 8px).
+- **Popup d'annonce** déplacé du haut vers le **bas, juste au-dessus des cartes**
+  du joueur (plus esthétique, à portée de pouce).
+
+### Icônes SVG (KB-392)
+Le menu de gauche (quitter, spectateurs, son, réactions, pause, vitesse) utilise
+désormais des **icônes SVG épurées** (trait, colorables) au lieu d'emojis. Fini
+l'emoji « porte » pour quitter.
+
+### VIP visible en jeu (KB-393)
+Un joueur VIP est signalé à la table par un **halo doré** autour de son logo,
+visible par tous. Le halo de ton siège est câblé ; le VIP des joueurs distants
+nécessitera un champ serveur (suite prévue).
+
+### Menu profil (KB-394)
+Clic sur le bloc **niveau/avatar** en haut -> **feuille déroulante** mobile :
+Mon profil, Mon porte-monnaie, Déconnexion. Conçue pour être **simple à étendre**
+et ergonomique au pouce.
+
+### Documentation ADS (KB-395)
+Nouveau **« Démarrage express »** dans docs/ADS.md : voir des pubs de test sur
+device en ~10 min (plugin, App ID de test Google fourni, config déjà prête, où
+voir chaque type de pub, pièges à éviter).
+
+### Vérification
+```
+TNR : 14/14 · 392 tests
+```
+
+## v12.1.3 — .env.sample : valeurs par défaut (IP LAN, Mongo auth, CORS)
+
+Valeurs par défaut des exemples d'environnement : `VITE_API_URL` sur l'IP LAN de
+dev, `MONGO_URI` avec authentification, `CORS_ORIGIN` multi-origines.
+
+## v12.1.2 — README enrichi (cap sync expliqué) + board/ à la racine
 
 - **`npx cap sync android` expliqué** : ce que la commande fait concrètement
   (copie du bundle, mise à jour des plugins natifs, sérialisation de la config),

@@ -181,7 +181,8 @@ export class AdManager {
       await this.#grant(amount);
       return { rewarded: true, amount };
     }
-    return res;
+    // Aucun crédit : renvoie la raison si le fournisseur en fournit une.
+    return { rewarded: false, amount: 0, reason: res.reason ?? 'error' };
   }
 
   async #rewardAmount(): Promise<number> {

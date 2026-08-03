@@ -18,7 +18,7 @@ import { RobotService } from './domain/usecases/RobotService';
 import { TeamService } from './domain/usecases/TeamService';
 import { makeT } from './data/i18n';
 import { AdManager, VipService } from './services/ads';
-import { creditReward } from './services/wallet';
+import { creditReward, spendTokens } from './services/wallet';
 import { readWallet } from './services/wallet';
 import { clear } from './core/dom';
 import type { AppContext, AppState } from './presentation/context';
@@ -50,7 +50,7 @@ const t = makeT(() => store.state.lang);
 // --- 2b. Publicité + VIP ----------------------------------------------------
 // VIP masque toute publicité ; AdManager orchestre les emplacements. Le crédit
 // des récompenses est délégué au wallet (le module ads ignore l'économie).
-const vip = new VipService(api);
+const vip = new VipService(api, (amount, kind) => spendTokens(amount, kind));
 const ads = new AdManager({
   bus,
   vip,

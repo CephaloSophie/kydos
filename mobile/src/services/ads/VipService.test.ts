@@ -1,9 +1,16 @@
 // @vitest-environment happy-dom
-// Tests for VipService: purchase durations, extension, VIP eligibility.
-import { beforeEach, describe, expect, it } from 'vitest';
-import { VipService, VIP_PLANS, type VipApi } from './VipService';
+// Tests for VipService: purchase durations, extension, VIP eligibility, debit.
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { VipService, VIP_PLANS, type VipApi, type SpendTokens } from './VipService';
 
 const localApi: VipApi = { isAuthenticated: () => false };
+
+/** Fake spend that just tracks calls and always succeeds. */
+function makeSpend(): { spend: SpendTokens; calls: number[] } {
+  const calls: number[] = [];
+  const spend: SpendTokens = async (amount) => { calls.push(amount); return { balance: 1_000_000 }; };
+  return { spend, calls };
+}
 
 beforeEach(() => localStorage.clear());
 
@@ -17,38 +24,64 @@ describe('VIP_PLANS — barème', () => {
   });
 });
 
-describe('VipService — statut', () => {
+describe('VipService — statut & achat', () => {
   it('non-VIP par défaut', async () => {
     const s = await new VipService(localApi).status();
     expect(s.isVip).toBe(false);
     expect(s.expiresAt).toBeNull();
   });
 
-  it('achat 1 jour → VIP actif, expiration ~24h plus tard', async () => {
-    const svc = new VipService(localApi);
+  it('achat 1 jour → VIP actif ET jetons débités de 600', async () => {
+    const { spend, calls } = makeSpend();
+    const svc = new VipService(localApi, spend);
     const before = Date.now();
     const s = await svc.purchase('day');
     expect(s.isVip).toBe(true);
+    expect(calls).toEqual([600]); // débit effectif
     const delta = Date.parse(s.expiresAt!) - before;
     expect(delta).toBeGreaterThan(23 * 3600_000);
     expect(delta).toBeLessThan(25 * 3600_000);
     expect(svc.isVipCached()).toBe(true);
   });
 
-  it('achat 30 jours → expiration ~30j plus tard', async () => {
-    const svc = new VipService(localApi);
-    const s = await svc.purchase('days30');
+  it('achat 30 jours → expiration ~30j + débit 30000', async () => {
+    const { spend, calls } = makeSpend();
+    const s = await new VipService(localApi, spend).purchase('days30');
+    expect(calls).toEqual([30_000]);
     const days = (Date.parse(s.expiresAt!) - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(29.5);
     expect(days).toBeLessThan(30.5);
   });
 
-  it('un achat pendant une période active PROLONGE (cumule) au lieu de remplacer', async () => {
-    const svc = new VipService(localApi);
-    await svc.purchase('day');           // +1 j
-    const s = await svc.purchase('days10'); // +10 j depuis l'expiration
+  it('un achat pendant une période active PROLONGE (cumule) et débite deux fois', async () => {
+    const { spend, calls } = makeSpend();
+    const svc = new VipService(localApi, spend);
+    await svc.purchase('day');           // +1 j, débit 600
+    const s = await svc.purchase('days10'); // +10 j, débit 4500
+    expect(calls).toEqual([600, 4500]);
     const days = (Date.parse(s.expiresAt!) - Date.now()) / 86_400_000;
     expect(days).toBeGreaterThan(10.5); // ~11 jours cumulés
+  });
+
+  it('deux achats de 1 jour successifs donnent bien 2 jours', async () => {
+    const { spend } = makeSpend();
+    const svc = new VipService(localApi, spend);
+    await svc.purchase('day');
+    const s = await svc.purchase('day');
+    const days = (Date.parse(s.expiresAt!) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(1.5);
+    expect(days).toBeLessThan(2.5);
+  });
+
+  it('sans callback de débit local, l\'achat échoue proprement', async () => {
+    await expect(new VipService(localApi).purchase('day')).rejects.toThrow();
+  });
+
+  it('solde insuffisant : purchase remonte l\'erreur et ne prolonge pas', async () => {
+    const spend: SpendTokens = async () => { throw new Error('Solde insuffisant'); };
+    const svc = new VipService(localApi, spend);
+    await expect(svc.purchase('day')).rejects.toThrow('Solde insuffisant');
+    expect(svc.isVipCached()).toBe(false);
   });
 
   it('une expiration passée n’est plus VIP', async () => {
@@ -77,3 +110,4 @@ describe('VipService — serveur-premier', () => {
     expect(s.source).toBe('local');
   });
 });
+

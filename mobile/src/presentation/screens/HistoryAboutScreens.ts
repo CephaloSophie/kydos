@@ -5,6 +5,7 @@
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
 import { Button, Badge } from '../components/ui';
+import { APP_VERSION } from '../../version';
 import type { AppContext } from '../context';
 import type { ServerGame } from '../../data/ApiClient';
 
@@ -148,5 +149,10 @@ export function AboutScreen(ctx: AppContext): HTMLElement {
       h('div', { class: 'eyebrow', style: { marginBottom: '8px' } }, 'ILS NOUS FONT CONFIANCE'),
       h('div', { class: 'row gap-2 wrap' }, ...CLIENTS.map((c) => Badge(c))),
       h('div', { class: 'mono', style: { fontSize: '10px', marginTop: '10px', color: 'var(--c-text-mute)' } }, 'Contact : ', h('a', { href: 'mailto:contact@cephalosophie.com', class: 'gold' }, 'contact@cephalosophie.com'))),
+    // Version de l'app (source de vérité : mobile/src/version.ts).
+    h('div', { class: 'card', style: { marginTop: '12px', textAlign: 'center' } },
+      h('div', { class: 'eyebrow' }, 'VERSION'),
+      h('div', { class: 'title', style: { fontSize: '18px', margin: '4px 0', color: 'var(--c-gold)' } }, `Kýdos Belote v${APP_VERSION}`),
+      h('div', { class: 'text-mute', style: { fontSize: '10px' } }, 'Développé avec Claude — © Cephalo Sophie')),
   );
 }

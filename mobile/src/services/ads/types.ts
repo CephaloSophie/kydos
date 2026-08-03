@@ -36,6 +36,8 @@ export interface RewardResult {
   rewarded: boolean;
   /** Montant crédité (jetons), 0 si non récompensé. */
   amount: number;
+  /** Raison si non récompensé (diagnostic UX). */
+  reason?: 'vip' | 'unavailable' | 'not-native' | 'plugin-missing' | 'error' | 'cancelled';
 }
 
 /** Résultat générique d'un affichage plein écran (interstitiel / app open). */

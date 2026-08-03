@@ -41,11 +41,15 @@ export interface VipApi {
   purchaseVip?(planId: string): Promise<{ expiresAt: string | null; balance: number }>;
 }
 
+/** Callback de débit du porte-monnaie (délégué au wallet — ADS ignore la monnaie). */
+export type SpendTokens = (amount: number, kind?: string) => Promise<{ balance: number }>;
+
 export class VipService {
   #api: VipApi;
+  #spend: SpendTokens | null;
   #cache: VipStatus | null = null;
 
-  constructor(api: VipApi) { this.#api = api; }
+  constructor(api: VipApi, spend?: SpendTokens) { this.#api = api; this.#spend = spend ?? null; }
 
   /** Statut courant (serveur si possible, sinon local). Mis en cache. */
   async status(): Promise<VipStatus> {
@@ -68,21 +72,29 @@ export class VipService {
   }
 
   /**
-   * Achète (ou prolonge) le statut VIP selon un plan. Serveur-premier ; en local
-   * on prolonge à partir de la date d'expiration courante si encore valide.
+   * Achète (ou prolonge) le statut VIP selon un plan. **Débite les jetons** puis
+   * étend la période. Serveur-premier ; en local on prolonge à partir de la date
+   * d'expiration courante si encore valide (les achats se CUMULENT).
    */
   async purchase(planId: VipPlan['id']): Promise<VipStatus> {
     const plan = VIP_PLANS.find((p) => p.id === planId);
     if (!plan) throw new Error(`plan VIP inconnu : ${planId}`);
 
     if (this.#api.isAuthenticated() && this.#api.purchaseVip) {
+      // Serveur : l'endpoint fait tout (débit + validité + réponse).
       try {
         const r = await this.#api.purchaseVip(planId);
         this.#cache = { isVip: this.#active(r.expiresAt), expiresAt: r.expiresAt, source: 'server' };
         return this.#cache;
       } catch { /* retombe en local */ }
     }
-    // Local : prolonge depuis maintenant OU depuis l'expiration si encore active.
+
+    // Local : DÉBIT du porte-monnaie AVANT tout — si le solde est insuffisant,
+    // on ne prolonge rien (comportement cohérent avec l'attente utilisateur).
+    if (!this.#spend) throw new Error('Débit de jetons indisponible.');
+    await this.#spend(plan.costTokens, 'vip');
+
+    // Prolongation cumulative depuis maintenant OU depuis l'expiration active.
     const current = localStorage.getItem(STORAGE_KEY);
     const base = this.#active(current) && current ? new Date(current) : new Date();
     base.setDate(base.getDate() + plan.durationDays);

@@ -1,11 +1,13 @@
 /* BidPanel + ContrerControls popup + EndRoundPopup — DS component CSS. */
 
-/* Bid panel — ancré en HAUT-CENTRE du feutre pour NE PAS couvrir la main du
-   joueur (sud) : il doit pouvoir voir ses cartes en annonçant. */
+/* Bid panel — ancré en BAS du feutre, juste au-dessus de la main du joueur
+   (sud). Il n'est plus en haut (jugé disgracieux) : le joueur voit ses cartes
+   ET l'annonce est à portée de pouce. `top` = bas du feutre − hauteur du panneau
+   − une marge pour la main. */
 .px-bid-slot {
   position: absolute; z-index: 20;
   left: calc(var(--px-felt-x, 0px) + var(--px-felt-w, 100vw) / 2);
-  top: calc(var(--px-felt-y, 0px) + 10px);
+  top: calc(var(--px-felt-y, 0px) + var(--px-felt-h, 100vh) - 220px);
   transform: translateX(-50%);
 }
 .ky-bid {
