@@ -14,6 +14,7 @@ export interface SeatModel {
   seat: Seat; name: string; team: 'blue' | 'yellow';
   isDonneur: boolean; isEntame: boolean; isMeneur: boolean;
   demande: SeatDemande | null; contre: 'none' | 'contree' | 'surcontree';
+  vip?: boolean;
 }
 
 /**
@@ -83,6 +84,11 @@ export class SeatsLayer extends Container {
         pill.roundRect(-2, -2, pillW + 4, pillH + 4, (pillH + 4) / 2).stroke({ width: 2, color: t.accent2 });
         pill.roundRect(-5, -5, pillW + 10, pillH + 10, (pillH + 10) / 2).stroke({ width: 5, color: t.accent2, alpha: 0.22 });
       }
+      if (m.vip) {
+        // VIP : anneau doré + halo (visible par tous les joueurs à la table).
+        pill.roundRect(-2, -2, pillW + 4, pillH + 4, (pillH + 4) / 2).stroke({ width: 2, color: 0xf0c46a });
+        pill.roundRect(-6, -6, pillW + 12, pillH + 12, (pillH + 12) / 2).stroke({ width: 6, color: 0xf0c46a, alpha: 0.28 });
+      }
       node.addChild(pill);
 
       const logoSp = new Sprite(this.logo(m.team, m.name.charAt(0).toUpperCase()));
@@ -138,7 +144,7 @@ export class SeatsLayer extends Container {
   }
 }
 
-export function buildSeatModels(view: EngineView, names: string[], showDemandeInPlay: boolean, showReflexion = true): SeatModel[] {
+export function buildSeatModels(view: EngineView, names: string[], showDemandeInPlay: boolean, showReflexion = true, vipSeats?: boolean[]): SeatModel[] {
   const lastSeatOf = (action: Bid['action']): Seat | null => {
     for (let i = view.bids.length - 1; i >= 0; i--) if (view.bids[i].action === action) return view.bids[i].seat;
     return null;
@@ -168,6 +174,7 @@ export function buildSeatModels(view: EngineView, names: string[], showDemandeIn
       isDonneur: seat === view.dealer, isEntame: seat === view.firstBidderSeat,
       isMeneur: seat === view.turn && !view.awaitingCollect,
       demande, contre: seat === surcontreSeat ? 'surcontree' : seat === contreSeat ? 'contree' : 'none',
+      vip: vipSeats?.[seat] === true,
     };
   });
 }

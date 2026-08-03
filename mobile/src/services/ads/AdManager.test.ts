@@ -59,7 +59,7 @@ describe('AdManager — bannière', () => {
   });
 
   it('un VIP ne voit pas la bannière', async () => {
-    const vip = new VipService({ isAuthenticated: () => false });
+    const vip = new VipService({ isAuthenticated: () => false }, async () => ({ balance: 100000 }));
     await vip.purchase('day');
     const { mgr, provider } = make({ vip });
     await mgr.showBanner();
@@ -100,7 +100,7 @@ describe('AdManager — interstitiels & anti-spam', () => {
   });
 
   it('un VIP ne voit aucun interstitiel', async () => {
-    const vip = new VipService({ isAuthenticated: () => false });
+    const vip = new VipService({ isAuthenticated: () => false }, async () => ({ balance: 100000 }));
     await vip.purchase('days10');
     const { mgr } = make({ vip });
     const r = await mgr.afterGame();

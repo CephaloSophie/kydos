@@ -124,8 +124,15 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
   async function onWatchReward() {
     const r = await ads.watchRewarded();
     await refresh();
-    if (r.rewarded) toast(`+${r.amount} \u25c6 cr\u00e9dit\u00e9s !`, 'success');
-    else toast('Pub non termin\u00e9e \u2014 aucune r\u00e9compense.', 'error');
+    if (r.rewarded) { toast(`+${r.amount} \u25c6 cr\u00e9dit\u00e9s !`, 'success'); return; }
+    // Message adapté à la raison du refus (aide au diagnostic).
+    const reason = r.reason ?? 'error';
+    const msg = reason === 'not-native' ? 'Les pubs ne s\u2019affichent que sur device natif.'
+      : reason === 'plugin-missing' ? 'Plugin AdMob non install\u00e9 sur ce device.'
+      : reason === 'unavailable' ? 'Pub indisponible \u2014 r\u00e9essayez dans quelques secondes.'
+      : reason === 'cancelled' ? 'Pub interrompue \u2014 regardez-la enti\u00e8rement pour la r\u00e9compense.'
+      : 'Impossible de charger la pub \u2014 v\u00e9rifiez votre connexion.';
+    toast(msg, 'error');
   }
 
   async function onBuyVip(plan: VipPlan) {

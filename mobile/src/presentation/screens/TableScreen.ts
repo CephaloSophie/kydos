@@ -23,6 +23,7 @@ import { PixiTable } from '@kydos/table-pixi';
 import { h, clear } from '../../core/dom';
 import { Button, Dialog, Slider } from '../components/ui';
 import { soundService } from '../../services/sound/SoundService';
+import { icon } from '../components/icons';
 import { detectSoundEvents } from '../../services/sound/soundEvents';
 import { GameLoop } from '../../services/gameLoop';
 import { mySeatFromSetup, type GameSetup } from '../../services/gameSetup';
@@ -38,7 +39,7 @@ const rules = new ContreeRules();
 const GREEK = ['Athéna', 'Borée', 'Calliope', 'Damon'];
 
 export function TableScreen(ctx: AppContext): HTMLElement {
-  const { router, api, ads } = ctx;
+  const { router, api, ads, vip } = ctx;
   // Mode « regarder » demandé via l'URL : on saute le dialogue et on lance
   // directement une partie 4 robots avec la première écurie de l'utilisateur.
   const watch = location.hash.includes('watch=1');
@@ -49,6 +50,8 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const onlineId = new URLSearchParams(location.hash.split('?')[1] ?? '').get('online');
   let mySeat: Seat | null = watch ? null : 0;
   let opponentCards: 'back' | 'faceup' = 'back';
+  /** Visibilité de la partie d'entraînement en cours (piloté par le dialogue). */
+  let trainingVisibility: 'none' | 'robots' | 'all' = 'none';
 
   /* ── SON (voir docs/SOUNDS.md) ─────────────────────────────────────────
    * Effets déclenchés par diff de vues (detectSoundEvents) — mêmes vues en
@@ -120,7 +123,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     class: 'center', style: {
       // Table AU MAXIMUM : plus de barre en haut → le feutre monte à 6px du bord
       // haut. Gauche 60px : place du menu d'icônes vertical. Bas 64px : bannières.
-      position: 'absolute', inset: '6px 14px 64px 60px', borderRadius: 'var(--r-2xl)', overflow: 'hidden',
+      position: 'absolute', inset: '6px 14px 8px 60px', borderRadius: 'var(--r-2xl)', overflow: 'hidden',
       background: 'radial-gradient(520px 300px at 50% 45%, #2b8a52, #17673d 70%)', border: '2px solid rgba(230,196,106,.5)', boxShadow: 'inset 0 0 60px rgba(0,0,0,.35), var(--sh-float)',
     },
   }, mount);
@@ -163,15 +166,8 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
 
   /** Bouton d'icône du menu de gauche. */
-  const iconBtn = (glyph: string, title: string, onClick?: () => void, extra: Record<string, string> = {}) =>
-    h('button', { class: 'table-menu__btn', title, onClick, style: extra }, glyph);
-
-  /** Emplacement de banniere publicitaire (bas de l'ecran, gauche/droite). */
-  const adBanner = (side: string) => h('div', { 'data-ad-slot': side, style: {
-    flex: '1', borderRadius: 'var(--r-lg)', border: '1px dashed rgba(255,255,255,.12)',
-    background: 'rgba(255,255,255,.03)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: '10px', letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--c-text-faint)',
-  } }, `Emplacement pub ${side}`);
+  const iconBtn = (name: string, title: string, onClick?: () => void, extra: Record<string, string> = {}) =>
+    h('button', { class: 'table-menu__btn', title, onClick, style: extra }, icon(name));
 
   const openSoundSettings = () => {
     let lastTestAt = 0;
@@ -199,21 +195,21 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     ...SMILEYS.map((e2) => h('button', { class: 'table-menu__emoji', onClick: () => {
       sendEmote?.(e2); emotePicker.style.display = 'none';
     } }, e2)));
-  const smileyBtn = iconBtn('🙂', 'Reactions', () => {
+  const smileyBtn = iconBtn('smile', 'Réactions', () => {
     emotePicker.style.display = emotePicker.style.display === 'none' ? 'flex' : 'none';
   });
   const smileyWrap = h('div', { style: { position: 'relative', display: onlineId ? 'block' : 'none' } }, smileyBtn, emotePicker);
 
-  const quitIcon = iconBtn('🚪', 'Quitter la table', leaveTable);
-  const spectatorIcon = iconBtn('👁', 'Spectateurs', undefined, { position: 'relative' });
+  const quitIcon = iconBtn('exit', 'Quitter la table', leaveTable);
+  const spectatorIcon = iconBtn('eye', 'Spectateurs', undefined, { position: 'relative' });
   const spectatorCount = h('span', { class: 'table-menu__badge' }, '0');
   spectatorIcon.append(spectatorCount);
   const onlineIcon = h('div', { class: 'table-menu__btn is-online', title: watch ? 'Vous regardez' : 'En ligne' },
     h('span', { class: 'table-menu__dot' }));
-  const soundIcon = iconBtn('🔊', 'Son de la table', openSoundSettings);
+  const soundIcon = iconBtn('sound', 'Son de la table', openSoundSettings);
   const speedBadge = h('span', { class: 'table-menu__badge table-menu__badge--speed' }, '1×');
-  const pauseIcon = iconBtn('⏸', 'Pause', () => { if (!loop) return; const p2 = loop.togglePause(); pauseIcon.textContent = p2 ? '▶' : '⏸'; pauseIcon.title = p2 ? 'Reprendre' : 'Pause'; });
-  const speedIcon = iconBtn('⏩', 'Vitesse 1×', () => { if (!loop) return; const sp = loop.cycleSpeed(); speedIcon.title = `Vitesse ${sp}×`; speedBadge.textContent = `${sp}×`; });
+  const pauseIcon = iconBtn('pause', 'Pause', () => { if (!loop) return; const p2 = loop.togglePause(); pauseIcon.replaceChildren(icon(p2 ? 'play' : 'pause')); pauseIcon.title = p2 ? 'Reprendre' : 'Pause'; });
+  const speedIcon = iconBtn('fast', 'Vitesse 1×', () => { if (!loop) return; const sp = loop.cycleSpeed(); speedIcon.title = `Vitesse ${sp}×`; speedBadge.textContent = `${sp}×`; });
   speedIcon.append(speedBadge);
 
   const leftMenu = h('div', { class: 'table-menu' },
@@ -231,9 +227,6 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     leftMenu,
     // Overlay de logs : réservé au REJEU/local. Jamais en ligne.
     onlineId ? null : logsOverlay,
-    // Bas de l'écran : deux emplacements de bannière publicitaire (gauche/droite).
-    h('div', { style: { position: 'absolute', bottom: '0', left: '0', right: '0', height: '56px', display: 'flex', gap: '10px', padding: '4px 14px 8px', zIndex: '4' } },
-      adBanner('gauche'), adBanner('droite')),
   );
 
   // Audio : débloqué au premier geste (autoplay), effets préchargés, mélodie
@@ -252,8 +245,15 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
   const buildAndStart = (robots: ServerRobot[], setup: GameSetup) => {
     mySeat = mySeatFromSetup(setup);
-    // Adversaires TOUJOURS dos : on ne révèle jamais les cartes des autres joueurs.
-    opponentCards = 'back';
+    // Visibilité pilotée par la configuration du joueur (entraînement) :
+    //  - 'none'   → dos (adversaires cachés, comportement de partie normale).
+    //  - 'robots' → face visible (le joueur veut voir/apprendre le jeu de ses robots).
+    //  - 'all'    → face visible (tous les jeux visibles).
+    // ⚠️ Le coéquipier reste toujours caché en jeu réel (règle belote appliquée
+    // par PixiTable via partnerFaceDown quand mySeat est défini) ; ici c'est de
+    // l'entraînement, on autorise donc l'affichage face visible.
+    opponentCards = setup.visibility === 'none' ? 'back' : 'faceup';
+    trainingVisibility = setup.visibility;
     const byId = new Map(robots.map((r) => [r.id, r]));
     const cfg = ([0, 1, 2, 3] as Seat[]).map((i) => {
       if (i === mySeat) return makeRobot({ id: 'human', name: 'Vous' });
@@ -298,16 +298,20 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
     const myTurn = mySeat != null && engine.turn === mySeat && !v.awaitingCollect;
     reactRoot ??= createRoot(mount);
+    const vipSeatsLocal: boolean[] = [false, false, false, false];
+    if (vip.isVipCached()) vipSeatsLocal[0] = true;
     reactRoot.render(createElement(PixiTable, {
-      view: v, names,
+      view: v, vipSeats: vipSeatsLocal, names,
       hands: [0, 1, 2, 3].map((i) => engine.handOf(i as Seat)),
       mySeat,
       legal: myTurn && v.phase === 'playing' ? engine.legalCards(mySeat as Seat) : [],
       onBid: mySeat != null ? (b: Omit<Bid, 'seat'>) => { engine.submitBid(mySeat as Seat, b); loop?.resume(); } : undefined,
       onPlay: mySeat != null ? (card: Card) => { engine.playCard(mySeat as Seat, card); loop?.resume(); } : undefined,
       onBeloteToggle: mySeat != null ? (on: boolean) => { engine.setBeloteAnnounce(mySeat as Seat, on); loop?.resume(); } : undefined,
-      // Coéquipier TOUJOURS caché (règle de belote — appliqué par PixiTable via `partnerFaceDown`).
-      opponentCards, showMenu: false, showScoreSheet: true, forceLandscape: false,
+      // Visibilité pilotée par le dialogue (entraînement) : en 'all', on
+      // révèle aussi le coéquipier (partnerFaceDown=false).
+      opponentCards, partnerFaceDown: trainingVisibility !== 'all',
+      showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: leaveTable,
     }));
   };
@@ -351,6 +355,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     } : null;
     reactRoot.render(createElement(PixiTable, {
       view: v, names: (v as unknown as { playerNames?: string[] }).playerNames ?? ['A', 'B', 'C', 'D'],
+      vipSeats: (() => { const arr = [false, false, false, false]; if (vip.isVipCached() && seat != null) arr[seat] = true; return arr; })(),
       hands, mySeat: seat,
       legal: myTurn && v.phase === 'playing' ? (state.legal ?? []) : [],
       onBid: seat != null ? (b: Omit<Bid, 'seat'>) => onlineSocket.submitBid(b) : undefined,
@@ -368,7 +373,7 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     // Voile d'attente tant qu'aucun état de partie n'est reçu (table encore en
     // lobby, ou connexion en cours) — évite d'afficher un tapis vide.
     const waiting = h('div', { class: 'center col gap-3', style: {
-      position: 'absolute', inset: '6px 14px 64px 60px', borderRadius: 'var(--r-2xl)', zIndex: '6',
+      position: 'absolute', inset: '6px 14px 8px 60px', borderRadius: 'var(--r-2xl)', zIndex: '6',
       background: 'rgba(6,10,20,.72)', backdropFilter: 'blur(4px)', textAlign: 'center',
     } },
       h('div', { class: 'title', style: { fontSize: '16px', color: 'var(--c-gold)' } }, 'En attente de la partie…'),

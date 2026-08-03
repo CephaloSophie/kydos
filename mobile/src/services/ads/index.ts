@@ -6,7 +6,7 @@
 export { AdManager } from './AdManager';
 export type { AdManagerDeps } from './AdManager';
 export { VipService, VIP_PLANS } from './VipService';
-export type { VipPlan, VipStatus, VipApi } from './VipService';
+export type { VipPlan, VipStatus, VipApi, SpendTokens } from './VipService';
 export { createAdProvider } from './registry';
 export { ACTIVE_NETWORK, AD_SETTINGS } from './adConfig';
 export type { AdNetwork, AdFormat, AdPlacement, AdProvider, RewardResult, ShowResult } from './types';

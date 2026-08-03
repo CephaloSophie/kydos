@@ -15,6 +15,7 @@ export interface SceneState {
   legal: Card[]; mySeat: Seat; showDemandeInPlay: boolean; showReflexion?: boolean;
   /** In play mode the PARTNER's hand is always face-down (you never see your partner's cards). */
   partnerFaceDown?: boolean;
+  vipSeats?: boolean[];
 }
 
 /**
@@ -81,7 +82,7 @@ export class TableScene extends Container {
     this.felt.layout(this._rect, this.w);
     this.felt.update(s.view.trump, this._rect);
     this.hands.update(s.hands, s.legal, s.view, s.mySeat, this._rect, this.atlas, cardW, (c) => this.cb.onPlay?.(c), s.partnerFaceDown ?? false);
-    this.seats.update(buildSeatModels(s.view, s.names, s.showDemandeInPlay, s.showReflexion ?? true), s.mySeat, this._rect, this.hands.metrics);
+    this.seats.update(buildSeatModels(s.view, s.names, s.showDemandeInPlay, s.showReflexion ?? true, s.vipSeats), s.mySeat, this._rect, this.hands.metrics);
     this.trick.update(s.view, s.mySeat, this._rect, this.atlas, cardW);
     this.announces.update(s.view, s.mySeat, this._rect, this.hands.metrics, s.showReflexion ?? true);
   }
