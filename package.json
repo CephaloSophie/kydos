@@ -31,5 +31,8 @@
     "@playwright/test": "^1.62.0",
     "@vitest/coverage-v8": "^2.1.9",
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^6.2.0"
   }
 }
