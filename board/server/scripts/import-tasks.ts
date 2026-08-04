@@ -5,6 +5,11 @@
  *   - Comptes seed (ameur + hamido) : upsertés (mot de passe rehashé si absent).
  *   - Tâches : importées seulement si la collection est vide, sinon on log
  *     un résumé et on ne touche à rien (l'API est déjà source de vérité).
+ *
+ * Normalisation : le tasks.json historique contient des tâches mal formées
+ * (colonnes décalées dans d'anciennes générations). La fonction `normalize`
+ * coerce chaque champ vers le type attendu et logue les corrections — le
+ * seed ne plante JAMAIS sur des données douteuses.
  * ========================================================================== */
 import path from 'node:path';
 import fs from 'node:fs';
@@ -12,6 +17,7 @@ import url from 'node:url';
 import { connectMongo, disconnectMongo } from '../src/core/mongo.js';
 import { authService } from '../src/modules/auth/auth.service.js';
 import { TaskModel } from '../src/modules/tasks/task.model.js';
+import { normalizeTask } from './normalize.js';
 
 interface RawTask {
   id: string;
@@ -47,19 +53,37 @@ async function importTasksIfEmpty(jsonPath: string) {
   console.log(`[seed] import de ${tasks.length} tâches depuis ${jsonPath}…`);
 
   let inserted = 0;
+  let normalized = 0;
+  const failures: Array<{ id: string; reason: string }> = [];
+
   for (const raw of tasks) {
-    const { id, ...rest } = raw;
-    if (!id) continue;
-    // On mappe `id` → `taskId` pour respecter le schéma Mongo.
-    await TaskModel.create({
-      ...rest,
-      taskId: id,
-      revision: 1,
-      lastModifiedBy: 'seed',
-    });
-    inserted++;
+    if (!raw.id) { failures.push({ id: '(sans id)', reason: 'id manquant' }); continue; }
+    try {
+      const { normalized: cleaned, warnings } = normalizeTask(raw);
+      if (warnings.length > 0) {
+        normalized++;
+        // On garde le log discret : une ligne par tâche corrigée.
+        console.log(`  ⚠ ${raw.id} corrigé : ${warnings.join(', ')}`);
+      }
+      // On mappe `id` → `taskId` pour respecter le schéma Mongo.
+      const { id, ...rest } = cleaned;
+      await TaskModel.create({
+        ...rest,
+        taskId: id,
+        revision: 1,
+        lastModifiedBy: 'seed',
+      });
+      inserted++;
+    } catch (error) {
+      failures.push({ id: raw.id, reason: (error as Error).message });
+    }
   }
-  console.log(`[seed] ✓ ${inserted} tâches importées`);
+
+  console.log(`[seed] ✓ ${inserted} tâches importées${normalized > 0 ? ` (${normalized} normalisées)` : ''}`);
+  if (failures.length > 0) {
+    console.log(`[seed] ✗ ${failures.length} tâches ignorées :`);
+    for (const f of failures) console.log(`    ${f.id} : ${f.reason}`);
+  }
 }
 
 async function main() {

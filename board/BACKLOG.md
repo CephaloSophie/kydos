@@ -3,13 +3,13 @@
 > **Source : `board/tasks.json`.** Board : `board/board.html` · Backoffice web : `board/web/` · API : `board/server/`.
 > Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md` · Jetons : `docs/WALLET.md` · Robots : `docs/architecture-robots.md`.
 
-**Projet** Kýdos Belote · **Version** v12.4.0 · **150 tâches** · généré 2026-08-04T00:30:00.000Z
+**Projet** Kýdos Belote · **Version** v12.4.1 · **151 tâches** · généré 2026-08-04T02:00:00.000Z
 
 ## Synthèse
 
-- **Terminées** 131 · **En cours** 8 · **À faire** 11 · **Bugs** 26
+- **Terminées** 132 · **En cours** 8 · **À faire** 11 · **Bugs** 27
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-301
-- **Points** 478 · **Durée** 57.8 j
+- **Points** 481 · **Durée** 58.1 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 116 | 369 | 43.1 j |
+| tested | 117 | 372 | 43.3 j |
 | pending | 10 | 36 | 3.9 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -29,7 +29,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| P1 | 74 | 264 | 29.2 j |
+| P1 | 75 | 267 | 29.4 j |
 | P0 | 43 | 140 | 20.3 j |
 | P2 | 30 | 64 | 6.7 j |
 | P3 | 3 | 10 | 1.6 j |
@@ -39,7 +39,7 @@
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
 | feature | 90 | 330 | 40.9 j |
-| bug | 26 | 60 | 6.2 j |
+| bug | 27 | 63 | 6.4 j |
 | test | 8 | 31 | 3.8 j |
 | doc | 6 | 17 | 2.4 j |
 | chore | 5 | 13 | 1.8 j |
@@ -60,8 +60,8 @@
 | IHM (table) | 17 | 56 | 5.8 j |
 | Bugs / UX | 11 | 36 | 2.8 j |
 | Documentation | 6 | 17 | 2.4 j |
+| Outillage / Backoffice | 6 | 30 | 4.1 j |
 | Architecture / Robots | 5 | 17 | 1.4 j |
-| Outillage / Backoffice | 5 | 27 | 3.9 j |
 | CI/CD | 4 | 22 | 2.2 j |
 | Monétisation | 4 | 26 | 3.0 j |
 | Refactoring | 4 | 12 | 1.6 j |
@@ -92,6 +92,7 @@
 | Mobile (Vite/Capacitor) | 1 | 3 | 2.0 h |
 | Mobile (Web Audio API) | 1 | 8 | 6.0 h |
 | Node / Make / Docs | 1 | 8 | 6.0 h |
+| Node/Mongoose | 1 | 3 | 2.0 h |
 | TypeScript (moteur) | 1 | 3 | 4.0 h |
 
 ### Par version
@@ -129,9 +130,16 @@
 | 11.11.0 | 1 | 8 | 6.0 h |
 | 11.9.0 | 1 | 8 | 6.0 h |
 | 11.9.1 | 1 | 3 | 2.0 h |
+| 12.4.1 | 1 | 3 | 2.0 h |
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v12.4.1 — 1 tâches · 3 pts · 2.0 h
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-421 | Bord seed : normalisation défensive des tâches malformées | Testée | P1 | bug | Outillage / Backoffice | Node/Mongoose | 3 | 2 h |
 
 ### v12.4.0 — 5 tâches · 27 pts · 3.9 j
 
