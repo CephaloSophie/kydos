@@ -16,8 +16,8 @@
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import {
-  ContreeRules, DEFAULT_PARTIE, GameEngine, createAlgorithm, makeRobot, robotFromFiche,
-  type Bid, type Card, type EnginePlayer, type Seat,
+  GameEngine,
+  type Bid, type Card, type Seat,
 } from 'belote-core';
 import { PixiTable } from '@kydos/table-pixi';
 import { h, clear } from '../../core/dom';
@@ -26,7 +26,8 @@ import { soundService } from '../../services/sound/SoundService';
 import { icon } from '../components/icons';
 import { detectSoundEvents } from '../../services/sound/soundEvents';
 import { GameLoop } from '../../services/gameLoop';
-import { mySeatFromSetup, type GameSetup } from '../../services/gameSetup';
+import { buildLocalGame } from '../../services/localGame';
+import { type GameSetup } from '../../services/gameSetup';
 import { TableSocket, type LiveGameState } from '../../data/TableSocket';
 import { toast } from '../components/feedback';
 import { openPlayerProfile } from '../components/PlayerProfile';
@@ -35,8 +36,7 @@ import type { AppContext } from '../context';
 import type { ServerRobot } from '../../data/ApiClient';
 import { toDomain } from '../../data/RobotRepository';
 
-const rules = new ContreeRules();
-const GREEK = ['Athéna', 'Borée', 'Calliope', 'Damon'];
+
 
 export function TableScreen(ctx: AppContext): HTMLElement {
   const { router, api, ads, vip } = ctx;
@@ -244,7 +244,6 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   let saved = false;
 
   const buildAndStart = (robots: ServerRobot[], setup: GameSetup) => {
-    mySeat = mySeatFromSetup(setup);
     // Visibilité pilotée par la configuration du joueur (entraînement) :
     //  - 'none'   → dos (adversaires cachés, comportement de partie normale).
     //  - 'robots' → face visible (le joueur veut voir/apprendre le jeu de ses robots).
@@ -254,21 +253,16 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     // l'entraînement, on autorise donc l'affichage face visible.
     opponentCards = setup.visibility === 'none' ? 'back' : 'faceup';
     trainingVisibility = setup.visibility;
-    const byId = new Map(robots.map((r) => [r.id, r]));
-    const cfg = ([0, 1, 2, 3] as Seat[]).map((i) => {
-      if (i === mySeat) return makeRobot({ id: 'human', name: 'Vous' });
-      const choice = setup.seats[i];
-      const chosen = choice !== 'auto' && choice !== 'me' ? byId.get(choice) : undefined;
-      if (chosen) return robotFromFiche({ ...chosen, _id: chosen.id } as never, { id: chosen.id, name: chosen.name });
-      // « Auto » : robot générique (personnalité paramétrée pour de la variété).
-      return makeRobot({ id: `bot${i}`, name: GREEK[i], personality: { aggressiveness: 3 + i * 2, concentration: 5, velocity: 5 } });
-    });
-    const players: EnginePlayer[] = cfg.map((c, i) => ({ seat: i as Seat, name: c.name, type: i === mySeat ? 'human' : 'robot', robotId: c.id }));
-    const engine = new GameEngine(players, { ...DEFAULT_PARTIE, manches: setup.manches, local: true }, rules);
-    const brains = players.map((p, i) => (p.type === 'robot' ? createAlgorithm(cfg[i], rules, () => {}) : null));
+
+    // Fabrique UNIFIÉE — mêmes cerveaux que le web et le serveur (parité stricte).
+    // Chaque robot choisi joue avec SON `algoSpec` (récupéré du serveur via /robots).
+    const built = buildLocalGame(setup, robots);
+    mySeat = built.mySeat;
+    const { engine, players, robots: robotConfigs, brains } = built;
 
     loop = new GameLoop(engine, {
       brains,
+      robots: robotConfigs, // requis pour la surcoinche (shouldSurcontrer a besoin de la fiche)
       onTick: () => render(engine, players.map((p) => p.name)),
       onEnd: () => {
         if (saved) return;

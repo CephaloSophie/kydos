@@ -79,3 +79,63 @@ describe('WalletService.credit', () => {
     expect(wallet.transactions).toHaveLength(0);
   });
 });
+
+/* ============================================================================
+ * VIP purchase — debit + cumulative extension
+ * ========================================================================== */
+describe('WalletService.purchaseVip', () => {
+  const dayPlan = { id: 'day', costTokens: 600, durationDays: 1 };
+
+  it('debits tokens and sets vipExpiresAt ~24h ahead', async () => {
+    const uid = await newUser('vipbuyer');
+    // Give the user some balance first.
+    const user = await UserModel.findById(uid);
+    user!.wallet = { tokens: 1000, lastClaimDay: null, transactions: [] };
+    await user!.save();
+
+    const before = Date.now();
+    const result = await walletService.purchaseVip(uid, dayPlan);
+    expect(result.balance).toBe(400); // 1000 - 600
+    const delta = Date.parse(result.expiresAt!) - before;
+    expect(delta).toBeGreaterThan(23 * 3600_000);
+    expect(delta).toBeLessThan(25 * 3600_000);
+
+    // Wallet is actually persisted.
+    const wallet = await walletService.getMyWallet(uid);
+    expect(wallet.balance).toBe(400);
+    expect(wallet.transactions.find((t: any) => t.kind === 'vip')).toBeTruthy();
+  });
+
+  it('rejects when balance is insufficient (no partial write)', async () => {
+    const uid = await newUser('poor');
+    const user = await UserModel.findById(uid);
+    user!.wallet = { tokens: 100, lastClaimDay: null, transactions: [] };
+    await user!.save();
+
+    await expect(walletService.purchaseVip(uid, dayPlan)).rejects.toThrow();
+    const wallet = await walletService.getMyWallet(uid);
+    expect(wallet.balance).toBe(100); // unchanged
+    expect(wallet.transactions.filter((t: any) => t.kind === 'vip')).toHaveLength(0);
+  });
+
+  it('cumulates: 2 x 1-day purchases => ~2 days total', async () => {
+    const uid = await newUser('cumul');
+    const user = await UserModel.findById(uid);
+    user!.wallet = { tokens: 2000, lastClaimDay: null, transactions: [] };
+    await user!.save();
+
+    const r1 = await walletService.purchaseVip(uid, dayPlan);
+    const r2 = await walletService.purchaseVip(uid, dayPlan);
+    const days = (Date.parse(r2.expiresAt!) - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(1.5);
+    expect(days).toBeLessThan(2.5);
+    // Note: r1 is used to check first purchase succeeded.
+    expect(r1.expiresAt).toBeTruthy();
+  });
+
+  it('getVipStatus returns null when never purchased', async () => {
+    const uid = await newUser('nevervip');
+    const status = await walletService.getVipStatus(uid);
+    expect(status.expiresAt).toBeNull();
+  });
+});

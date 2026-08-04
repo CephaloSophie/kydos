@@ -1,0 +1,113 @@
+/* =============================================================================
+ * THEMES — Ubuntu & Mac (clair + sombre).
+ * -----------------------------------------------------------------------------
+ * Chaque thème définit ses variables sur `[data-theme="…"]`. La bascule se fait
+ * en JS via `document.documentElement.dataset.theme = "ubuntu-dark"`.
+ *
+ * • Ubuntu : palette aubergine + orange (E95420), typo Ubuntu.
+ * • Mac    : palette bleu système (007AFF) + gris neutres, typo San Francisco.
+ * ========================================================================== */
+
+/* ── Défaut : Ubuntu sombre ──────────────────────────────────────────────── */
+:root, [data-theme="ubuntu-dark"] {
+  --bg:            #1e1a1c;
+  --bg-elev-1:     #2c2226;
+  --bg-elev-2:     #3a2e34;
+  --bg-hover:      #443539;
+  --border:        #4a3941;
+  --border-strong: #5a4750;
+  --text:          #f6f6f6;
+  --text-soft:     #cfc9cb;
+  --text-mute:     #8e8388;
+  --primary:       #e95420;      /* orange Ubuntu */
+  --primary-hover: #f37339;
+  --primary-fg:    #ffffff;
+  --accent:        #77216f;      /* aubergine */
+  --success:       #2eb872;
+  --warning:       #f7b32b;
+  --danger:        #e5484d;
+  --info:          #7dc4e4;
+  --shadow:        0 8px 24px rgba(0,0,0,.45);
+  --radius:        6px;
+  --radius-lg:     10px;
+  --font-ui:       'Ubuntu', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:     'Ubuntu Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ── Ubuntu clair ────────────────────────────────────────────────────────── */
+[data-theme="ubuntu-light"] {
+  --bg:            #faf5f2;
+  --bg-elev-1:     #ffffff;
+  --bg-elev-2:     #f2ebe6;
+  --bg-hover:      #ece2dc;
+  --border:        #ddd0c8;
+  --border-strong: #b8a99f;
+  --text:          #2c001e;
+  --text-soft:     #5c3a4d;
+  --text-mute:     #8a6e7d;
+  --primary:       #e95420;
+  --primary-hover: #d64716;
+  --primary-fg:    #ffffff;
+  --accent:        #77216f;
+  --success:       #0e8f4a;
+  --warning:       #b56f00;
+  --danger:        #c92a2a;
+  --info:          #005f8f;
+  --shadow:        0 4px 12px rgba(44,0,30,.08);
+  --radius:        6px;
+  --radius-lg:     10px;
+  --font-ui:       'Ubuntu', 'Segoe UI', system-ui, sans-serif;
+  --font-mono:     'Ubuntu Mono', 'JetBrains Mono', 'SF Mono', monospace;
+}
+
+/* ── Mac sombre ──────────────────────────────────────────────────────────── */
+[data-theme="mac-dark"] {
+  --bg:            #1c1c1e;
+  --bg-elev-1:     #2c2c2e;
+  --bg-elev-2:     #3a3a3c;
+  --bg-hover:      #48484a;
+  --border:        #38383a;
+  --border-strong: #48484a;
+  --text:          #f2f2f7;
+  --text-soft:     #c7c7cc;
+  --text-mute:     #8e8e93;
+  --primary:       #0a84ff;      /* bleu système macOS */
+  --primary-hover: #409cff;
+  --primary-fg:    #ffffff;
+  --accent:        #bf5af2;      /* violet système */
+  --success:       #30d158;
+  --warning:       #ff9f0a;
+  --danger:        #ff453a;
+  --info:          #64d2ff;
+  --shadow:        0 8px 32px rgba(0,0,0,.45);
+  --radius:        8px;
+  --radius-lg:     12px;
+  --font-ui:       -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --font-mono:     'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+}
+
+/* ── Mac clair ───────────────────────────────────────────────────────────── */
+[data-theme="mac-light"] {
+  --bg:            #f2f2f7;
+  --bg-elev-1:     #ffffff;
+  --bg-elev-2:     #f9f9fb;
+  --bg-hover:      #e9e9ee;
+  --border:        #d1d1d6;
+  --border-strong: #b0b0b7;
+  --text:          #1c1c1e;
+  --text-soft:     #3c3c43;
+  --text-mute:     #8e8e93;
+  --primary:       #007aff;
+  --primary-hover: #0a6ee0;
+  --primary-fg:    #ffffff;
+  --accent:        #af52de;
+  --success:       #34c759;
+  --warning:       #ff9500;
+  --danger:        #ff3b30;
+  --info:          #5ac8fa;
+  --shadow:        0 4px 16px rgba(0,0,0,.08);
+  --radius:        8px;
+  --radius-lg:     12px;
+  --font-ui:       -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --font-mono:     'SF Mono', 'JetBrains Mono', 'Menlo', monospace;
+}

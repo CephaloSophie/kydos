@@ -108,6 +108,10 @@ export class ApiClient {
   claimDailyTokens() { return this.call<{ claimed: boolean; balance: number; reward: number }>('/wallet/claim', { method: 'POST' }); }
   /** Recharge des jetons via un code promo (12 chiffres, tirets ignorés). */
   redeemPromo(code: string) { return this.call<{ tokens: number; balance: number }>('/promo/redeem', { method: 'POST', body: JSON.stringify({ code }) }); }
+  /** Statut VIP courant (serveur : source de vérité). */
+  getVipStatus() { return this.call<{ expiresAt: string | null }>('/wallet/vip'); }
+  /** Achète/prolonge le VIP en débitant les jetons côté serveur. */
+  purchaseVip(planId: string) { return this.call<{ expiresAt: string | null; balance: number }>('/wallet/vip', { method: 'POST', body: JSON.stringify({ planId }) }); }
 
   // --- Teams --------------------------------------------------------------
   listTeams() { return this.call<{ teams: ServerTeamSummary[] }>('/teams'); }

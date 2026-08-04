@@ -30,7 +30,7 @@ export function createAdProvider(network: AdNetwork = ACTIVE_NETWORK): AdProvide
 
   const units = unitsFor(network);
   switch (network) {
-    case 'admob':    return new AdMobProvider(units, TEST_MODE);
+    case 'admob':    return new AdMobProvider(units, TEST_MODE, AD_SETTINGS.admobTestDeviceIds);
     case 'applovin': return new AppLovinProvider(units);
     case 'unity':    return new UnityProvider(units, AD_SETTINGS.unityGameId, TEST_MODE);
     case 'meta':     return new MetaProvider(units);

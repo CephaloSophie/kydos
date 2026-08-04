@@ -71,4 +71,11 @@ export const AD_SETTINGS = {
   interstitialMinGapMs: 45_000,
   /** Clé Unity (gameId) — requise si ACTIVE_NETWORK = 'unity'. */
   unityGameId: { android: '', ios: '' },
+  /**
+   * Identifiants de DEVICES de test (Android) pour AdMob.
+   * Trouver le tien : `adb logcat | grep "Use RequestConfiguration.Builder"` sur
+   * ton device en dev — AdMob affiche l'ID à ajouter ici pour que TES device(s)
+   * reçoivent des pubs de test même en TEST_MODE=false / prod.
+   */
+  admobTestDeviceIds: [] as string[],
 } as const;

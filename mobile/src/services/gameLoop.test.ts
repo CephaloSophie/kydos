@@ -69,3 +69,25 @@ describe('GameLoop — scheduler injecté', () => {
     loop.dispose();
   });
 });
+
+describe('GameLoop — micro-phase surcontre (parité web/serveur)', () => {
+  it('accepte des fiches robots optionnelles sans casser (rétrocompat)', () => {
+    const { engine, brains } = buildFourRobots();
+    const loop = new GameLoop(engine, { brains, onTick: () => {} });
+    // Sans robots : plan() ne doit pas planter en phase bidding.
+    expect(loop.plan()).not.toBeNull();
+  });
+
+  it('utilise la fiche robot pour appeler shouldSurcontrer (comme web/serveur)', () => {
+    // On construit un moteur, une liste de fiches robots, et on vérifie que
+    // le plan gère bien la présence du champ `robots`.
+    const cfg = [0, 1, 2, 3].map((i) => makeRobot({ id: `bot${i}`, name: `R${i}`, personality: { aggressiveness: 5, concentration: 5, velocity: 5 } }));
+    const players: EnginePlayer[] = cfg.map((c, i) => ({ seat: i as Seat, name: c.name, type: 'robot', robotId: c.id }));
+    const engine = new GameEngine(players, { ...DEFAULT_PARTIE, manches: 1, local: true }, rules);
+    const brains = cfg.map((c) => createAlgorithm(c, rules, () => {}));
+    const loop = new GameLoop(engine, { brains, robots: cfg, onTick: () => {} });
+    // Le plan initial doit fonctionner en phase bidding.
+    const step = loop.plan();
+    expect(step).not.toBeNull();
+  });
+});

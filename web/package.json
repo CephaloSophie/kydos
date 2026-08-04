@@ -1,6 +1,6 @@
 {
   "name": "belote-web",
-  "version": "12.2.1",
+  "version": "12.4.0",
   "private": true,
   "type": "module",
   "scripts": {
