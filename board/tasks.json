@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "12.4.0",
-    "generatedAt": "2026-08-04T00:30:00.000Z",
+    "currentVersion": "12.4.1",
+    "generatedAt": "2026-08-04T02:00:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -5983,6 +5983,41 @@
           "status": "tested",
           "by": "claude",
           "note": "board/README.md + board/ecosystem.config.cjs."
+        }
+      ]
+    },
+    {
+      "id": "KB-421",
+      "title": "Bord seed : normalisation défensive des tâches malformées",
+      "area": "tools",
+      "version": "12.4.1",
+      "createdAt": "2026-08-04T02:00:00.000Z",
+      "updatedAt": "2026-08-04T02:00:00.000Z",
+      "logs": [],
+      "module": "board",
+      "type": "bug",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "retour terrain seed 2026-08-04",
+      "techno": "Node/Mongoose",
+      "category": "Outillage / Backoffice",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "Le seed plantait sur 6 tâches (KB-390..KB-395) au format hérité : complexity était une string 'X h', description un tableau, acceptance une string, type un nombre — dérive causée par un bug de génération dans une session antérieure. FIX : fonction normalizeTask() qui coerce chaque champ vers le type attendu (string→[str], array→'a. b', 'X h'→X, number→String(n)) et logue les corrections. Le seed ne plante JAMAIS sur des données douteuses.",
+      "instructions": [],
+      "acceptance": [
+        "Les 150 tâches passent sans rejet",
+        "6 tâches corrigées avec log lisible",
+        "Tests unitaires couvrent les cas réels + dégénérés",
+        "Aucune donnée perdue (mapping fidèle)"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T02:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Dry-run OK : 150/150 importées, 6 corrigées."
         }
       ]
     }
