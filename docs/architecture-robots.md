@@ -381,8 +381,10 @@ function shouldSurcontrer(robot: RobotConfig, view?, seat?): boolean {
 
 ## Utilisation concrète — les 4 pilotes
 
-Le **même code** (`robotFromFiche` + `createAlgorithm` + `robotAct`) est appelé à l'identique
-dans les 4 endroits. Le robot pense pareil partout.
+Le **même code** (`robotFromFiche` + `createAlgorithm` + `robotAct` +
+`shouldSurcontrer`) est appelé à l'identique dans les 4 endroits. Le robot pense
+pareil partout — c'est la **garantie de parité**, vérifiée par les tests de
+`mobile/src/services/localGame.parity.test.ts`.
 
 ### 1. Front — entraînement local (`LocalTableEngine`)
 
@@ -400,7 +402,33 @@ Boucle de jeu (planNextStep) :
   → force() (re-render React)
 ```
 
-### 2. Back — compétition headless (`competition.runner`)
+### 2. Mobile — entraînement local (`buildLocalGame` + `GameLoop`)
+
+```
+mobile/src/services/localGame.ts     ← fabrique unifiée (pure, testable)
+mobile/src/services/gameLoop.ts      ← pilote (planification + délais + pause)
+
+Séquence au montage (via TableScreen.buildAndStart) :
+  buildLocalGame(setup, userRobots)
+    → robotFicheFromServer(chosen) → robotFromFiche(fiche) → RobotConfig
+      (siège CHOISI : personnalité + algoSpec de l'utilisateur)
+    → makeRobot({...}) → RobotConfig
+      (siège AUTO : personnalité paramétrée pour la variété)
+    → createAlgorithm(robot, rules, onLog) → RobotAlgorithm
+  ⇒ { engine, players, robots, brains, mySeat }
+
+Boucle de jeu (GameLoop.plan) — MÊME LOGIQUE que le web :
+  si phase surcontre → sélectionne un robot dans surcontreSeats
+                     → shouldSurcontrer(robots[seat]) → pass/surcontre
+  sinon → robotAct(engine, seat, brains[seat]) → bid/play
+  → engine.submitBid() ou engine.playCard()
+  → onTick() (re-render Pixi + hand cards)
+```
+
+Contrat : un robot avec le même `algoSpec` prend LA MÊME décision quel que soit
+le pilote (mobile / web / back). Vérifié par 4 tests de parité dédiés.
+
+### 3. Back — compétition headless (`competition.runner`)
 
 ```
 server/src/modules/competition/competition.runner.ts
@@ -417,7 +445,7 @@ Boucle synchrone (while phase !== partie_end) :
 Aucun délai (headless) — la partie tourne en < 50ms.
 ```
 
-### 3. Back — partie en ligne (`liveGame.service`)
+### 4. Back — partie en ligne (`liveGame.service`)
 
 ```
 server/src/modules/game/liveGame.service.ts
@@ -435,7 +463,7 @@ Boucle asynchrone (advance) :
   → broadcast('table:game', state) à tous les clients
 ```
 
-### 4. Démo moteur (`demo/partie.ts`)
+### 5. Démo moteur (`demo/partie.ts`)
 
 ```
 packages/core/demo/partie.ts
@@ -590,7 +618,9 @@ export function shouldSurcontrer(robot: RobotConfig, view?, seat?): boolean {
 | `packages/core/src/robot/workflow/steps.ts`                | Steps du pipeline (fonctions enregistrées)|
 | `packages/core/src/engine/RobotDriver.ts`        | Pont moteur↔cerveau (buildContext + robotAct)   |
 | `packages/core/src/domain/types.ts`              | RobotConfig, Personality, TableContext, decisions|
-| `web/src/table/LocalTableEngine.ts`              | Pilote front (entraînement)                     |
+| `web/src/table/LocalTableEngine.ts`              | Pilote front web (entraînement)                 |
+| `mobile/src/services/localGame.ts`               | Pilote mobile — fabrique unifiée `buildLocalGame`|
+| `mobile/src/services/gameLoop.ts`                | Pilote mobile — planification + délais + pause  |
 | `server/.../competition/competition.runner.ts`   | Pilote back (compétition headless)              |
 | `server/.../game/liveGame.service.ts`            | Pilote back (partie en ligne)                   |
 
@@ -600,9 +630,23 @@ export function shouldSurcontrer(robot: RobotConfig, view?, seat?): boolean {
 
 ```bash
 npm --workspace belote-core run test
+npm --workspace belote-mobile run test
 ```
 
+**Core** :
 - `src/robot/Agent.test.ts` (5 tests) : individu instancié depuis spec seule, fusion défensive,
   décision d'enchère et de carte en isolation (sans moteur).
 - `src/engine/GameEngine.test.ts` (8 tests) : signaux d'enchère + micro-phase surcontre.
 - `src/scoring/scoring.test.ts` (14 tests) : barème, arrondi, contrat, capot, contre, belote.
+
+**Mobile — parité (v12.3.0)** :
+- `src/services/localGame.test.ts` (7 tests) : fabrique unifiée `buildLocalGame` —
+  placement humain, robot choisi vs auto, fallback si id inconnu, tous-robots,
+  transmission de l'`algoSpec`.
+- `src/services/localGame.parity.test.ts` (4 tests) : **garantit qu'un robot avec
+  le même `algoSpec` prend LA MÊME décision côté mobile et côté core** — idempotence,
+  cerveau identique sur le même moteur, personnalité serveur transitée, partie
+  complète 4 robots jusqu'à `partie_end`.
+- `src/services/gameLoop.test.ts` (7 tests) : planificateur, vitesses, pause,
+  scheduler injecté, phase surcontre.
+

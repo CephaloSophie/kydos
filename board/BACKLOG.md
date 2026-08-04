@@ -1,15 +1,15 @@
 # Kýdos Belote — Diagnostic & référentiel de tâches
 
-> **Source : `board/tasks.json`.** Board : `board/board.html`.
-> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md` · Jetons : `docs/WALLET.md`.
+> **Source : `board/tasks.json`.** Board : `board/board.html` · Backoffice web : `board/web/` · API : `board/server/`.
+> Audit : `docs/AUDIT-3AGENTS.md` · Roadmap : `docs/ROADMAP.md` · Tests : `docs/ai/TESTING.md` · Sons : `docs/SOUNDS.md` · Connexion : `docs/mobile-connection.md` · Pub/VIP : `docs/ADS.md` · Jetons : `docs/WALLET.md` · Robots : `docs/architecture-robots.md`.
 
-**Projet** Kýdos Belote · **Version** v12.2.1 · **136 tâches** · généré 2026-08-03T15:00:00.000Z
+**Projet** Kýdos Belote · **Version** v12.4.0 · **150 tâches** · généré 2026-08-04T00:30:00.000Z
 
 ## Synthèse
 
-- **Terminées** 117 · **En cours** 8 · **À faire** 11 · **Bugs** 25
+- **Terminées** 131 · **En cours** 8 · **À faire** 11 · **Bugs** 26
 - **P1 ouvertes** : KB-004, KB-071, KB-121, KB-131, KB-301
-- **Points** 419 · **Durée** 51.3 j
+- **Points** 478 · **Durée** 57.8 j
 
 ## Répartitions
 
@@ -17,7 +17,7 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| tested | 102 | 310 | 36.6 j |
+| tested | 116 | 369 | 43.1 j |
 | pending | 10 | 36 | 3.9 j |
 | finished | 9 | 27 | 4.1 j |
 | confirmed | 6 | 20 | 2.9 j |
@@ -29,26 +29,26 @@
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| P1 | 64 | 214 | 23.3 j |
+| P1 | 74 | 264 | 29.2 j |
 | P0 | 43 | 140 | 20.3 j |
-| P2 | 26 | 55 | 6.1 j |
+| P2 | 30 | 64 | 6.7 j |
 | P3 | 3 | 10 | 1.6 j |
 
 ### Par type
 
 | Valeur | Tâches | Points | Durée |
 |---|---:|---:|---:|
-| feature | 82 | 291 | 36.0 j |
-| bug | 25 | 55 | 5.8 j |
-| test | 7 | 26 | 3.4 j |
+| feature | 90 | 330 | 40.9 j |
+| bug | 26 | 60 | 6.2 j |
+| test | 8 | 31 | 3.8 j |
 | doc | 6 | 17 | 2.4 j |
 | chore | 5 | 13 | 1.8 j |
-| refactor | 4 | 12 | 1.6 j |
+| refactor | 5 | 14 | 1.8 j |
+| docs | 4 | 13 | 1.1 j |
 | 3 | 2 | 0 | 0.0 h |
 | 5 | 2 | 0 | 0.0 h |
 | 1 | 1 | 0 | 0.0 h |
 | 2 | 1 | 0 | 0.0 h |
-| docs | 1 | 5 | 3.0 h |
 
 ### Par catégorie
 
@@ -58,8 +58,10 @@
 | Serveur | 29 | 88 | 11.4 j |
 | Design / IHM | 17 | 24 | 2.1 j |
 | IHM (table) | 17 | 56 | 5.8 j |
-| Bugs / UX | 7 | 21 | 1.6 j |
+| Bugs / UX | 11 | 36 | 2.8 j |
 | Documentation | 6 | 17 | 2.4 j |
+| Architecture / Robots | 5 | 17 | 1.4 j |
+| Outillage / Backoffice | 5 | 27 | 3.9 j |
 | CI/CD | 4 | 22 | 2.2 j |
 | Monétisation | 4 | 26 | 3.0 j |
 | Refactoring | 4 | 12 | 1.6 j |
@@ -76,9 +78,11 @@
 | Mobile (Vite/TS) | 43 | 129 | 18.2 j |
 | Node/Express/Mongo | 30 | 91 | 11.9 j |
 | PixiJS | 17 | 45 | 4.5 j |
+| Mobile/Ads | 11 | 36 | 2.8 j |
 | Mobile/PixiJS | 10 | 11 | 6.5 h |
-| Mobile/Ads | 7 | 21 | 1.6 j |
 | Documentation | 6 | 17 | 2.4 j |
+| Mobile/Core | 5 | 17 | 1.4 j |
+| Node/Express/Mongo/Vite | 5 | 27 | 3.9 j |
 | CI / Outillage | 4 | 19 | 2.1 j |
 | Infra | 4 | 12 | 1.8 j |
 | Mobile (Capacitor/Ads SDK) | 4 | 26 | 3.0 j |
@@ -107,11 +111,14 @@
 | 10.5.0 | 6 | 16 | 2.2 j |
 | 12.2.0 | 6 | 0 | 0.0 h |
 | 11.7.0 | 5 | 10 | 1.1 j |
+| 12.3.0 | 5 | 17 | 1.4 j |
+| 12.4.0 | 5 | 27 | 3.9 j |
 | 10.4.0 | 4 | 9 | 1.2 j |
 | 11.0.1 | 4 | 8 | 1.0 j |
 | 11.6.0 | 4 | 13 | 1.5 j |
 | 12.0.0 | 4 | 26 | 3.0 j |
 | 12.1.0 | 4 | 19 | 2.1 j |
+| 12.2.2 | 4 | 15 | 1.2 j |
 | 10.8.0 | 3 | 8 | 1.1 j |
 | 11.13.0 | 3 | 8 | 4.5 h |
 | 11.5.0 | 3 | 12 | 1.5 j |
@@ -125,6 +132,35 @@
 | continu | 1 | 1 | 1.0 h |
 
 ## Tâches par version
+
+### v12.4.0 — 5 tâches · 27 pts · 3.9 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-416 | Backend Bord : API Express + Mongo (bordjira) + auth JWT | Testée | P1 | feature | Outillage / Backoffice | Node/Express/Mongo/Vite | 8 | 1.5 j |
+| KB-417 | Archivage automatique versionné des tâches | Testée | P1 | feature | Outillage / Backoffice | Node/Express/Mongo/Vite | 5 | 6 h |
+| KB-418 | Seed idempotent : 2 comptes ameur/hamido + import tasks.json | Testée | P1 | feature | Outillage / Backoffice | Node/Express/Mongo/Vite | 3 | 2 h |
+| KB-419 | Frontend Bord : SPA Vite + 4 thèmes Ubuntu/Mac clair/sombre | Testée | P1 | feature | Outillage / Backoffice | Node/Express/Mongo/Vite | 8 | 1 j |
+| KB-420 | PM2 + README complet du backoffice | Testée | P1 | docs | Outillage / Backoffice | Node/Express/Mongo/Vite | 3 | 3 h |
+
+### v12.3.0 — 5 tâches · 17 pts · 1.4 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-411 | Fabrique unifiée buildLocalGame côté mobile | Testée | P1 | feature | Architecture / Robots | Mobile/Core | 5 | 4 h |
+| KB-412 | Surcoinche gérée dans GameLoop.plan (parité web/serveur) | Testée | P1 | feature | Architecture / Robots | Mobile/Core | 3 | 2 h |
+| KB-413 | Tests de parité mobile ↔ core | Testée | P1 | test | Architecture / Robots | Mobile/Core | 5 | 3 h |
+| KB-414 | TableScreen refondu : appel buildLocalGame + imports nettoyés | Testée | P2 | refactor | Architecture / Robots | Mobile/Core | 2 | 1 h |
+| KB-415 | Documentation architecture-robots : pilote mobile officialisé | Testée | P2 | docs | Architecture / Robots | Mobile/Core | 2 | 1 h |
+
+### v12.2.2 — 4 tâches · 15 pts · 1.2 j
+
+| ID | Titre | Statut | Prio | Type | Catégorie | Techno | Cplx | Durée |
+|---|---|---|---|---|---|---|---:|---:|
+| KB-407 | AdMob chargé via le pont Capacitor (fix 'plugin not installed' faux positif) | Testée | P1 | bug | Bugs / UX | Mobile/Ads | 5 | 3 h |
+| KB-408 | VIP côté serveur : endpoints /wallet/vip + débit atomique | Testée | P1 | feature | Bugs / UX | Mobile/Ads | 5 | 4 h |
+| KB-409 | adConfig : IDs de test AdMob + debugGeography EEA en test | Testée | P2 | feature | Bugs / UX | Mobile/Ads | 2 | 1 h |
+| KB-410 | Documentation ADS enrichie (Capacitor bridge + zsh + testDeviceIds) | Testée | P2 | docs | Bugs / UX | Mobile/Ads | 3 | 2 h |
 
 ### v12.2.1 — 7 tâches · 21 pts · 1.6 j
 

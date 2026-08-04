@@ -52,25 +52,47 @@ export class AdMobProvider implements AdProvider {
   #plugin: AdMobPlugin | null = null;
   #units: AdUnitIds;
   #testMode: boolean;
+  #testDeviceIds: string[];
   #ready = false;
   #rewardEarned = false;
   #appOpenReady = false;
 
-  constructor(units: AdUnitIds, testMode: boolean) {
+  constructor(units: AdUnitIds, testMode: boolean, testDeviceIds: readonly string[] = []) {
     this.#units = units;
     this.#testMode = testMode;
+    this.#testDeviceIds = [...testDeviceIds];
   }
 
-  /** Charge le plugin dynamiquement ; renvoie null s'il est absent. */
+  /**
+   * Charge le plugin AdMob via le PONT CAPACITOR global.
+   *
+   * IMPORTANT — pourquoi cette forme :
+   *   • Tous les plugins Capacitor enregistrent leur interface sur
+   *     `window.Capacitor.Plugins.<Name>` (ici `AdMob`) au démarrage natif.
+   *   • Ce chemin est **le pattern recommandé** pour intégrer un plugin en
+   *     dépendance douce : pas besoin d'`import()` (qui casse dans la WebView
+   *     pour un module bundlé), pas besoin d'installer le paquet npm à la
+   *     compilation. Il suffit que le **code natif du plugin** soit présent
+   *     dans le projet Android/iOS.
+   *   • Sur web/dev/tests : `Capacitor.Plugins.AdMob` est `undefined` → on
+   *     retombe proprement sur le fournisseur nul via `registry.ts`.
+   */
   async #load(): Promise<AdMobPlugin | null> {
     if (this.#plugin) return this.#plugin;
     try {
-      const pkg = '@capacitor-community/admob';
-      const mod = (await import(/* @vite-ignore */ pkg)) as { AdMob?: AdMobPlugin };
-      this.#plugin = mod.AdMob ?? null;
+      const cap = (globalThis as { Capacitor?: { Plugins?: { AdMob?: AdMobPlugin } } }).Capacitor;
+      const plugin = cap?.Plugins?.AdMob ?? null;
+      if (!plugin) {
+        // eslint-disable-next-line no-console
+        console.warn('[ads] Capacitor.Plugins.AdMob introuvable — le plugin natif est-il bien installé et synchronisé ? (npx cap sync android)');
+        return null;
+      }
+      this.#plugin = plugin;
       return this.#plugin;
-    } catch {
-      return null; // plugin non installé : dégradation propre
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn('[ads] Chargement AdMob impossible :', error);
+      return null;
     }
   }
 
@@ -81,13 +103,18 @@ export class AdMobProvider implements AdProvider {
     try {
       await p.initialize({
         initializeForTesting: this.#testMode,
-        testingDevices: [],
+        testingDevices: this.#testDeviceIds,
       });
 
       // RGPD / EEA : demander l'info de consentement et afficher le formulaire
       // s'il est requis. SANS ça, les pubs peuvent NE PAS SE CHARGER en Europe.
+      // En mode test, on force la géographie EEA pour reproduire le flux
+      // consentement même sur un device US.
       try {
-        const info = await p.requestConsentInfo?.({});
+        const info = await p.requestConsentInfo?.(this.#testMode ? {
+          debugGeography: 1, // EEA (voir enum AdmobConsentDebugGeography)
+          testDeviceIdentifiers: this.#testDeviceIds,
+        } : {});
         if (info?.isConsentFormAvailable && (info.status === 'REQUIRED' || info.status === 'UNKNOWN')) {
           await p.showConsentForm?.();
         }

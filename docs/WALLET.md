@@ -105,6 +105,23 @@ expiré, désactivé, épuisé, déjà utilisé, format invalide.
 Le statut VIP (sans publicité) s'achète en jetons sur la page porte-monnaie —
 détails dans `docs/ADS.md` §6.
 
+**Flux côté serveur (source de vérité)** :
+
+- `GET /api/wallet/vip` — statut VIP courant (`{ expiresAt: string | null }`).
+- `POST /api/wallet/vip` — corps `{ planId: 'day' | 'days10' | 'days30' }`.
+  Débit atomique du wallet + prolongation cumulative (base = expiration active
+  si encore valide, sinon `now()`). Renvoie `{ expiresAt, balance }`.
+
+Le champ `vipExpiresAt` (Date, indexé) est stocké sur le user. La transaction
+apparaît dans le journal avec `kind: 'vip'` et `amount: -costTokens`.
+
+**Barème (aligné mobile ↔ serveur)** :
+| Plan | Coût | Durée |
+| --- | --- | --- |
+| `day` | 600 ◆ | 1 jour |
+| `days10` | 4 500 ◆ | 10 jours |
+| `days30` | 30 000 ◆ | 30 jours |
+
 ## 6. Tests
 
 - `server/src/modules/promo/promo.service.test.ts` — normalisation & format.

@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "12.2.1",
-    "generatedAt": "2026-08-03T15:00:00.000Z",
+    "currentVersion": "12.4.0",
+    "generatedAt": "2026-08-04T00:30:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -5505,6 +5505,484 @@
           "status": "tested",
           "by": "claude",
           "note": "docs/ADS.md complètement restructuré."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.2.2",
+      "createdAt": "2026-08-03T20:00:00.000Z",
+      "updatedAt": "2026-08-03T20:00:00.000Z",
+      "logs": [],
+      "id": "KB-407",
+      "title": "AdMob chargé via le pont Capacitor (fix 'plugin not installed' faux positif)",
+      "module": "ads",
+      "type": "bug",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "debug session 2026-08-03",
+      "techno": "Mobile/Ads",
+      "category": "Bugs / UX",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Le chargement du plugin AdMob passait par `await import('@capacitor-community/admob')` (dynamique, avec @vite-ignore). Dans la WebView Capacitor, cet import échouait car il tente de résoudre une URL du module → catch → renvoie null → message trompeur 'Plugin AdMob not installed'. FIX : lire directement `window.Capacitor.Plugins.AdMob` (pont Capacitor global) — pattern recommandé pour un plugin natif en dépendance douce. Aucun import npm requis à la compilation, aucun risque de casse WebView. Le plugin est détecté dès que le sync natif l'a copié. Log de diagnostic en cas d'absence.",
+      "instructions": [],
+      "acceptance": [
+        "Le message 'plugin not installed' n'apparaît PLUS quand le plugin est bien installé",
+        "Diagnostic dans la console si vraiment absent"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T20:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Cause racine : @vite-ignore + variable = résolution URL WebView impossible."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.2.2",
+      "createdAt": "2026-08-03T20:00:00.000Z",
+      "updatedAt": "2026-08-03T20:00:00.000Z",
+      "logs": [],
+      "id": "KB-408",
+      "title": "VIP côté serveur : endpoints /wallet/vip + débit atomique",
+      "module": "server",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "debug session 2026-08-03",
+      "techno": "Mobile/Ads",
+      "category": "Bugs / UX",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "Ajout d'un flux VIP serveur-premier : GET/POST /api/wallet/vip. Débit atomique dans WalletService.purchaseVip (solde insuffisant → erreur, aucune écriture). Prolongation cumulative depuis maintenant OU depuis l'expiration active. Transaction 'vip' ajoutée à l'enum. Champ vipExpiresAt (Date, indexé) sur le user. Cause du 'solde pas à jour après achat' : le débit n'était que local, mais readWallet lisait le serveur (qui ne savait rien).",
+      "instructions": [],
+      "acceptance": [
+        "Le solde change réellement après un achat VIP",
+        "Cumul persistant côté serveur",
+        "Solde insuffisant → refus propre"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T20:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "wallet.service.purchaseVip + getVipStatus + routes + 4 tests intégration."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.2.2",
+      "createdAt": "2026-08-03T20:00:00.000Z",
+      "updatedAt": "2026-08-03T20:00:00.000Z",
+      "logs": [],
+      "id": "KB-409",
+      "title": "adConfig : IDs de test AdMob + debugGeography EEA en test",
+      "module": "ads",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "debug session 2026-08-03",
+      "techno": "Mobile/Ads",
+      "category": "Bugs / UX",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "Ajout de admobTestDeviceIds dans AD_SETTINGS pour permettre de recevoir des pubs de test sur son device de dev même en TEST_MODE=false. En TEST_MODE=true, on force debugGeography=EEA lors du requestConsentInfo pour reproduire le flux consentement RGPD même hors zone EEA.",
+      "instructions": [],
+      "acceptance": [
+        "Champ admobTestDeviceIds configurable",
+        "Consentement RGPD reproductible en test"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T20:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "AdMobProvider.testDeviceIds + adConfig.AD_SETTINGS + registry passage."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.2.2",
+      "createdAt": "2026-08-03T20:00:00.000Z",
+      "updatedAt": "2026-08-03T20:00:00.000Z",
+      "logs": [],
+      "id": "KB-410",
+      "title": "Documentation ADS enrichie (Capacitor bridge + zsh + testDeviceIds)",
+      "module": "docs",
+      "type": "docs",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "debug session 2026-08-03",
+      "techno": "Mobile/Ads",
+      "category": "Bugs / UX",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "Section 'Plugin AdMob not installed alors qu'il est installé' avec les 3 causes + vérification live via window.Capacitor.Plugins.AdMob dans chrome://inspect. Correction commande adb logcat pour zsh (quoter *:E). Section 'Ajouter TON device comme device de test'. Note technique sur le pattern pont Capacitor vs import() dynamique.",
+      "instructions": [],
+      "acceptance": [
+        "Diagnostic étape par étape",
+        "Commande adb valide en bash ET zsh",
+        "Pattern technique expliqué"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T20:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "docs/ADS.md dépannage refondu + docs/WALLET.md endpoints VIP."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.3.0",
+      "createdAt": "2026-08-03T22:30:00.000Z",
+      "updatedAt": "2026-08-03T22:30:00.000Z",
+      "logs": [],
+      "id": "KB-411",
+      "title": "Fabrique unifiée buildLocalGame côté mobile",
+      "module": "robots",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "parité cerveaux mobile 2026-08-03",
+      "techno": "Mobile/Core",
+      "category": "Architecture / Robots",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "Nouveau module mobile/src/services/localGame.ts : fonction pure buildLocalGame(setup, userRobots) qui construit engine + robots + brains à partir des primitives belote-core (robotFromFiche + makeRobot + createAlgorithm). Helper robotFicheFromServer(ServerRobot) → RobotFiche remplace le cast `as never` fragile qui traînait dans TableScreen. Parité STRICTE avec web/LocalTableEngine et serveur/liveGame.service.",
+      "instructions": [],
+      "acceptance": [
+        "Un robot avec le même algoSpec joue à l'identique entre mobile/web/back",
+        "API mobile propre : buildLocalGame(setup, robots)",
+        "Plus de casts as never"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T22:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Fabrique centrale du pilote mobile."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.3.0",
+      "createdAt": "2026-08-03T22:30:00.000Z",
+      "updatedAt": "2026-08-03T22:30:00.000Z",
+      "logs": [],
+      "id": "KB-412",
+      "title": "Surcoinche gérée dans GameLoop.plan (parité web/serveur)",
+      "module": "robots",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "parité cerveaux mobile 2026-08-03",
+      "techno": "Mobile/Core",
+      "category": "Architecture / Robots",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "GameLoop.plan() gère maintenant la phase surcontre comme LocalTableEngine.planNextStep du web et liveGame.service.advance du serveur : lecture de view().surcontreSeats, sélection du premier robot pending, appel de shouldSurcontrer(fiche, view, seat). Champ robots (optionnel pour rétrocompat) ajouté à GameLoopOptions. Point d'extension prêt pour brancher un cerveau de surcoinche configurable.",
+      "instructions": [],
+      "acceptance": [
+        "Phase surcontre traitée sans crasher",
+        "Sélection du bon siège via surcontreSeats",
+        "shouldSurcontrer appelé avec la fiche complète"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T22:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Rétrocompat : robots?: (RobotConfig | null)[] optionnel."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.3.0",
+      "createdAt": "2026-08-03T22:30:00.000Z",
+      "updatedAt": "2026-08-03T22:30:00.000Z",
+      "logs": [],
+      "id": "KB-413",
+      "title": "Tests de parité mobile ↔ core",
+      "module": "tests",
+      "type": "test",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "parité cerveaux mobile 2026-08-03",
+      "techno": "Mobile/Core",
+      "category": "Architecture / Robots",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "localGame.parity.test.ts (4 tests) : garantit qu'un robot avec le même algoSpec prend LA MÊME décision quel que soit le pilote (mobile buildLocalGame ou core direct). Tests : idempotence, même moteur+même spec = même décision, personnalité serveur transitée (ALGO_AGRESSIF → aggressiveness 9), partie complète 4 robots jusqu'à partie_end. + localGame.test.ts (7 tests) sur la fabrique elle-même.",
+      "instructions": [],
+      "acceptance": [
+        "Parité algoSpec vérifiée mathématiquement",
+        "Coverage des cas critiques de buildLocalGame",
+        "Test d'intégration partie complète"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T22:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "11 nouveaux tests. La parité est maintenant garantie par la CI."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.3.0",
+      "createdAt": "2026-08-03T22:30:00.000Z",
+      "updatedAt": "2026-08-03T22:30:00.000Z",
+      "logs": [],
+      "id": "KB-414",
+      "title": "TableScreen refondu : appel buildLocalGame + imports nettoyés",
+      "module": "home",
+      "type": "refactor",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "parité cerveaux mobile 2026-08-03",
+      "techno": "Mobile/Core",
+      "category": "Architecture / Robots",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "TableScreen.buildAndStart passe de 40 lignes inline (avec cast as never, logique dispersée) à un simple appel à buildLocalGame(setup, robots). Imports inutilisés retirés : ContreeRules, DEFAULT_PARTIE, GameEngine (déplacé sur type only), createAlgorithm, makeRobot, robotFromFiche, EnginePlayer, mySeatFromSetup, GREEK, rules. GameLoop reçoit désormais les fiches robots pour la surcoinche.",
+      "instructions": [],
+      "acceptance": [
+        "TableScreen plus lisible",
+        "Aucune duplication avec la fabrique",
+        "GameLoop reçoit les fiches"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T22:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Refactoring pur sans changement de comportement."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "12.3.0",
+      "createdAt": "2026-08-03T22:30:00.000Z",
+      "updatedAt": "2026-08-03T22:30:00.000Z",
+      "logs": [],
+      "id": "KB-415",
+      "title": "Documentation architecture-robots : pilote mobile officialisé",
+      "module": "docs",
+      "type": "docs",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "parité cerveaux mobile 2026-08-03",
+      "techno": "Mobile/Core",
+      "category": "Architecture / Robots",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "Section « 2. Mobile — entraînement local » ajoutée à docs/architecture-robots.md avec le schéma buildLocalGame + GameLoop, alignée aux 3 autres pilotes (web, competition, liveGame). Table des fichiers de référence enrichie (localGame.ts, gameLoop.ts). Section Tests mise à jour avec les 11 nouveaux tests.",
+      "instructions": [],
+      "acceptance": [
+        "Le pilote mobile est documenté",
+        "Table de référence à jour",
+        "Contrat de parité officialisé"
+      ],
+      "history": [
+        {
+          "at": "2026-08-03T22:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "docs/architecture-robots.md maintient un modèle mental unique pour les 4 pilotes."
+        }
+      ]
+    },
+    {
+      "area": "tools",
+      "version": "12.4.0",
+      "createdAt": "2026-08-04T00:30:00.000Z",
+      "updatedAt": "2026-08-04T00:30:00.000Z",
+      "logs": [],
+      "id": "KB-416",
+      "title": "Backend Bord : API Express + Mongo (bordjira) + auth JWT",
+      "module": "board",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1.5 j",
+      "spec": "backoffice board 2026-08-04",
+      "techno": "Node/Express/Mongo/Vite",
+      "category": "Outillage / Backoffice",
+      "complexity": 8,
+      "duration": "1.5 j",
+      "description": "Nouveau backend board/server/ : Express + Mongoose sur base bordjira. Modèles BordUser (bcrypt) et Task (miroir enrichi du JSON avec taskId humain, revision, lastModifiedBy, updatedAt auto). Auth JWT 12h + middleware requireAuthentication. Endpoints tasks (CRUD complet) et archive (consultation par tâche, par utilisateur, fil récent). Erreurs typées HttpError + asyncHandler + env centralisée. Typecheck vert, 5 tests unitaires.",
+      "instructions": [],
+      "acceptance": [
+        "API JSON complète",
+        "Base Mongo bordjira séparée de belote",
+        "JWT + bcrypt",
+        "Typecheck strict"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T00:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Fondation du backoffice : tout est stateless côté serveur."
+        }
+      ]
+    },
+    {
+      "area": "tools",
+      "version": "12.4.0",
+      "createdAt": "2026-08-04T00:30:00.000Z",
+      "updatedAt": "2026-08-04T00:30:00.000Z",
+      "logs": [],
+      "id": "KB-417",
+      "title": "Archivage automatique versionné des tâches",
+      "module": "board",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "6 h",
+      "spec": "backoffice board 2026-08-04",
+      "techno": "Node/Express/Mongo/Vite",
+      "category": "Outillage / Backoffice",
+      "complexity": 5,
+      "duration": "6 h",
+      "description": "Chaque PATCH réussi sur une tâche déclenche : (1) écriture d'un TaskArchive avec snapshot COMPLET AVANT modif + diff champ par champ + auteur + horodatage + note optionnelle ; (2) incrément de revision ; (3) mise à jour de lastModifiedBy ; (4) trace inline dans task.history[]. Les suppressions archivent aussi un dernier snapshot avec note « suppression ». Aucune modification n'est jamais perdue.",
+      "instructions": [],
+      "acceptance": [
+        "Snapshot complet AVANT chaque modif",
+        "Diff visible champ par champ",
+        "Qui + Quand + Quoi tracés",
+        "Consultable via /tasks/:id/archive"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T00:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Fonction pure computeDiff testée en isolation."
+        }
+      ]
+    },
+    {
+      "area": "tools",
+      "version": "12.4.0",
+      "createdAt": "2026-08-04T00:30:00.000Z",
+      "updatedAt": "2026-08-04T00:30:00.000Z",
+      "logs": [],
+      "id": "KB-418",
+      "title": "Seed idempotent : 2 comptes ameur/hamido + import tasks.json",
+      "module": "board",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "backoffice board 2026-08-04",
+      "techno": "Node/Express/Mongo/Vite",
+      "category": "Outillage / Backoffice",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "Script server/scripts/import-tasks.ts. Comptes ameur et hamido (mot de passe @kantoA123, rôle admin) upsertés à chaque lancement. Import des 145 tâches du tasks.json existant vers Mongo si la collection est vide (sinon ignore, l'API devient source de vérité). Complètement idempotent.",
+      "instructions": [],
+      "acceptance": [
+        "Comptes créés au premier lancement",
+        "Tâches importées avec id → taskId",
+        "Relançable sans casser"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T00:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Script npm --prefix server run seed."
+        }
+      ]
+    },
+    {
+      "area": "tools",
+      "version": "12.4.0",
+      "createdAt": "2026-08-04T00:30:00.000Z",
+      "updatedAt": "2026-08-04T00:30:00.000Z",
+      "logs": [],
+      "id": "KB-419",
+      "title": "Frontend Bord : SPA Vite + 4 thèmes Ubuntu/Mac clair/sombre",
+      "module": "board",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1 j",
+      "spec": "backoffice board 2026-08-04",
+      "techno": "Node/Express/Mongo/Vite",
+      "category": "Outillage / Backoffice",
+      "complexity": 8,
+      "duration": "1 j",
+      "description": "SPA vanilla-TS (helper h() minimaliste, aucun framework lourd). Vue Login avec message d'erreur, vue Board avec stats (P1/pending/tested), filtres (statut/prio/version/domaine), tri intelligent, table dense avec badges colorés, dates relatives. Modal d'édition avec onglet Historique (rendu diff visuel : avant en rouge barré, flèche, après en vert, auteur+date+révision). Système de thèmes : 4 variantes (ubuntu-dark, ubuntu-light, mac-dark, mac-light) avec palettes soignées (orange/aubergine + typo Ubuntu ; bleu système + typo SF). Sélecteur en 1 clic, persistance localStorage.",
+      "instructions": [],
+      "acceptance": [
+        "Login/logout fonctionnel",
+        "Filtrage + tri des tâches",
+        "Edition en modal",
+        "Historique visuel diff",
+        "4 thèmes basculables"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T00:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "SPA sans dépendance framework, environ 14 KB gzip."
+        }
+      ]
+    },
+    {
+      "area": "tools",
+      "version": "12.4.0",
+      "createdAt": "2026-08-04T00:30:00.000Z",
+      "updatedAt": "2026-08-04T00:30:00.000Z",
+      "logs": [],
+      "id": "KB-420",
+      "title": "PM2 + README complet du backoffice",
+      "module": "board",
+      "type": "docs",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "backoffice board 2026-08-04",
+      "techno": "Node/Express/Mongo/Vite",
+      "category": "Outillage / Backoffice",
+      "complexity": 3,
+      "duration": "3 h",
+      "description": "ecosystem.config.cjs : 2 processus (bord-api sur 4100, bord-web sur 4200), logs séparés, restart auto, max_memory_restart, env intégrée. README exhaustif : arborescence, prérequis, install pas-à-pas (npm install, seed, build avec VITE_API_URL, pm2 start), commandes PM2, doc endpoints API, contrat d'archivage détaillé, comptes seed, palette des 4 thèmes.",
+      "instructions": [],
+      "acceptance": [
+        "pm2 start ecosystem.config.cjs lance les 2 process",
+        "README explique tout le flow",
+        "Logs séparés API/web"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T00:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "board/README.md + board/ecosystem.config.cjs."
         }
       ]
     }

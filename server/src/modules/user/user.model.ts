@@ -10,7 +10,7 @@ import mongoose, { Schema, model, type InferSchemaType } from 'mongoose';
  */
 const WalletTransactionSchema = new Schema(
   {
-    kind: { type: String, enum: ['daily', 'game_stake', 'game_win', 'refund', 'promo'], required: true },
+    kind: { type: String, enum: ['daily', 'game_stake', 'game_win', 'refund', 'promo', 'vip'], required: true },
     amount: { type: Number, required: true },
     balance: { type: Number, required: true },
     game: { type: Schema.Types.ObjectId, ref: 'Game', default: null },
@@ -50,6 +50,8 @@ const UserSchema = new Schema(
     activeSession: { type: Schema.Types.ObjectId, ref: 'Session', default: null, index: true },
     /** Robot désigné comme favori — reprend la main si l'utilisateur quitte. */
     favoriteRobot: { type: Schema.Types.ObjectId, ref: 'Robot', default: null },
+    /** Statut VIP : date d'expiration (null = non VIP). Le service compare > now(). */
+    vipExpiresAt: { type: Date, default: null, index: true },
   },
   { timestamps: true },
 );

@@ -7,7 +7,7 @@
  * on lui fournit un `onTick` (re-render) et un `scheduler` (setTimeout injecté,
  * remplaçable en test). Le comportement des robots vient intégralement du moteur.
  * ========================================================================== */
-import { GameEngine, robotAct, type RobotAlgorithm, type Seat } from 'belote-core';
+import { GameEngine, robotAct, shouldSurcontrer, type RobotAlgorithm, type RobotConfig, type Seat } from 'belote-core';
 
 export interface LoopStep { run: () => void; ms: number; noSpeed?: boolean }
 
@@ -18,17 +18,24 @@ export const timeoutScheduler: Scheduler = (fn, ms) => { const id = setTimeout(f
 
 export interface GameLoopOptions {
   brains: (RobotAlgorithm | null)[]; // null = siège humain
+  /** Fiches robots (même indexation que `brains`). Requis pour la surcoinche
+   *  (`shouldSurcontrer` a besoin de la fiche complète, pas seulement du cerveau).
+   *  Optionnel pour rétrocompatibilité — en son absence, le pilote applique la
+   *  décision par défaut (pass) issue de `robotAct`. */
+  robots?: (RobotConfig | null)[];
   onTick: () => void;                // appelé après chaque avancée
   onEnd?: () => void;                // appelé une fois la partie terminée
   scheduler?: Scheduler;
   preDelayMs?: number;               // délai avant qu'un robot pose sa carte
   trickPauseMs?: number;             // pause avant ramassage du pli
   mancheGapMs?: number;              // pause entre manches (chrono popup)
+  bidResponseMs?: number;            // délai fixe des réponses d'enchère
 }
 
 export class GameLoop {
   #engine: GameEngine;
   #brains: (RobotAlgorithm | null)[];
+  #robots: (RobotConfig | null)[];
   #onTick: () => void;
   #onEnd?: () => void;
   #schedule: Scheduler;
@@ -39,16 +46,19 @@ export class GameLoop {
   readonly preDelayMs: number;
   readonly trickPauseMs: number;
   readonly mancheGapMs: number;
+  readonly bidResponseMs: number;
 
   constructor(engine: GameEngine, opts: GameLoopOptions) {
     this.#engine = engine;
     this.#brains = opts.brains;
+    this.#robots = opts.robots ?? opts.brains.map(() => null);
     this.#onTick = opts.onTick;
     this.#onEnd = opts.onEnd;
     this.#schedule = opts.scheduler ?? timeoutScheduler;
     this.preDelayMs = opts.preDelayMs ?? 400;
     this.trickPauseMs = opts.trickPauseMs ?? 1500;
     this.mancheGapMs = opts.mancheGapMs ?? 5200;
+    this.bidResponseMs = opts.bidResponseMs ?? 700;
   }
 
   get engine(): GameEngine { return this.#engine; }
@@ -59,6 +69,14 @@ export class GameLoop {
    * Détermine la prochaine action AUTOMATIQUE et son délai.
    * Renvoie null quand c'est au tour d'un humain (ou partie finie).
    * PUR : ne planifie rien, ne mute rien — utilisable tel quel en test.
+   *
+   * Gère les phases spéciales :
+   *  • `donne_end`, `manche_end`   → passage à la donne/manche suivante.
+   *  • `awaitingCollect`            → ramassage du pli après un délai.
+   *  • `surcontre`                  → parité web/serveur : on lit `surcontreSeats`,
+   *    on cible le premier siège robot en attente, on décide via
+   *    `shouldSurcontrer(fiche, view, seat)`. Si aucun robot n'est concerné
+   *    (tous humains), on renvoie null pour laisser la popup répondre.
    */
   plan(): LoopStep | null {
     const e = this.#engine;
@@ -66,6 +84,23 @@ export class GameLoop {
     if (e.phase === 'donne_end') return { run: () => e.nextDonne(), ms: 1200 };
     if (e.phase === 'manche_end') return { run: () => e.nextManche(), ms: this.mancheGapMs, noSpeed: true };
     if (e.view().awaitingCollect) return { run: () => e.collectTrick(), ms: this.trickPauseMs };
+
+    // Micro-phase surcontre : identique au web (`LocalTableEngine.planNextStep`)
+    // et au serveur (`liveGame.service.advance`). On sélectionne un robot dans
+    // les sièges pending et on lui demande sa décision de surcoinche.
+    if (e.phase === 'surcontre') {
+      const pending = e.view().surcontreSeats as Seat[];
+      const robotSeat = pending.find((s) => this.#brains[s]);
+      if (robotSeat == null) return null; // tous humains → popup
+      const robot = this.#robots[robotSeat];
+      // `shouldSurcontrer` est configurable — par défaut → pass.
+      const decide = robot ? shouldSurcontrer(robot, e.view(), robotSeat) : false;
+      return {
+        run: () => e.submitBid(robotSeat, { action: decide ? 'surcontree' : 'pass' }),
+        ms: this.bidResponseMs, noSpeed: true,
+      };
+    }
+
     const seat = e.turn as Seat;
     const brain = this.#brains[seat];
     if (!brain) return null; // tour d'un humain
@@ -74,7 +109,7 @@ export class GameLoop {
       if (act.kind === 'bid') { const r = e.submitBid(seat, act.bid); if (!r.ok) e.submitBid(seat, { action: 'pass' }); }
       else e.playCard(seat, act.card);
     };
-    return { run, ms: act.kind === 'bid' ? 700 : this.preDelayMs + act.thinkMs, noSpeed: act.kind === 'bid' };
+    return { run, ms: act.kind === 'bid' ? this.bidResponseMs : this.preDelayMs + act.thinkMs, noSpeed: act.kind === 'bid' };
   }
 
   /** Démarre / relance la boucle (idempotent). */

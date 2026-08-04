@@ -69,6 +69,47 @@ export class WalletService {
     return { balance };
   }
 
+  /**
+   * Renvoie le statut VIP courant de l'utilisateur (date d'expiration serveur).
+   */
+  async getVipStatus(userId: string): Promise<{ expiresAt: string | null }> {
+    const userDocument = await UserModel.findById(userId);
+    if (!userDocument) throw notFound();
+    const raw = (userDocument as unknown as { vipExpiresAt?: Date | null }).vipExpiresAt ?? null;
+    return { expiresAt: raw ? raw.toISOString() : null };
+  }
+
+  /**
+   * Achète (ou PROLONGE) le statut VIP en jetons. Débit atomique du wallet,
+   * puis prolongation cumulative depuis maintenant OU depuis l'expiration
+   * courante si encore active.
+   */
+  async purchaseVip(userId: string, plan: { id: string; costTokens: number; durationDays: number }): Promise<{ expiresAt: string | null; balance: number }> {
+    if (plan.costTokens <= 0 || plan.durationDays <= 0) throw badRequest('plan VIP invalide');
+    const userDocument = await UserModel.findById(userId);
+    if (!userDocument) throw notFound();
+
+    const currentBalance = userDocument.wallet?.tokens ?? 0;
+    if (currentBalance < plan.costTokens) throw badRequest('solde insuffisant');
+
+    // Débit atomique.
+    const balance = currentBalance - plan.costTokens;
+    userDocument.wallet = userDocument.wallet ?? { tokens: 0, lastClaimDay: null, transactions: [] };
+    userDocument.wallet.tokens = balance;
+    userDocument.wallet.transactions.push({
+      kind: 'vip', amount: -plan.costTokens, balance, at: new Date(), game: null,
+    } as any);
+
+    // Prolongation cumulative depuis maintenant OU depuis l'expiration si encore active.
+    const rawExpiration = (userDocument as unknown as { vipExpiresAt?: Date | null }).vipExpiresAt ?? null;
+    const baseTime = rawExpiration && rawExpiration.getTime() > Date.now() ? rawExpiration.getTime() : Date.now();
+    const newExpiration = new Date(baseTime + plan.durationDays * 86_400_000);
+    (userDocument as unknown as { vipExpiresAt: Date }).vipExpiresAt = newExpiration;
+
+    await userDocument.save();
+    return { expiresAt: newExpiration.toISOString(), balance };
+  }
+
   /** Crédite un gain à un utilisateur (fin de partie). */
   async credit(userId: string, amount: number, gameId?: string, kind: 'game_win' | 'refund' = 'game_win') {
     if (amount <= 0) return;

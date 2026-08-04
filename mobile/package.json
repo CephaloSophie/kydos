@@ -1,6 +1,6 @@
 {
   "name": "belote-mobile",
-  "version": "12.2.1",
+  "version": "12.4.0",
   "private": true,
   "type": "module",
   "description": "Kýdos Belote — application MOBILE (paysage), séparée du web. Design system Claude Design + table Pixi partagée.",
@@ -21,25 +21,24 @@
     "set-dev-ip": "node scripts/set-dev-ip.mjs"
   },
   "dependencies": {
-    "@capacitor-community/admob": "^6.2.0",
-    "@capacitor/android": "^6.2.0",
-    "@capacitor/core": "^6.2.0",
-    "@capacitor/ios": "^6.2.0",
     "@kydos/table-pixi": "*",
     "belote-core": "*",
     "pixi.js": "^8.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/ios": "^6.2.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "happy-dom": "^15.11.7",
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
-    "vitest": "^2.1.9"
+    "vitest": "^2.1.9",
+    "@capacitor/cli": "^6.2.0"
   }
 }

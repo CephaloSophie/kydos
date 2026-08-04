@@ -1,6 +1,6 @@
 {
   "name": "belote-contree",
-  "version": "12.2.1",
+  "version": "12.4.0",
   "private": true,
   "type": "module",
   "workspaces": [
@@ -31,8 +31,5 @@
     "@playwright/test": "^1.62.0",
     "@vitest/coverage-v8": "^2.1.9",
     "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "@capacitor-community/admob": "^6.2.0"
   }
 }

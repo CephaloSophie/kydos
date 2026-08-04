@@ -115,7 +115,13 @@ Dans l'ordre à vérifier :
 
 1. **Vérifie le logcat Android** :
    ```bash
+   # bash :
    adb logcat -v time Ads:V AdMob:V *:E | grep -i "ad\|admob"
+   # zsh (obligatoire de quoter *:E, sinon zsh le prend pour un glob et échoue
+   # avec "no matches found: *:E") :
+   adb logcat -v time 'Ads:V' 'AdMob:V' '*:E' | grep -i "ad\|admob"
+   # alternative zsh : désactiver le glob failure une bonne fois :
+   #   setopt no_nomatch
    ```
    Cherche des messages `Ad failed to load` avec un code d'erreur (0=INTERNAL_ERROR,
    1=INVALID_REQUEST, 2=NETWORK_ERROR, 3=NO_FILL, 8=NOT_READY).
@@ -129,6 +135,58 @@ Dans l'ordre à vérifier :
 
 Si un message dans le logcat te dit `The Google Mobile Ads SDK was initialized
 incorrectly` ou similaire : l'**App ID de l'étape 2 est mal placé** ou absent.
+
+### « Plugin AdMob not installed on this device » alors qu'il est installé
+
+**Cause** : le plugin natif n'est pas accessible via `window.Capacitor.Plugins.AdMob`.
+C'est **toujours** l'un de ces trois cas — vérifier dans l'ordre :
+
+1. **Le paquet est installé mais pas synchronisé** :
+   ```bash
+   npm i @capacitor-community/admob@^6  # à la RACINE du projet, pas dans mobile/
+   npm --workspace belote-mobile run build
+   npx cap sync android
+   ```
+   Le `cap sync` **est obligatoire** — il copie le code natif du plugin dans le
+   projet Android. Sans lui, `Capacitor.Plugins.AdMob` reste `undefined` même
+   après `npm i`.
+
+2. **Le build web n'a pas été refait** entre `npm i` et `cap sync` — le sync
+   copie le dossier `dist/` : s'il est vieux, l'ancien code (sans plugin) est
+   embarqué.
+
+3. **Tu testes en navigateur** (`npm run dev`) : c'est normal, `Capacitor.Plugins.AdMob`
+   n'existe pas hors Android/iOS. Vérifie sur ton device natif.
+
+**Vérification en direct** — sur ton device via `chrome://inspect` :
+```js
+console.log(window.Capacitor?.Plugins?.AdMob)
+```
+- Si tu vois un objet avec les méthodes `showBanner`, `showInterstitial`, etc.
+  → le plugin est bien câblé, le message d'erreur ne devrait plus apparaître.
+- Si tu vois `undefined` → étape 1 ou 2 ci-dessus.
+
+**Note technique** : le code utilise `window.Capacitor.Plugins.AdMob` (le pont
+Capacitor global) plutôt qu'un `import('@capacitor-community/admob')` dynamique.
+C'est **le pattern recommandé** pour un plugin en dépendance douce — l'`import()`
+dynamique casse dans la WebView Capacitor (résolution d'URL impossible), et
+c'était la cause du faux positif « plugin non installé » dans les versions
+antérieures.
+
+### Ajouter TON device comme device de test (optionnel)
+
+En dev, si tu veux des pubs de test même avec `TEST_MODE = false` :
+
+1. Lance l'app une fois, ouvre le logcat :
+   ```bash
+   adb logcat | grep "Use RequestConfiguration.Builder"
+   ```
+   AdMob affiche un ID de la forme `RequestConfiguration.Builder().setTestDeviceIds(Arrays.asList("XXXXXXXX"))`.
+2. Copie l'ID dans `mobile/src/services/ads/adConfig.ts` :
+   ```ts
+   admobTestDeviceIds: ['XXXXXXXX'],
+   ```
+3. Rebuild + sync + relance.
 
 ### ⚠️ À NE JAMAIS FAIRE en mode test
 

@@ -2,7 +2,204 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.2.1 — Correctifs AdMob v6 + VIP débit/cumul + training visible + doc refondue (version actuelle)
+## v12.4.0 — Bord : backoffice complet de gestion des tâches (version actuelle)
+
+Nouveau module autonome `board/` : backoffice web + API pour gérer le
+référentiel des tâches. Deux comptes (ameur + hamido), thèmes Ubuntu/Mac
+clair/sombre, historique versionné de chaque modification.
+
+### Backend Bord (KB-416, KB-417, KB-418)
+- **API Express + Mongoose** sur base Mongo dédiée `bordjira` (séparée du jeu).
+  Modèles `BordUser` (bcrypt) et `Task` (miroir enrichi du JSON avec `taskId`
+  humain, `revision`, `lastModifiedBy`, `updatedAt` auto).
+- **Auth JWT 12 h** + middleware `requireAuthentication`. Deux comptes seed
+  `ameur` et `hamido` (mot de passe `@kantoA123`, rôle admin).
+- **Endpoints** : `GET/POST/PATCH/DELETE /api/tasks`, `GET /api/tasks/:id/archive`,
+  `GET /api/archive/recent`, `GET /api/archive/by/:username`, `POST /api/auth/login`,
+  `GET /api/auth/me`.
+- **Archivage automatique versionné** : chaque `PATCH` réussi écrit un
+  `TaskArchive` avec snapshot COMPLET AVANT modif + diff champ par champ +
+  auteur + horodatage + note optionnelle. Les suppressions archivent aussi.
+  **Aucune modification n'est jamais perdue** — l'API `/tasks/:id/archive`
+  restitue tout l'historique de chaque tâche.
+- **Seed idempotent** (`npm run seed`) : crée les 2 comptes + importe les 150
+  tâches du `tasks.json` existant vers Mongo (si vide).
+
+### Frontend Bord (KB-419)
+SPA vanilla-TS (~14 KB gzip), zéro framework lourd :
+- **Vue Login** avec gestion d'erreur.
+- **Vue Board** : stats (P1 ouvertes / en attente / terminées), filtres
+  (statut/priorité/version/domaine), tri intelligent, table dense avec badges
+  colorés, dates relatives.
+- **Modal d'édition** avec onglet **Historique** — rendu diff visuel : avant
+  en rouge barré, flèche `→`, après en vert, auteur + date + numéro de
+  révision. Note optionnelle sur chaque modification.
+- **4 thèmes basculables en 1 clic** : `ubuntu-dark` (défaut, orange + aubergine
+  + typo Ubuntu), `ubuntu-light`, `mac-dark` (bleu système + typo SF),
+  `mac-light`. Persistance `localStorage`.
+
+### Déploiement PM2 (KB-420)
+`board/ecosystem.config.cjs` : 2 processus (`bord-api` sur `:4100`, `bord-web`
+sur `:4200`), logs séparés dans `board/{server,web}/logs/`, restart auto,
+`max_memory_restart`, env intégrée.
+
+**Mise en route** :
+```bash
+cd board
+npm --prefix server install
+npm --prefix web install
+npm --prefix server run seed
+VITE_API_URL=http://localhost:4100/api npm --prefix web run build
+pm2 start ecosystem.config.cjs
+```
+
+### Vérification
+```
+Belote  : TNR 14/14 · 412 tests (inchangé)
+Bord    : 5 tests unitaires sur la logique de diff
+Server  : typecheck strict ✓  Web : typecheck strict ✓  Build web : 302 ms
+```
+
+### Fichiers créés (v12.4.0)
+- `board/server/` — API complète (Express + Mongoose + JWT)
+- `board/web/` — SPA (Vite + TS + 4 thèmes)
+- `board/ecosystem.config.cjs` — PM2 2 process
+- `board/README.md` — mode d'emploi complet
+- `board/.gitignore`
+
+## v12.3.0 — Parité formelle des cerveaux mobile ↔ core
+
+Refonte majeure du pilote mobile pour garantir qu'un robot **pense exactement
+la même chose** en local mobile, front web, compétition et partie en ligne.
+
+### Fabrique unifiée `buildLocalGame` (KB-411)
+Nouveau module `mobile/src/services/localGame.ts` — fonction PURE :
+```ts
+buildLocalGame(setup, userRobots) → { engine, players, robots, brains, mySeat }
+```
+Utilise **exactement les mêmes primitives** que le web (`LocalTableEngine`) et
+le serveur (`liveGame.service`) :
+- `robotFicheFromServer(ServerRobot)` → `RobotFiche` (helper typé, plus de
+  `as never` dans TableScreen).
+- `robotFromFiche(fiche, fallback)` pour les robots CHOISIS par l'utilisateur
+  (leur `algoSpec` complet est passé au cerveau).
+- `makeRobot({...})` pour les sièges « auto » (personnalité paramétrée).
+- `createAlgorithm(robot, rules, onLog)` pour le cerveau exécutable.
+
+### Surcoinche gérée dans `GameLoop.plan()` (KB-412)
+Parité stricte avec `LocalTableEngine.planNextStep` et `liveGame.service.advance` :
+- Lecture de `view().surcontreSeats`.
+- Sélection du premier robot pending.
+- Appel de `shouldSurcontrer(fiche, view, seat)` avec la fiche complète.
+- Champ `robots: (RobotConfig | null)[]` (optionnel, rétrocompat) ajouté à
+  `GameLoopOptions`.
+
+### `TableScreen.buildAndStart` refondu (KB-414)
+De 40 lignes inline (avec cast `as never`) à un simple appel :
+```ts
+const built = buildLocalGame(setup, robots);
+mySeat = built.mySeat;
+loop = new GameLoop(engine, { brains, robots: robotConfigs, onTick, onEnd });
+```
+Imports inutilisés retirés : `ContreeRules`, `DEFAULT_PARTIE`, `createAlgorithm`,
+`makeRobot`, `robotFromFiche`, `EnginePlayer`, `mySeatFromSetup`, `GREEK`, `rules`.
+
+### Tests de parité (KB-413)
+**Le vrai enjeu de la demande.** Nouveau fichier `localGame.parity.test.ts` (4
+tests) qui **garantit mathématiquement** que le même `algoSpec` produit la
+même décision entre mobile et core :
+
+1. **Idempotence** — le cerveau est une fonction pure : même contexte → même
+   résultat.
+2. **Même moteur, même spec = même décision** — un cerveau construit via
+   `buildLocalGame` et un cerveau construit via l'appel core direct, tous deux
+   avec `ALGO_CLASSIQUE`, produisent EXACTEMENT le même `{kind, bid|card, thinkMs}`
+   sur le même moteur.
+3. **Personnalité serveur transitée** — un robot avec `algoSpec: ALGO_AGRESSIF`
+   porte bien `personality.aggressiveness = 9` (pas la défaut 5) → la spec
+   traverse bien serveur → mobile → cerveau.
+4. **Partie complète 4 robots** — s'exécute jusqu'à `partie_end` sans erreur
+   (validation d'intégration, ~5 000 itérations).
+
+Plus 7 tests unitaires sur `buildLocalGame` (placement humain, robot choisi vs
+auto, fallback si id inconnu, tous-robots, manches transmis) et 2 tests
+supplémentaires sur `GameLoop` (surcontre, rétrocompat robots optionnels).
+
+### Documentation (KB-415)
+Section « 2. Mobile — entraînement local » ajoutée à `docs/architecture-robots.md`
+au même niveau que les 3 autres pilotes. Table des fichiers de référence
+enrichie. Section Tests mise à jour.
+
+### Vérification
+```
+TNR : 14/14 · 412 tests (+17 tests parité + fabrique + surcoinche)
+```
+
+### Contrat désormais garanti par la CI
+> Un robot avec le même `algoSpec` prend LA MÊME décision quel que soit
+> l'endroit où il joue : mobile local, front web, compétition ou partie en
+> ligne.
+
+Vérifié par 4 tests de parité qui échoueront si un pilote diverge de belote-core.
+
+## v12.2.2 — Fix racine 'plugin AdMob not installed' + débit VIP serveur
+
+Correction des deux bugs restants après diagnostic à froid.
+
+### AdMob : chargement via le pont Capacitor (KB-407)
+**Cause racine du faux positif « plugin not installed »** : le code utilisait
+`await import('@capacitor-community/admob')` avec `/* @vite-ignore */`. Dans la
+WebView Capacitor, cet import tente une résolution URL du module — qui échoue
+systématiquement — d'où le `catch` qui renvoie `null` puis le message trompeur.
+
+**Fix** : lire directement `window.Capacitor.Plugins.AdMob` (pont Capacitor
+global). C'est **le pattern recommandé** pour tous les plugins Capacitor en
+dépendance douce :
+
+- Aucun `import()` dynamique — aucun risque de casse WebView.
+- Aucun paquet npm requis à la compilation — le build passe sans le plugin.
+- Le plugin est détecté dès que `npx cap sync android` a copié le code natif.
+
+Un log de diagnostic apparaît dans la console si le pont Capacitor ne trouve
+vraiment pas `AdMob` — pour distinguer un vrai « pas installé » d'un simple
+« pas sync ».
+
+### VIP : débit côté serveur (KB-408)
+**Cause du solde qui ne bougeait pas après achat VIP** : `spendTokens` ne
+débitait qu'en local (`localStorage`), mais `readWallet` lisait le solde
+**serveur** (qui ne savait rien du débit). Le décrément était silencieusement
+perdu à l'affichage.
+
+**Fix** : ajout d'un flux VIP serveur-premier complet :
+
+- **`GET /api/wallet/vip`** — statut VIP courant (`expiresAt`).
+- **`POST /api/wallet/vip`** — corps `{ planId: 'day' | 'days10' | 'days30' }`.
+  Débit atomique du wallet + prolongation cumulative.
+- Champ `vipExpiresAt` (Date, indexé) sur le user.
+- Kind `'vip'` ajouté aux transactions.
+
+Le débit est maintenant **réellement persisté** sur le user et se voit
+immédiatement dans le solde affiché.
+
+**Tests intégration** : 4 nouveaux (débit + expiration, refus solde
+insuffisant, cumul 2×1j=2j, getVipStatus null par défaut).
+
+### Bonus (KB-409, KB-410)
+- **`admobTestDeviceIds`** dans `AD_SETTINGS` : ajouter TON device pour recevoir
+  des pubs de test même hors `TEST_MODE`.
+- **`debugGeography: EEA`** forcée en test → reproduction du flux consentement
+  RGPD depuis n'importe où.
+- **Section dépannage docs/ADS.md refondue** : sous-section dédiée « Plugin
+  AdMob not installed alors qu'il est installé » (3 causes possibles + check
+  live via `chrome://inspect`), correction commande `adb logcat` pour **zsh**
+  (`no matches found: *:E` → quoter `'*:E'`), guide `testDeviceIds`.
+
+### Vérification
+```
+TNR : 14/14 · 399 tests (+4 tests intégration VIP serveur)
+```
+
+## v12.2.1 — Correctifs AdMob v6 + VIP débit/cumul + training visible + doc refondue
 
 Grosse tranche de correctifs suite au retour terrain de la tablette Samsung.
 
