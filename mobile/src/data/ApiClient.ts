@@ -25,37 +25,59 @@ export class ApiClient {
   setToken(t: string | null): void { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }
   isAuthenticated(): boolean { return !!this.token(); }
 
+  /** Requêtes GET en cours — clé = path. Évite les doublons quand deux
+   *  parties de l'app (TopBar + un écran) demandent la même donnée en même temps.
+   *  Uniquement pour les méthodes idempotentes (GET) — jamais pour POST/PATCH/DELETE. */
+  #inflight = new Map<string, Promise<unknown>>();
+
   async call<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
-    let res: Response;
-    try {
-      res = await fetch(`${BASE}${path}`, {
-        ...init,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(this.token() ? { Authorization: `Bearer ${this.token()}` } : {}),
-          ...(init.headers ?? {}),
-        },
-      });
-    } catch {
-      // On expose l'URL RÉELLEMENT contactée : indispensable pour diagnostiquer
-      // sur un device (localhost pointe le téléphone, pas la machine de dev).
-      const host = BASE.replace(/^https?:\/\//, '').split('/')[0];
-      const hint = /localhost|127\.0\.0\.1/.test(BASE)
-        ? ` L'app pointe vers « ${host} » : sur un téléphone, localhost désigne le téléphone. Configurez VITE_API_URL avec l'IP de votre machine (ex. http://192.168.1.42:4000/api).`
-        : ` L'app pointe vers « ${host} ». Vérifiez que le serveur est lancé, accessible sur le réseau, et que le téléphone est sur le même Wi-Fi.`;
-      throw new ApiError(`Serveur injoignable.${hint}`, 0);
+    // Déduplication : uniquement pour les GET (méthode par défaut si non spécifiée).
+    const method = (init.method ?? 'GET').toUpperCase();
+    const canDedup = method === 'GET';
+    if (canDedup) {
+      const existing = this.#inflight.get(path);
+      if (existing) return existing as Promise<T>;
     }
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      // Session expirée / jeton invalide : on purge et on ramène au login,
-      // sinon l'app reste « connectée » avec toutes ses requêtes en erreur.
-      if (res.status === 401) {
-        this.setToken(null);
-        if (typeof location !== 'undefined' && !location.hash.startsWith('#/login')) location.hash = '#/login';
+
+    const run = async (): Promise<T> => {
+      let res: Response;
+      try {
+        res = await fetch(`${BASE}${path}`, {
+          ...init,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(this.token() ? { Authorization: `Bearer ${this.token()}` } : {}),
+            ...(init.headers ?? {}),
+          },
+        });
+      } catch {
+        // On expose l'URL RÉELLEMENT contactée : indispensable pour diagnostiquer
+        // sur un device (localhost pointe le téléphone, pas la machine de dev).
+        const host = BASE.replace(/^https?:\/\//, '').split('/')[0];
+        const hint = /localhost|127\.0\.0\.1/.test(BASE)
+          ? ` L'app pointe vers « ${host} » : sur un téléphone, localhost désigne le téléphone. Configurez VITE_API_URL avec l'IP de votre machine (ex. http://192.168.1.42:4000/api).`
+          : ` L'app pointe vers « ${host} ». Vérifiez que le serveur est lancé, accessible sur le réseau, et que le téléphone est sur le même Wi-Fi.`;
+        throw new ApiError(`Serveur injoignable.${hint}`, 0);
       }
-      throw new ApiError((body as { error?: string; message?: string })?.error || (body as { message?: string })?.message || `HTTP ${res.status}`, res.status);
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Session expirée / jeton invalide : on purge et on ramène au login,
+        // sinon l'app reste « connectée » avec toutes ses requêtes en erreur.
+        if (res.status === 401) {
+          this.setToken(null);
+          if (typeof location !== 'undefined' && !location.hash.startsWith('#/login')) location.hash = '#/login';
+        }
+        throw new ApiError((body as { error?: string; message?: string })?.error || (body as { message?: string })?.message || `HTTP ${res.status}`, res.status);
+      }
+      return body as T;
+    };
+
+    if (canDedup) {
+      const p = run().finally(() => { this.#inflight.delete(path); });
+      this.#inflight.set(path, p);
+      return p;
     }
-    return body as T;
+    return run();
   }
 
   // --- Auth ---------------------------------------------------------------

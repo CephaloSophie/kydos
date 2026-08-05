@@ -38,7 +38,16 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
   const grid = h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' } },
     h('div', { class: 'text-mute', style: { fontSize: '12px', gridColumn: '1 / -1', padding: '10px 0' } }, 'Chargement de votre écurie…'));
 
-  robotService.list()
+  // Cache local : un SEUL appel API par visite. Le dialogue « match entre
+  // robots » réutilise cette liste au lieu de refetcher inutilement.
+  let robotsCache: Robot[] | null = null;
+  const getRobots = async (): Promise<Robot[]> => {
+    if (robotsCache) return robotsCache;
+    robotsCache = await robotService.list();
+    return robotsCache;
+  };
+
+  getRobots()
     .then((robots) => { clear(grid); robots.forEach((r) => grid.append(robotCard(r))); grid.append(addCard); })
     .catch((e) => { clear(grid); grid.append(h('div', { class: 'text-mute', style: { fontSize: '12px', gridColumn: '1 / -1' } }, `Impossible de charger l'écurie : ${(e as Error).message}`), addCard); });
 
@@ -49,7 +58,7 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
    */
   const openRobotMatchDialog = async () => {
     let robots: Robot[] = [];
-    try { robots = await robotService.list(); } catch (e) { toast((e as Error).message); return; }
+    try { robots = await getRobots(); } catch (e) { toast((e as Error).message); return; }
     if (robots.length < 4) { toast('Il faut au moins 4 robots dans votre écurie pour un match entre robots.', 'info'); return; }
 
     const chosen: string[] = robots.slice(0, 4).map((r) => r.id);

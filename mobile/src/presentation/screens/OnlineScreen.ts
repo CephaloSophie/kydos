@@ -107,6 +107,15 @@ export function OnlineScreen(ctx: AppContext): HTMLElement {
     tables.sort((a, b) => a.id.localeCompare(b.id)).forEach((t) => listEl.append(tableCard(t)));
   };
 
+  // Debounce des reloads en cascade : plusieurs tables peuvent finir presque
+  // simultanément (event onFinished) et déclencher chacune un reload. On en
+  // fait UN SEUL après une fenêtre courte.
+  let reloadDebounce: ReturnType<typeof setTimeout> | null = null;
+  const scheduleReload = () => {
+    if (reloadDebounce) return;
+    reloadDebounce = setTimeout(() => { reloadDebounce = null; reload(); }, 200);
+  };
+
   const reload = () => {
     Promise.all([api.listTables({ scope, page }), api.listRobots(), api.me()])
       .then(([tablesRes, robotsRes, meRes]) => {
@@ -125,7 +134,7 @@ export function OnlineScreen(ctx: AppContext): HTMLElement {
               cleanupSockets();
               router.go(`table?online=${info.tableId}`);
             },
-            onFinished: () => reload(),
+            onFinished: () => scheduleReload(),
           });
           lobbySockets.set(t.id, sock);
         }
@@ -262,6 +271,14 @@ export function OnlineScreen(ctx: AppContext): HTMLElement {
       'Une seule partie à la fois. Le jeu tourne sur le serveur : si vous partez, votre robot prend la main, et vous la récupérez au retour.'),
     scopeRow,
     listEl,
-    pager);
+    pager) as HTMLElement & { _cleanup?: () => void };
+
+  // Le router (main.tsx) appelle ce cleanup avant de remplacer l'écran :
+  // toutes les sockets de lobby sont fermées + debounce reload annulé →
+  // plus aucun event serveur ni timer ne remonte pour cet écran une fois quitté.
+  root._cleanup = () => {
+    cleanupSockets();
+    if (reloadDebounce) { clearTimeout(reloadDebounce); reloadDebounce = null; }
+  };
   return root;
 }

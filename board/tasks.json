@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "12.4.1",
-    "generatedAt": "2026-08-04T02:00:00.000Z",
+    "currentVersion": "12.4.4",
+    "generatedAt": "2026-08-05T09:00:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -6018,6 +6018,113 @@
           "status": "tested",
           "by": "claude",
           "note": "Dry-run OK : 150/150 importées, 6 corrigées."
+        }
+      ]
+    },
+    {
+      "id": "KB-422",
+      "title": "Fix racine TopBar : arrêt du spam d'API + VIP autoritaire serveur",
+      "area": "mobile",
+      "version": "12.4.2",
+      "createdAt": "2026-08-04T04:00:00.000Z",
+      "updatedAt": "2026-08-04T04:00:00.000Z",
+      "logs": [],
+      "module": "home",
+      "type": "bug",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "retour terrain 2026-08-04",
+      "techno": "Mobile",
+      "category": "Bugs / Perf",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Le TopBar spamait wallet+vip+me à chaque focus/clic. Cause : window.addEventListener('focus') sans cleanup s'accumulait à chaque navigation Accueil↔Mes robots. VIP.purchase avait un fallback silencieux vers localStorage qui masquait les erreurs serveur.",
+      "instructions": [],
+      "acceptance": [
+        "Un seul appel wallet+vip+me au montage du TopBar",
+        "Zéro call pour ouvrir le menu profil",
+        "Cleanup effectif du listener focus",
+        "VIP.purchase : serveur autoritaire quand authentifié"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T04:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "TopBar réécrit, HomeScreen chaîne cleanup, VipService remonte les erreurs."
+        }
+      ]
+    },
+    {
+      "id": "KB-423",
+      "title": "Audit systématique des screens : cleanup complet au démontage",
+      "area": "mobile",
+      "version": "12.4.3",
+      "createdAt": "2026-08-04T05:30:00.000Z",
+      "updatedAt": "2026-08-04T05:30:00.000Z",
+      "logs": [],
+      "module": "screens",
+      "type": "bug",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "suite audit fuites 2026-08-04",
+      "techno": "Mobile",
+      "category": "Bugs / Perf",
+      "complexity": 5,
+      "duration": "2 h",
+      "description": "Audit systématique : OnlineScreen ne fermait pas ses sockets de lobby à la navigation, TableScreen fermait le son mais laissait socket/boucle/react root ouverts, ReplayScreen ne coupait son timer de tick que sur le bouton Quitter, InvitationsScreen ne coupait pas le debounce de recherche.",
+      "instructions": [],
+      "acceptance": [
+        "Aucune socket zombie après navigation",
+        "Aucun timer fantôme",
+        "React roots démontés proprement",
+        "typecheck vert 3 workspaces",
+        "tests ads+localGame+gameLoop verts"
+      ],
+      "history": [
+        {
+          "at": "2026-08-04T05:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "4 screens patchés, _cleanup posé sur root avec cleanup complet."
+        }
+      ]
+    },
+    {
+      "id": "KB-424",
+      "title": "Déduplication in-flight des GET + optim WalletScreen/RobotsScreen/OnlineScreen",
+      "area": "mobile",
+      "version": "12.4.4",
+      "createdAt": "2026-08-05T09:00:00.000Z",
+      "updatedAt": "2026-08-05T09:00:00.000Z",
+      "logs": [],
+      "module": "data",
+      "type": "refactor",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "suite optim requêtes 2026-08-05",
+      "techno": "Mobile",
+      "category": "Bugs / Perf",
+      "complexity": 5,
+      "duration": "2 h",
+      "description": "ApiClient : cache in-flight par path pour les GET → deux appels concurrents partagent la même Promise (un seul HTTP request). VipService.status et readWallet reçoivent la même dédup. WalletScreen faisait 2 calls /wallet en séquence, réduit à 1. RobotsScreen cache la liste des robots au niveau de la screen (1 seul appel par visite au lieu de N). OnlineScreen debounce les reloads déclenchés en cascade par onFinished.",
+      "instructions": [],
+      "acceptance": [
+        "Deux appels concurrents = 1 seul HTTP",
+        "WalletScreen : 1 call /wallet au lieu de 2",
+        "RobotsScreen : 1 call list au lieu de 2",
+        "Debounce reload OnlineScreen",
+        "tests services verts (84)"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Dédup au niveau ApiClient : impact système sur toute l'app."
         }
       ]
     }

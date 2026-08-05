@@ -93,12 +93,16 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     style: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px' },
   }, ...MENUS.map(menuTile));
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } });
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } }) as HTMLElement & { _cleanup?: () => void };
+  const topbar = TopBar(root) as HTMLElement & { _cleanup?: () => void };
   root.append(
-    TopBar(root),
+    topbar,
     h('div', { class: 'row gap-3', style: { position: 'absolute', top: '64px', left: '60px', right: '26px' } }, ...FEATURES.map(featureCard)),
     h('div', { style: { position: 'absolute', top: '250px', left: '60px', right: '26px' } }, menuRow),
     fan,
   );
+  // Le router (main.tsx) appellera ce cleanup avant de remplacer l'écran :
+  // on propage celui du TopBar → les listeners globaux ne fuient pas.
+  root._cleanup = () => { topbar._cleanup?.(); };
   return root;
 }
