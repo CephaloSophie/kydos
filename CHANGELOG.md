@@ -2,7 +2,223 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.4.0 — Bord : backoffice complet de gestion des tâches (version actuelle)
+## v12.4.4 — Déduplication in-flight des GET + optim WalletScreen/RobotsScreen (version actuelle)
+
+Suite du travail de fond sur les appels API superflus. Fix ARCHITECTURAL au
+niveau de l'ApiClient : impact système sur toute l'app.
+
+### Déduplication in-flight par path (KB-424)
+
+Cœur du fix : `ApiClient.call()` maintient une `Map<path, Promise>` des
+requêtes GET en cours. Un second appel au même endpoint alors qu'une réponse
+n'est pas encore arrivée ne déclenche PAS un second fetch — il partage la
+Promise existante. Uniquement pour les GET (idempotents) ; jamais pour
+POST/PATCH/DELETE.
+
+**Conséquence** : deux endroits différents de l'app (TopBar + un écran, par
+exemple) qui demandent la même donnée en parallèle = UN SEUL request HTTP.
+La même logique de dédup est appliquée au niveau des services `readWallet()`
+et `VipService.status()` pour blinder encore.
+
+### Optims ciblées
+
+**WalletScreen** — `refresh()` faisait DEUX appels séquentiels à `/wallet` :
+un via `readWallet()`, un via `api.wallet()` pour les transactions. Réduit
+à un seul appel (les transactions viennent dans la même réponse).
+
+**RobotsScreen** — la liste des robots était refetchée à l'ouverture du
+dialogue « match entre robots » alors qu'on venait de la charger. Cache
+local au niveau de la screen : 1 seul call par visite.
+
+**OnlineScreen** — plusieurs tables peuvent finir simultanément et déclencher
+chacune un `reload()`. Debounce 200 ms : un seul reload au lieu de N.
+
+### Récap cumulé des optims réseau (v12.4.2 → v12.4.4)
+
+| Symptôme | Fix | Version |
+|---|---|---|
+| TopBar `window.focus` fuité → 5×paint après 5 A/R | Cleanup listener | 12.4.2 |
+| Clic avatar → 1 call /wallet/vip inutile | Cache vipCache | 12.4.2 |
+| VIP purchase erreur serveur → fallback local silencieux | Serveur autoritaire | 12.4.2 |
+| Sockets zombies OnlineScreen | _cleanup complet | 12.4.3 |
+| Socket/loop/reactRoot TableScreen non fermés | _cleanup complet | 12.4.3 |
+| Timer ReplayScreen non annulé | _cleanup complet | 12.4.3 |
+| **2 appels concurrents = 2 HTTP requests** | **Dédup in-flight** | **12.4.4** |
+| WalletScreen : 2 calls /wallet séquentiels | 1 seul call | 12.4.4 |
+| RobotsScreen : list() refetch au dialogue | Cache screen | 12.4.4 |
+| OnlineScreen : reload en cascade | Debounce | 12.4.4 |
+
+### Vérification
+- Typecheck mobile/pixi/server : ✓
+- Tests services (11 fichiers) : 84/84 ✓
+- TNR global : NON relancé (patch strictement circonscrit).
+
+## v12.4.3 — Audit systématique : cleanup complet au démontage des screens
+
+Suite du fix v12.4.2 : audit exhaustif des 14 screens pour trouver TOUTES les
+fuites (sockets, timers, React roots) qui survivaient à la navigation.
+
+### 4 screens patchés (KB-423)
+
+**`OnlineScreen`** — un socket `TableSocket` était ouvert PAR TABLE listée
+(potentiellement 20+ par visite). `cleanupSockets()` n'était appelé que sur
+le bouton « Accueil » et à `onCountdown` — jamais au démontage automatique
+(clic dans le fan, changement de hash…). **Fix** : `_cleanup` posé sur root
+→ toutes les sockets fermées à la sortie de l'écran.
+
+**`TableScreen`** — le `_cleanup` existant faisait uniquement
+`soundService.stopMelody()`. Le `TableSocket` de partie en ligne, la
+`GameLoop` locale et le `reactRoot` de PixiTable restaient ouverts.
+**Fix** : `_cleanup` étendu :
+```
+loop.dispose() + onlineSocket.disconnect() + reactRoot.unmount()
+```
+
+**`ReplayScreen`** — `setTimeout` du tick de replay et `reactRoot` n'étaient
+coupés QUE sur le bouton « Quitter ». Une navigation via le fan laissait le
+timer en boucle infinie. **Fix** : `_cleanup` → `clearTimeout(timer)` +
+`reactRoot.unmount()`.
+
+**`InvitationsScreen`** — le debounce timer de recherche d'invitations
+n'était pas coupé au démontage (mineur, max 300 ms). **Fix** : ref
+partagée + `clearTimeout` chaîné dans le `_cleanup` existant.
+
+### Vérification
+- Typecheck mobile/pixi/server : ✓
+- Tests VipService (12), AdManager (13), localGame (11), gameLoop (7) : 43/43 ✓
+- TNR global : NON relancé (patch strictement circonscrit aux screens).
+
+### Récap complet des fuites corrigées (v12.4.2 + v12.4.3)
+
+| Screen | Fuite | Statut |
+|---|---|---|
+| `TopBar` | `window.focus` listener accumulé + calls API superflus au clic | v12.4.2 ✓ |
+| `HomeScreen` | Cleanup TopBar non chaîné | v12.4.2 ✓ |
+| `OnlineScreen` | Sockets lobby non fermés | v12.4.3 ✓ |
+| `TableScreen` | Socket + loop + React root non fermés | v12.4.3 ✓ |
+| `ReplayScreen` | Timer + React root non fermés | v12.4.3 ✓ |
+| `InvitationsScreen` | Debounce timer non annulé | v12.4.3 ✓ |
+| `VipService.purchase` | Fallback local silencieux masquant erreurs serveur | v12.4.2 ✓ |
+
+Le TopBar ne fait plus **aucun appel réseau** pour ouvrir le menu profil.
+Chaque écran nettoie exhaustivement ses ressources au démontage.
+
+## v12.4.2 — Fix racine : TopBar spamait les API + VIP autoritaire serveur
+
+Deux bugs racines corrigés à la source.
+
+### Bug 1 — TopBar accumulait des listeners `window.focus`
+`TopBar.ts` posait `window.addEventListener('focus', ...)` **sans jamais le
+retirer**. Chaque montage de `HomeScreen` (accueil → Mes robots → accueil…)
+créait un TopBar de plus, donc un listener de plus. Après 5 aller-retours,
+5 listeners actifs — un simple focus (retour de fenêtre, ouverture d'un
+dialogue) déclenchait **5×`paintVip()` + 5×`paint()`** = 10 calls d'un coup.
+
+**Fix propre** :
+- Le TopBar expose désormais un `_cleanup` sur l'élément retourné (via
+  `bar._cleanup = () => { removeEventListener(...) }`).
+- `HomeScreen` chaîne son `root._cleanup` sur celui du TopBar.
+- Le router (`main.tsx`) appelle déjà `outgoing._cleanup?.()` avant de
+  remplacer l'écran → aucun listener ne fuit.
+- Le mécanisme est extensible : le TopBar écoute désormais les événements
+  ciblés `kb:wallet-changed` et `kb:vip-changed`, émis UNIQUEMENT par les
+  écrans qui modifient réellement le solde ou le VIP (achat, code promo,
+  récompense, claim daily). Zéro polling, zéro focus, zéro re-fetch au clic.
+
+### Bug 2 — Clic sur l'avatar déclenchait un call `/wallet/vip`
+`profileCluster.click` faisait `await vipLocal.status()` **juste pour
+afficher le menu** (3 items). Ce call réseau pour ouvrir un menu était
+absurde.
+
+**Fix propre** : le TopBar tient un `vipCache` et un `meCache` peuplés
+UNE seule fois au montage. Le clic ouvre le menu à partir du cache — aucun
+call API. Idem pour `me` (utilisateur courant, live-chip).
+
+### Bug 3 — `purchase()` VIP retombait en local si le serveur échouait
+Le fallback était masqué par un `catch { /* retombe en local */ }` : quand
+le serveur renvoyait une erreur (solde insuffisant, réseau, 500), le
+mobile faisait un débit local `spendTokens()` sur `localStorage` — le
+serveur restait la source de vérité pour le solde, mais le mobile croyait
+avoir du VIP. Résultat : divergence + solde affiché faux.
+
+**Fix propre** : quand l'utilisateur est authentifié, le serveur est la
+SEULE autorité. Toute erreur remonte au caller. `WalletScreen.onBuyVip`
+attrape l'erreur et affiche un toast clair (« Solde insuffisant » si le
+message serveur le mentionne). Le fallback local est strictement réservé
+au mode démo hors-ligne (jamais utilisé quand un utilisateur est connecté).
+
+### Récap des appels /wallet + /wallet/vip + /me au montage
+- **Avant** : imprévisible, jusqu'à 10×3 = 30 calls après 5 A/R + un focus.
+- **Après** : exactement 3 calls (wallet + vip + me) au montage du TopBar,
+  1 seul TopBar à la fois (cleanup à chaque démontage), rafraîchissements
+  uniquement sur événement métier explicite.
+
+### Vérification
+- Typecheck mobile/pixi/server : ✓
+- Tests VipService (12) : ✓
+- Tests AdManager (13) : ✓
+- TNR global : NON relancé (comme demandé, patch strictement ciblé).
+
+### Fichiers touchés
+- `mobile/src/presentation/components/TopBar.ts` — réécrit sans fuite
+- `mobile/src/presentation/screens/HomeScreen.ts` — cleanup chaîné
+- `mobile/src/presentation/screens/WalletScreen.ts` — notifieurs +
+  catch d'erreur VIP
+- `mobile/src/services/ads/VipService.ts` — serveur autoritaire, plus de
+  fallback silencieux quand authentifié
+
+## v12.4.1 — Bord seed : normalisation défensive des tâches malformées
+
+Correctif ciblé : le seed initial (`npm --prefix server run seed`) plantait
+sur 6 tâches héritées (KB-390 à KB-395) au format cassé — `complexity`
+contenant une string `"1 h"`, `description` étant un tableau, `acceptance`
+une string, `type` un nombre. Dérive causée par un bug de génération dans
+une session antérieure.
+
+### Fix (KB-421)
+Nouvelle fonction `normalizeTask()` dans `board/server/scripts/normalize.ts` qui
+coerce chaque champ vers le type attendu par le schéma Mongo, sans perdre
+d'information :
+
+- `description` en tableau → jointure lisible (`. `-séparée).
+- `complexity: "1 h"` → extraction du nombre (1) via regex, string originale
+  loguée en warning.
+- `acceptance` en string → tableau à un élément.
+- `type` en nombre → converti en string.
+- `instructions`/`acceptance` null → tableaux vides (jamais null en DB).
+- `history` mal formée → filtrage des entrées invalides.
+
+Le seed loge chaque correction (`⚠ KB-390 corrigé : description était un
+tableau, complexity="1 h" → 1, …`) et ne plante JAMAIS sur des données
+douteuses. Import complet + auteur `seed` traçable.
+
+### Vérification (dry-run sur le vrai tasks.json)
+```
+Total: 150  OK: 150  Corrigées: 6  Rejets: 0
+  KB-390: description était un tableau, complexity="1 h" → 1, acceptance était une string, type=2 converti en string
+  KB-391: description était un tableau, complexity="0.5 h" → 0.5, …
+  KB-392: description était un tableau, complexity="2 h" → 2, …
+  KB-393: description était un tableau, complexity="4 h" → 4, …
+  KB-394: description était un tableau, complexity="4 h" → 4, …
+  KB-395: description était un tableau, complexity="2 h" → 2, …
+```
+
+### Tests
+- **12 nouveaux tests** dans `board/server/scripts/normalize.test.ts` :
+  cas réel KB-390, tâches saines (aucun warning), cas dégénérés (id manquant,
+  complexity absente, description objet, null-safe, history mal formée…).
+- Total tests board : **17** (12 nouveaux + 5 existants sur `computeDiff`).
+- TNR Belote **NON relancé** (aucun impact sur le jeu, patch strictement
+  circonscrit à `board/`).
+
+### Fichiers touchés
+- `board/server/scripts/normalize.ts` (nouveau)
+- `board/server/scripts/normalize.test.ts` (nouveau, 12 tests)
+- `board/server/scripts/import-tasks.ts` (import + log des warnings)
+- `board/server/vitest.config.ts` (scan aussi `scripts/**`)
+- `board/server/package.json` v1.0.1 · `board/web/package.json` v1.0.1
+
+## v12.4.0 — Bord : backoffice complet de gestion des tâches
 
 Nouveau module autonome `board/` : backoffice web + API pour gérer le
 référentiel des tâches. Deux comptes (ameur + hamido), thèmes Ubuntu/Mac

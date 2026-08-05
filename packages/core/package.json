@@ -1,6 +1,6 @@
 {
   "name": "belote-core",
-  "version": "12.4.0",
+  "version": "12.4.4",
   "type": "module",
   "main": "src/index.ts",
   "module": "src/index.ts",

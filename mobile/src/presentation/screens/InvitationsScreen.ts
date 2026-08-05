@@ -27,6 +27,8 @@ export function InvitationsScreen(ctx: AppContext): HTMLElement {
   const list = h('div', { class: 'col gap-2' }, h('div', { class: 'text-mute', style: { fontSize: '12px' } }, 'Chargement…'));
   const tabsRow = h('div', { class: 'row gap-2', style: { marginBottom: '12px' } });
   const inviteBox = h('div', {});
+  // Ref partagée pour annuler le debounce de recherche d'invitation au démontage.
+  const inviteDebounceRef: { current: ReturnType<typeof setTimeout> | null } = { current: null };
 
   // ---- Onglets ----
   const tabBtn = (value: Tab, label: string) => h('span', {
@@ -91,15 +93,14 @@ export function InvitationsScreen(ctx: AppContext): HTMLElement {
     const teamId = myTeam.team.id;
 
     const results = h('div', { class: 'col gap-1', style: { marginTop: '6px' } });
-    let debounce: ReturnType<typeof setTimeout> | null = null;
 
     const field = Field('Inviter un joueur (pseudo)', {
       placeholder: 'Tape un pseudo…',
       oninput: (e: Event) => {
         const q = (e.target as HTMLInputElement).value.trim();
-        if (debounce) clearTimeout(debounce);
+        if (inviteDebounceRef.current) clearTimeout(inviteDebounceRef.current);
         if (q.length < 1) { clear(results); return; }
-        debounce = setTimeout(async () => {
+        inviteDebounceRef.current = setTimeout(async () => {
           try {
             const users = await teamService.searchUsers(q);
             clear(results);
@@ -173,7 +174,11 @@ export function InvitationsScreen(ctx: AppContext): HTMLElement {
     tabsRow,
     inviteBox,
     list);
-  // Nettoyage de l'abonnement quand l'écran est retiré du DOM.
-  (root as HTMLElement & { _cleanup?: () => void })._cleanup = off;
+  // Nettoyage de l'abonnement bus quand l'écran est retiré du DOM,
+  // et annulation du debounce timer de recherche s'il est en cours.
+  (root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    off();
+    if (inviteDebounceRef.current) { clearTimeout(inviteDebounceRef.current); inviteDebounceRef.current = null; }
+  };
   return root;
 }

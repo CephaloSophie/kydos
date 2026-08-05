@@ -13,6 +13,7 @@ import { formatPromoCode, digitsOnly, isCompleteCode } from '../../services/prom
 import { VIP_PLANS, type VipPlan } from '../../services/ads';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
+import { notifyWalletChanged, notifyVipChanged } from '../components/TopBar';
 
 const KIND_LABELS: Record<ServerWalletTransaction['kind'], string> = {
   daily: 'Récompense quotidienne',
@@ -56,22 +57,28 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
   const historyEl = h('div', { class: 'col gap-2', style: { marginTop: '12px' } }, h('div', { class: 'text-mute', style: { fontSize: '11px' } }, '…'));
 
   async function refresh() {
-    const w = await readWallet();
-    balanceEl.textContent = `◆ ${w.balance.toLocaleString('fr-FR')}`;
-    dailyStateEl.textContent = w.canClaim
-      ? 'Votre récompense quotidienne de 500 ◆ est disponible.'
-      : 'Récompense déjà réclamée aujourd\'hui — revenez demain.';
-    (claimBtn as HTMLButtonElement).disabled = !w.canClaim;
-    await refreshVip();
-    // Journal des transactions (si serveur disponible).
+    // Un SEUL call /wallet ici (via api.wallet) — on ne repasse pas par
+    // readWallet() en plus. La déduplication de l'ApiClient garantit qu'un
+    // appel concurrent depuis le TopBar partagera cette même requête.
+    let balance: number = 0, canClaim: boolean = false;
+    let transactions: ServerWalletTransaction[] = [];
     if (api.isAuthenticated()) {
       try {
         const full = await api.wallet();
-        renderHistory(full.transactions);
-      } catch { renderHistory([]); }
+        balance = full.balance; canClaim = full.canClaimToday; transactions = full.transactions;
+      } catch {
+        const w = await readWallet(); balance = w.balance; canClaim = w.canClaim;
+      }
     } else {
-      renderHistory([]);
+      const w = await readWallet(); balance = w.balance; canClaim = w.canClaim;
     }
+    balanceEl.textContent = `◆ ${balance.toLocaleString('fr-FR')}`;
+    dailyStateEl.textContent = canClaim
+      ? 'Votre récompense quotidienne de 500 ◆ est disponible.'
+      : 'Récompense déjà réclamée aujourd\'hui — revenez demain.';
+    (claimBtn as HTMLButtonElement).disabled = !canClaim;
+    await refreshVip();
+    renderHistory(transactions);
   }
 
   function renderHistory(txs: ServerWalletTransaction[]) {
@@ -113,6 +120,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
     try {
       const r = await api.redeemPromo(code);
       promoInput.value = '';
+      notifyWalletChanged();
       await refresh();
       toast(`+${r.tokens.toLocaleString('fr-FR')} \u25c6 cr\u00e9dit\u00e9s !`, 'success');
     } catch (e) {
@@ -123,6 +131,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
 
   async function onWatchReward() {
     const r = await ads.watchRewarded();
+    if (r.rewarded) notifyWalletChanged();
     await refresh();
     if (r.rewarded) { toast(`+${r.amount} \u25c6 cr\u00e9dit\u00e9s !`, 'success'); return; }
     // Message adapté à la raison du refus (aide au diagnostic).
@@ -145,9 +154,17 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
         Button('Annuler', { variant: 'secondary', size: 'sm', onClick: () => dlg.remove() }),
         Button('Confirmer', { size: 'sm', onClick: async () => {
           dlg.remove();
-          await vip.purchase(plan.id);
-          await refresh();
-          toast(`\u2b50 Vous \u00eates VIP pour ${plan.label} !`, 'success');
+          try {
+            await vip.purchase(plan.id);
+            notifyWalletChanged();
+            notifyVipChanged();
+            await refresh();
+            toast(`\u2b50 Vous \u00eates VIP pour ${plan.label} !`, 'success');
+          } catch (e) {
+            const msg = (e as Error).message ?? 'Achat impossible';
+            // Message serveur typique : « solde insuffisant » → clair.
+            toast(msg.includes('solde') ? 'Solde insuffisant.' : `Achat impossible : ${msg}`, 'error');
+          }
         } }),
       ],
       onClose: () => dlg.remove(),
@@ -157,6 +174,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
 
   async function onClaim() {
     const res = await claimDaily();
+    if (res.claimed) notifyWalletChanged();
     await refresh();
     if (res.claimed) {
       const dlg = Dialog({

@@ -238,7 +238,16 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     soundService.playMelodyForTable(melodyKind);
   }, { once: true });
   soundService.preloadEffects();
-  (root as HTMLElement & { _cleanup?: () => void })._cleanup = () => soundService.stopMelody();
+  // Cleanup complet au démontage : coupe la boucle locale, la connexion en
+  // ligne, arrête la mélodie et démonte le React root de PixiTable. Le router
+  // (main.tsx) appelle ce cleanup avant de remplacer l'écran → aucun socket
+  // ni timer ne survit à la sortie de la table.
+  (root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    soundService.stopMelody();
+    loop?.dispose();
+    onlineSocket.disconnect();
+    reactRoot?.unmount();
+  };
 
   // --- Moteur + boucle (démarrés après chargement des robots) ---------------
   let saved = false;

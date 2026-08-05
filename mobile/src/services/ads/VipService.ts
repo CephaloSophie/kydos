@@ -48,21 +48,35 @@ export class VipService {
   #api: VipApi;
   #spend: SpendTokens | null;
   #cache: VipStatus | null = null;
+  /** Requête serveur en cours — évite les doubles appels concurrents (déduplication). */
+  #inflight: Promise<VipStatus> | null = null;
 
   constructor(api: VipApi, spend?: SpendTokens) { this.#api = api; this.#spend = spend ?? null; }
 
-  /** Statut courant (serveur si possible, sinon local). Mis en cache. */
+  /**
+   * Statut courant (serveur si possible, sinon local). Mis en cache.
+   * Déduplication : plusieurs appels concurrents (TopBar + AdManager par ex.)
+   * partagent la MÊME requête réseau au lieu d'en déclencher plusieurs.
+   */
   async status(): Promise<VipStatus> {
-    if (this.#api.isAuthenticated() && this.#api.getVipStatus) {
-      try {
-        const r = await this.#api.getVipStatus();
-        this.#cache = { isVip: this.#active(r.expiresAt), expiresAt: r.expiresAt, source: 'server' };
-        return this.#cache;
-      } catch { /* retombe en local */ }
-    }
-    const local = localStorage.getItem(STORAGE_KEY);
-    this.#cache = { isVip: this.#active(local), expiresAt: local, source: 'local' };
-    return this.#cache;
+    // Un appel est déjà en cours → on partage sa promesse.
+    if (this.#inflight) return this.#inflight;
+
+    const run = async (): Promise<VipStatus> => {
+      if (this.#api.isAuthenticated() && this.#api.getVipStatus) {
+        try {
+          const r = await this.#api.getVipStatus();
+          this.#cache = { isVip: this.#active(r.expiresAt), expiresAt: r.expiresAt, source: 'server' };
+          return this.#cache;
+        } catch { /* retombe en local */ }
+      }
+      const local = localStorage.getItem(STORAGE_KEY);
+      this.#cache = { isVip: this.#active(local), expiresAt: local, source: 'local' };
+      return this.#cache;
+    };
+
+    this.#inflight = run().finally(() => { this.#inflight = null; });
+    return this.#inflight;
   }
 
   /** Réponse SYNCHRONE depuis le cache (pour les décisions d'affichage rapides). */
@@ -72,29 +86,31 @@ export class VipService {
   }
 
   /**
-   * Achète (ou prolonge) le statut VIP selon un plan. **Débite les jetons** puis
-   * étend la période. Serveur-premier ; en local on prolonge à partir de la date
-   * d'expiration courante si encore valide (les achats se CUMULENT).
+   * Achète (ou prolonge) le statut VIP selon un plan.
+   *
+   * Authentifié : le SERVEUR est l'unique autorité. Il débite atomiquement
+   *  (transaction `vip`) et étend la période. Toute erreur serveur (solde
+   *  insuffisant, réseau…) est REMONTÉE — pas de fallback local qui
+   *  invaliderait la source de vérité côté back.
+   *
+   * Hors-ligne (démo web) : débit du localStorage + prolongation cumulative.
+   *  Utile pour la démo sans backend. Jamais utilisé quand un utilisateur
+   *  est connecté.
    */
   async purchase(planId: VipPlan['id']): Promise<VipStatus> {
     const plan = VIP_PLANS.find((p) => p.id === planId);
     if (!plan) throw new Error(`plan VIP inconnu : ${planId}`);
 
     if (this.#api.isAuthenticated() && this.#api.purchaseVip) {
-      // Serveur : l'endpoint fait tout (débit + validité + réponse).
-      try {
-        const r = await this.#api.purchaseVip(planId);
-        this.#cache = { isVip: this.#active(r.expiresAt), expiresAt: r.expiresAt, source: 'server' };
-        return this.#cache;
-      } catch { /* retombe en local */ }
+      // Serveur = source de vérité. Toute erreur remonte à l'appelant.
+      const r = await this.#api.purchaseVip(planId);
+      this.#cache = { isVip: this.#active(r.expiresAt), expiresAt: r.expiresAt, source: 'server' };
+      return this.#cache;
     }
 
-    // Local : DÉBIT du porte-monnaie AVANT tout — si le solde est insuffisant,
-    // on ne prolonge rien (comportement cohérent avec l'attente utilisateur).
+    // Mode démo hors-ligne uniquement.
     if (!this.#spend) throw new Error('Débit de jetons indisponible.');
     await this.#spend(plan.costTokens, 'vip');
-
-    // Prolongation cumulative depuis maintenant OU depuis l'expiration active.
     const current = localStorage.getItem(STORAGE_KEY);
     const base = this.#active(current) && current ? new Date(current) : new Date();
     base.setDate(base.getDate() + plan.durationDays);

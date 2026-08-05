@@ -149,5 +149,11 @@ export function ReplayScreen(ctx: AppContext): HTMLElement {
     tick();
   }).catch((e) => { statusChip.textContent = `✕ ${(e as Error).message}`; });
 
+  // Cleanup automatique au démontage : coupe le timer du replay et démonte
+  // le React root — évite les rendus fantômes après navigation.
+  (root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    reactRoot?.unmount();
+  };
   return root;
 }

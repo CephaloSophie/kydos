@@ -12,18 +12,28 @@ import { claimDailyTokens as localClaim, tokenBalance as localBalance, canClaimT
 
 export interface WalletState { balance: number; canClaim: boolean; source: 'server' | 'local' }
 
+/** Requête réseau en cours — déduplique les appels concurrents. */
+let inflightRead: Promise<WalletState> | null = null;
+
 /**
  * Récupère le solde et le statut de réclamation quotidien.
  * Essaie le serveur d'abord ; retombe en local en cas d'erreur (offline).
+ * **Déduplication** : plusieurs appels concurrents partagent la même requête
+ * réseau — évite les doublons quand TopBar et un écran demandent en parallèle.
  */
 export async function readWallet(): Promise<WalletState> {
   if (!api.isAuthenticated()) return { balance: localBalance(), canClaim: localCan(), source: 'local' };
-  try {
-    const w: ServerWallet = await api.wallet();
-    return { balance: w.balance, canClaim: w.canClaimToday, source: 'server' };
-  } catch {
-    return { balance: localBalance(), canClaim: localCan(), source: 'local' };
-  }
+  if (inflightRead) return inflightRead;
+  const run = async (): Promise<WalletState> => {
+    try {
+      const w: ServerWallet = await api.wallet();
+      return { balance: w.balance, canClaim: w.canClaimToday, source: 'server' };
+    } catch {
+      return { balance: localBalance(), canClaim: localCan(), source: 'local' };
+    }
+  };
+  inflightRead = run().finally(() => { inflightRead = null; });
+  return inflightRead;
 }
 
 /**

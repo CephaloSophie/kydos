@@ -34,8 +34,19 @@ export function openProfileMenu(anchor: HTMLElement, items: ProfileMenuItem[]): 
       onClick: () => { close(); it.onClick(); },
     }, icon(it.icon, 20), h('span', {}, it.label))));
 
-  const close = () => { veil.remove(); sheet.remove(); };
+  // Fermeture : (1) clic extérieur, (2) touche Escape, (3) navigation par hash.
+  // Les listeners globaux sont impérativement retirés dans `close()` — pas de
+  // fuite même si l'utilisateur navigue autrement pendant que le menu est ouvert.
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+  const onHash = () => close();
+  const close = () => {
+    veil.remove(); sheet.remove();
+    document.removeEventListener('keydown', onKey);
+    window.removeEventListener('hashchange', onHash);
+  };
   veil.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  window.addEventListener('hashchange', onHash);
 
   document.body.append(veil, sheet);
 
