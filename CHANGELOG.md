@@ -2,7 +2,100 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v12.4.4 — Déduplication in-flight des GET + optim WalletScreen/RobotsScreen (version actuelle)
+## v13.0.1 — Édition de robot bout-en-bout (KB-301 résolue) (version actuelle)
+
+Complétion d'une défaillance de fond ouverte depuis plusieurs versions : le
+serveur exposait déjà `PUT /robots/:id` mais le mobile ne permettait pas
+d'éditer un robot. C'est désormais complet.
+
+### Ce qui est ajouté (KB-431 / KB-301)
+- **ApiClient.updateRobot(id, body)** → `PUT /robots/:id`.
+- **RobotRepository.update** + interface `IRobotRepository.update`.
+- **RobotService.update** (émet `robots:changed`).
+- **CreateRobotScreen** bascule en **mode édition** quand le hash porte `?id=` :
+  pré-remplit le brouillon depuis le cache de session (nom, avatar, curseurs),
+  titre et bouton adaptés (« Modifier un robot » / « Enregistrer les
+  modifications »).
+- **RobotsScreen** : bouton **Modifier** sur chaque carte → `create?id=<id>`.
+- **Refresh du cache session** après édition (l'écurie et la table solo voient
+  le robot mis à jour immédiatement).
+- Création ET édition **bloquent proprement hors-ligne** (le serveur persiste
+  la fiche) avec un message clair.
+
+### Vérification
+- **188 tests mobiles verts** (+1 : édition via PUT /robots/:id).
+- **TNR 14/14 · 428 tests verts.** Typecheck 3 workspaces OK.
+- fakeServer étendu (PUT + DELETE /robots/:id).
+
+## v13.0.0 — Cache de session : chargement unique, mode hors-ligne, page waiting
+
+Refonte structurante du chargement des données. L'app charge profil + wallet +
+VIP + robots UNE SEULE FOIS au lancement, les garde en mémoire et les persiste.
+Les écrans lisent depuis le cache (aucun aller-retour serveur au clic), et le
+mode solo devient jouable hors-ligne.
+
+### SessionCache — le cœur (KB-425)
+`data/SessionCache.ts` : le serveur reste l'AUTORITÉ, le cache est un miroir
+accéléré.
+- **Getters synchrones** : profil, wallet, VIP, robots, isVip, canPlayOffline —
+  zéro appel réseau.
+- **loadAll()** au bootstrap ; **refresh ciblés** (refreshWallet/Vip/Profile/
+  Robots) appelés SEULEMENT quand une donnée change réellement.
+- **Résilience hors-ligne** : si un refresh échoue, on garde la dernière valeur
+  connue persistée → le mode solo continue.
+- **Événements bus** (session:wallet/vip/profile/robots) : les abonnés (TopBar)
+  se mettent à jour sans polling.
+
+### persistentStorage — cross-platform (KB-426)
+`data/persistentStorage.ts` : abstraction sur localStorage, identique web +
+WebView Capacitor APK (localStorage y est persistant). Enveloppe versionnée
+`{v,at,data}` : ignore un schéma incompatible, TTL possible, namespace
+`kydos.cache.*`. `clear()` n'efface que le cache, jamais le jeton. Point
+d'abstraction unique pour un futur stockage chiffré natif.
+
+### Bootstrap + preload sons (KB-427)
+`data/bootstrap.ts` : charge session + tous les sons pendant la page waiting,
+tolérant à l'échec réseau. `SoundService.preloadAll()` précharge effets + toutes
+les mélodies en une passe. `main.tsx` : séquence `boot()` (waiting visible →
+chargement → router). Login : charge la session derrière un waiting overlay.
+
+### Waiting réutilisable (KB-428)
+`components/Waiting.ts` : les 4 robots dansants de #boot extraits en composant.
+`Waiting({label,overlay})` + `showWaitingOverlay()`. Écran de chargement par
+défaut de toute l'application.
+
+### TopBar + écrans branchés sur le cache (KB-429)
+- **TopBar réécrit** : lit tout depuis le cache (synchrone), s'abonne à
+  session:*, ZÉRO appel réseau au montage/clic. Live-chip depuis
+  session.profile.activeSession.
+- **WalletScreen** : synchronise le cache (applyWallet) + refresh ciblés.
+- **RobotsScreen** : affiche depuis session.robots (instantané + hors-ligne),
+  rafraîchit en fond.
+- **TableScreen** : jeu solo depuis session.robots — HORS-LIGNE OK.
+- **CreateRobotScreen** : bloque proprement hors-ligne + refreshRobots après
+  création.
+
+### Règles hors-ligne
+| Fonctionnalité | Hors-ligne |
+|---|---|
+| Jouer en solo / entraînement | ✅ |
+| Voir écurie / solde / VIP | ✅ |
+| Créer un robot | ❌ (serveur requis) |
+| Jouer en ligne | ❌ (serveur requis) |
+
+### Tests & vérification (KB-430)
+- **15 nouveaux tests** : SessionCache (9), persistentStorage (6).
+- **3 tests e2e adaptés** (mount hydrate la session comme le bootstrap réel).
+- **187 tests mobiles verts**, **TNR 14/14 · 427 tests verts**, build mobile OK,
+  typecheck 3 workspaces OK. **Zéro régression.**
+- `docs/session-cache.md` : architecture complète.
+
+### Sécurité
+Le cache ne contient que des données déjà connues du serveur. Aucune décision
+sensible (débit, achat) ne s'appuie sur le cache : le serveur reste l'autorité,
+toute erreur remonte. Le jeton garde sa clé propre, hors du namespace cache.
+
+## v12.4.4 — Déduplication in-flight des GET + optim WalletScreen/RobotsScreen
 
 Suite du travail de fond sur les appels API superflus. Fix ARCHITECTURAL au
 niveau de l'ApiClient : impact système sur toute l'app.

@@ -88,6 +88,7 @@ export class ApiClient {
   // --- Robots -------------------------------------------------------------
   listRobots() { return this.call<{ robots: ServerRobot[] }>('/robots'); }
   createRobot(body: unknown) { return this.call<{ robot: { id: string; name: string } }>('/robots', { method: 'POST', body: JSON.stringify(body) }); }
+  updateRobot(id: string, body: unknown) { return this.call<{ robot: { id: string; name: string } }>(`/robots/${id}`, { method: 'PUT', body: JSON.stringify(body) }); }
   deleteRobot(id: string) { return this.call<{ ok: boolean }>(`/robots/${id}`, { method: 'DELETE' }); }
 
   // --- Games / replays ----------------------------------------------------

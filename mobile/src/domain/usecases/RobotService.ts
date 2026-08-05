@@ -27,6 +27,13 @@ export class RobotService {
     return robot;
   }
 
+  /** Met à jour un robot existant (nom, avatar, curseurs), notifie le bus. */
+  async update(id: string, draft: RobotDraft): Promise<Robot> {
+    const robot = await this.#repo.update(id, draft);
+    this.#bus.emit('robots:changed');
+    return robot;
+  }
+
   async remove(id: string): Promise<void> {
     await this.#repo.remove(id);
     this.#bus.emit('robots:changed');

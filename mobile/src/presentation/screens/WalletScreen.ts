@@ -13,7 +13,6 @@ import { formatPromoCode, digitsOnly, isCompleteCode } from '../../services/prom
 import { VIP_PLANS, type VipPlan } from '../../services/ads';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
-import { notifyWalletChanged, notifyVipChanged } from '../components/TopBar';
 
 const KIND_LABELS: Record<ServerWalletTransaction['kind'], string> = {
   daily: 'Récompense quotidienne',
@@ -32,7 +31,7 @@ const KIND_COLORS: Record<ServerWalletTransaction['kind'], string> = {
 };
 
 export function WalletScreen(ctx: AppContext): HTMLElement {
-  const { router, ads, vip } = ctx;
+  const { router, ads, vip, session } = ctx;
 
   const balanceEl = h('div', { class: 'title', style: { fontSize: '48px', color: 'var(--c-gold)', margin: '4px 0' } }, '◆ …');
   const dailyStateEl = h('div', { class: 'text-mute', style: { fontSize: '12px', marginTop: '4px' } }, 'Chargement…');
@@ -66,6 +65,8 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
       try {
         const full = await api.wallet();
         balance = full.balance; canClaim = full.canClaimToday; transactions = full.transactions;
+        // Synchronise le cache de session → le TopBar (abonné) se met à jour.
+        session.applyWallet(balance, canClaim);
       } catch {
         const w = await readWallet(); balance = w.balance; canClaim = w.canClaim;
       }
@@ -120,7 +121,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
     try {
       const r = await api.redeemPromo(code);
       promoInput.value = '';
-      notifyWalletChanged();
+      await session.refreshWallet();
       await refresh();
       toast(`+${r.tokens.toLocaleString('fr-FR')} \u25c6 cr\u00e9dit\u00e9s !`, 'success');
     } catch (e) {
@@ -131,7 +132,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
 
   async function onWatchReward() {
     const r = await ads.watchRewarded();
-    if (r.rewarded) notifyWalletChanged();
+    if (r.rewarded) await session.refreshWallet();
     await refresh();
     if (r.rewarded) { toast(`+${r.amount} \u25c6 cr\u00e9dit\u00e9s !`, 'success'); return; }
     // Message adapté à la raison du refus (aide au diagnostic).
@@ -156,8 +157,8 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
           dlg.remove();
           try {
             await vip.purchase(plan.id);
-            notifyWalletChanged();
-            notifyVipChanged();
+            await session.refreshWallet();
+            await session.refreshVip();
             await refresh();
             toast(`\u2b50 Vous \u00eates VIP pour ${plan.label} !`, 'success');
           } catch (e) {
@@ -174,7 +175,7 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
 
   async function onClaim() {
     const res = await claimDaily();
-    if (res.claimed) notifyWalletChanged();
+    if (res.claimed) await session.refreshWallet();
     await refresh();
     if (res.claimed) {
       const dlg = Dialog({

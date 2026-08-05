@@ -9,17 +9,20 @@ import { Avatar, Badge, Button, Dialog } from '../components/ui';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
 import type { Robot } from '../../domain/entities/Robot';
+import { toDomain } from '../../data/RobotRepository';
 
 export function RobotsScreen(ctx: AppContext): HTMLElement {
   const { router, robotService, api, ads } = ctx;
 
   const robotCard = (r: Robot) => h('div', { class: 'card' },
-    h('div', { class: 'row gap-3', style: { marginBottom: '12px' } },
-      Avatar({ accent: r.accent, size: 40 }),
-      h('div', {},
-        h('div', { class: 'title', style: { fontSize: '15px' } }, r.name),
-        h('div', { class: 'mono', style: { fontSize: '9px', color: r.status === 'playing' ? 'var(--c-success)' : 'var(--c-text-mute)' } },
-          r.status === 'playing' ? '● en partie' : '○ repos'))),
+    h('div', { class: 'between', style: { marginBottom: '12px' } },
+      h('div', { class: 'row gap-3' },
+        Avatar({ accent: r.accent, size: 40 }),
+        h('div', {},
+          h('div', { class: 'title', style: { fontSize: '15px' } }, r.name),
+          h('div', { class: 'mono', style: { fontSize: '9px', color: r.status === 'playing' ? 'var(--c-success)' : 'var(--c-text-mute)' } },
+            r.status === 'playing' ? '● en partie' : '○ repos'))),
+      Button('Modifier', { variant: 'ghost', size: 'sm', onClick: () => router.go(`create?id=${r.id}`) })),
     h('div', { class: 'row gap-2 wrap', style: { marginBottom: '12px' } },
       Badge(r.personality, r.personality === 'Offensif' ? 'gold' : 'level'),
       Badge('ELO ' + r.elo)),
@@ -38,18 +41,31 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
   const grid = h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' } },
     h('div', { class: 'text-mute', style: { fontSize: '12px', gridColumn: '1 / -1', padding: '10px 0' } }, 'Chargement de votre écurie…'));
 
-  // Cache local : un SEUL appel API par visite. Le dialogue « match entre
-  // robots » réutilise cette liste au lieu de refetcher inutilement.
-  let robotsCache: Robot[] | null = null;
-  const getRobots = async (): Promise<Robot[]> => {
-    if (robotsCache) return robotsCache;
-    robotsCache = await robotService.list();
-    return robotsCache;
+  // Source : le cache de session (chargé au bootstrap, persisté, dispo
+  // hors-ligne). Affichage INSTANTANÉ depuis le cache, puis rafraîchissement
+  // silencieux en arrière-plan si le réseau est là. Le dialogue « match entre
+  // robots » réutilise la même liste — aucun refetch superflu.
+  const paintGrid = (robots: Robot[]) => {
+    clear(grid);
+    if (robots.length === 0) {
+      grid.append(h('div', { class: 'text-mute', style: { fontSize: '12px', gridColumn: '1 / -1' } }, 'Aucun robot pour l\u2019instant. Cr\u00e9ez-en un pour commencer !'));
+    } else {
+      robots.forEach((r) => grid.append(robotCard(r)));
+    }
+    grid.append(addCard);
   };
 
-  getRobots()
-    .then((robots) => { clear(grid); robots.forEach((r) => grid.append(robotCard(r))); grid.append(addCard); })
-    .catch((e) => { clear(grid); grid.append(h('div', { class: 'text-mute', style: { fontSize: '12px', gridColumn: '1 / -1' } }, `Impossible de charger l'écurie : ${(e as Error).message}`), addCard); });
+  const currentRobots = (): Robot[] => ctx.session.robots.map(toDomain);
+
+  // 1) Affichage immédiat depuis le cache (peut être vide au tout premier lancement).
+  if (ctx.session.robots.length > 0) paintGrid(currentRobots());
+
+  // 2) Rafraîchissement en arrière-plan (met à jour le cache → réaffiche).
+  ctx.session.refreshRobots()
+    .then(() => paintGrid(currentRobots()))
+    .catch(() => { if (ctx.session.robots.length === 0) paintGrid([]); });
+
+  const getRobots = async (): Promise<Robot[]> => currentRobots();
 
   /**
    * Fait s'affronter 4 robots CÔTÉ SERVEUR (aucune socket) : la partie est

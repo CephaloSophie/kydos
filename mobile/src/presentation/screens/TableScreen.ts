@@ -398,18 +398,24 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     return root;
   }
 
-  // Point d'entrée : chargement des robots, puis dialogue (sauf mode « regarder »).
-  api.listRobots().then(({ robots }) => {
-    if (watch) { buildAndStart(robots, { seats: ['auto', 'auto', 'auto', 'auto'], visibility: 'all', manches: 2 }); return; }
+  // Point d'entrée : les robots viennent du CACHE de session (chargé au
+  // bootstrap, persisté, disponible HORS-LIGNE). Le mode solo/entraînement
+  // fonctionne donc sans réseau. On ne refetch pas ici — le cache est déjà à
+  // jour (rafraîchi sur l'écran Robots ou après création).
+  const cachedRobots = ctx.session.robots;
+  if (watch) {
+    buildAndStart(cachedRobots, { seats: ['auto', 'auto', 'auto', 'auto'], visibility: 'all', manches: 2 });
+  } else if (cachedRobots.length > 0) {
     const dlg = GameSetupDialog({
-      robots: robots.map(toDomain),
-      onConfirm: (setup) => buildAndStart(robots, setup),
+      robots: cachedRobots.map(toDomain),
+      onConfirm: (setup) => buildAndStart(cachedRobots, setup),
       onCancel: () => router.go('home'),
     });
     root.append(dlg);
-  }).catch(() => {
-    // Pas de robots (offline) : on lance quand même une partie contre 3 génériques.
+  } else {
+    // Aucun robot en cache (tout premier lancement sans réseau) : partie
+    // d'entraînement contre 3 robots génériques, jouable immédiatement.
     buildAndStart([], { seats: ['me', 'auto', 'auto', 'auto'], visibility: 'none', manches: 2 });
-  });
+  }
   return root;
 }

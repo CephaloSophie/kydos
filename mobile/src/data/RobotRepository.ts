@@ -13,6 +13,7 @@ import { Robot, personalityToStrategy, strategyToPersonality, type RobotData } f
 export interface IRobotRepository {
   list(): Promise<Robot[]>;
   create(draft: RobotDraft): Promise<Robot>;
+  update(id: string, draft: RobotDraft): Promise<Robot>;
   remove(id: string): Promise<void>;
 }
 
@@ -53,6 +54,11 @@ export class RobotRepository implements IRobotRepository {
 
   async create(draft: RobotDraft): Promise<Robot> {
     const { robot } = await this.#api.createRobot(toServerBody(draft));
+    return new Robot({ id: robot.id, name: robot.name, avatarId: draft.avatarId, strategy: draft.strategy });
+  }
+
+  async update(id: string, draft: RobotDraft): Promise<Robot> {
+    const { robot } = await this.#api.updateRobot(id, toServerBody(draft));
     return new Robot({ id: robot.id, name: robot.name, avatarId: draft.avatarId, strategy: draft.strategy });
   }
 
