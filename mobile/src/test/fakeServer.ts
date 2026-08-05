@@ -103,6 +103,12 @@ export function installFakeServer(options: FakeServerOptions = {}): () => void {
       const body = JSON.parse(String(init?.body ?? '{}'));
       return json({ robot: { id: 'r_new', name: body.name ?? 'Robot' } });
     }
+    if (/^\/robots\/[^/]+$/.test(path) && method === 'PUT') {
+      const body = JSON.parse(String(init?.body ?? '{}'));
+      const id = path.split('/')[2];
+      return json({ robot: { id, name: body.name ?? 'Robot' } });
+    }
+    if (/^\/robots\/[^/]+$/.test(path) && method === 'DELETE') return json({ ok: true });
 
     // --- Games ------------------------------------------------------------
     if (path === '/games' && method === 'GET') return json({ games: FIXTURES.games, page: 1, pageSize: 15, total: FIXTURES.games.length, totalPages: 1 });

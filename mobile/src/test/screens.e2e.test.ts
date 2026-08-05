@@ -19,6 +19,7 @@ import { EventBus } from '../core/EventBus';
 import { Store } from '../core/Store';
 import { Router } from '../core/Router';
 import { api } from '../data/ApiClient';
+import { SessionCache } from '../data/SessionCache';
 import { RobotRepository } from '../data/RobotRepository';
 import { RobotService } from '../domain/usecases/RobotService';
 import { TeamService } from '../domain/usecases/TeamService';
@@ -48,6 +49,7 @@ function makeContext(): AppContext {
   const ads = new AdManager({ bus, vip, onReward: () => {}, hasClaimedDaily: () => true });
   return {
     router, store, bus, api,
+    session: new SessionCache(api, bus),
     robotService: new RobotService(new RobotRepository(api), bus),
     teamService: new TeamService(api, bus),
     t: makeT(() => store.state.lang),
@@ -57,7 +59,11 @@ function makeContext(): AppContext {
 
 /** Monte un écran dans le document et laisse les promesses se résoudre. */
 async function mount(factory: (ctx: AppContext) => HTMLElement): Promise<HTMLElement> {
-  const el = factory(makeContext());
+  const ctx = makeContext();
+  // Reproduit le bootstrap réel : la session est chargée AVANT que les écrans
+  // ne s'affichent (le TopBar et les écrans lisent alors depuis le cache).
+  await ctx.session.loadAll();
+  const el = factory(ctx);
   document.body.append(el);
   // Deux tours de boucle : fetch (microtask) puis rendu conditionnel.
   await new Promise((r) => setTimeout(r, 0));
@@ -134,6 +140,26 @@ describe('Écran · Éditeur de robot', () => {
     createBtn.click();
     await new Promise((r) => setTimeout(r, 0));
     expect(calls.some((c) => c.path === '/robots' && c.method === 'POST')).toBe(true);
+  });
+
+  it('édite un robot existant via PUT /robots/:id quand le hash porte ?id=', async () => {
+    // Le premier robot de l'écurie fixture sert de cible d'édition.
+    const ctx = makeContext();
+    await ctx.session.loadAll();
+    const target = ctx.session.robots[0];
+    location.hash = `#/create?id=${target.id}`;
+    const el = CreateRobotScreen(ctx);
+    document.body.append(el);
+    await new Promise((r) => setTimeout(r, 0));
+    // Le titre reflète le mode édition.
+    expect(el.textContent).toContain('Modifier un robot');
+    const saveBtn = Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Enregistrer les modifications')!;
+    expect(saveBtn).toBeTruthy();
+    saveBtn.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls.some((c) => new RegExp(`^/robots/${target.id}$`).test(c.path) && c.method === 'PUT')).toBe(true);
+    location.hash = '#/home';
   });
 });
 

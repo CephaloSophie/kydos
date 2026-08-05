@@ -85,6 +85,24 @@ export class SoundService {
     for (const file of Object.values(EFFECT_FILES)) void this.#load(file);
   }
 
+  /**
+   * Précharge TOUS les sons (effets + mélodies de toutes les tables) en une
+   * passe. Appelé une fois à la première connexion (bootstrap, page waiting)
+   * pour que le jeu — y compris hors-ligne ensuite — dispose de tous ses sons
+   * sans latence. Retourne une promesse résolue quand tout est tenté (les
+   * fichiers absents sont silencieusement ignorés).
+   */
+  async preloadAll(): Promise<void> {
+    const files = new Set<string>([
+      ...Object.values(EFFECT_FILES),
+      ...Object.values(MELODY_BY_TABLE_KIND),
+    ]);
+    await Promise.allSettled([...files].map((f) => this.#load(f)));
+  }
+
+  /** Nombre de buffers audio actuellement en cache (debug / tests). */
+  get cachedCount(): number { return this.#buffers.size; }
+
   /** Joue un effet sonore (one-shot, bus « effets »). */
   playEffect(effect: SoundEffect): void {
     const ctx = this.#ensureContext();

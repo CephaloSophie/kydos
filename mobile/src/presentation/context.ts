@@ -8,6 +8,7 @@ import type { Router } from '../core/Router';
 import type { Store } from '../core/Store';
 import type { EventBus } from '../core/EventBus';
 import type { ApiClient } from '../data/ApiClient';
+import type { SessionCache } from '../data/SessionCache';
 import type { RobotService } from '../domain/usecases/RobotService';
 import type { TeamService } from '../domain/usecases/TeamService';
 import type { Translate, Lang } from '../data/i18n';
@@ -20,6 +21,8 @@ export interface AppContext {
   store: Store<AppState>;
   bus: EventBus;
   api: ApiClient;
+  /** Cache de session (profil, wallet, VIP, robots) — chargé une fois, persisté. */
+  session: SessionCache;
   robotService: RobotService;
   teamService: TeamService;
   t: Translate;

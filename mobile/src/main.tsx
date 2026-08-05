@@ -13,6 +13,8 @@ import { EventBus } from './core/EventBus';
 import { Store } from './core/Store';
 import { Router } from './core/Router';
 import { api } from './data/ApiClient';
+import { SessionCache } from './data/SessionCache';
+import { runBootstrap } from './data/bootstrap';
 import { RobotRepository } from './data/RobotRepository';
 import { RobotService } from './domain/usecases/RobotService';
 import { TeamService } from './domain/usecases/TeamService';
@@ -20,6 +22,7 @@ import { makeT } from './data/i18n';
 import { AdManager, VipService } from './services/ads';
 import { creditReward, spendTokens } from './services/wallet';
 import { readWallet } from './services/wallet';
+import { soundService } from './services/sound/SoundService';
 import { clear } from './core/dom';
 import type { AppContext, AppState } from './presentation/context';
 import { LoginScreen } from './presentation/screens/LoginScreen';
@@ -46,6 +49,10 @@ const robotRepository = new RobotRepository(api);
 const robotService = new RobotService(robotRepository, bus);
 const teamService = new TeamService(api, bus);
 const t = makeT(() => store.state.lang);
+
+// Cache de session : profil, wallet, VIP, robots — chargé une fois au
+// bootstrap, persisté sur disque, rafraîchi seulement quand une donnée change.
+const session = new SessionCache(api, bus);
 
 // --- 2b. Publicité + VIP ----------------------------------------------------
 // VIP masque toute publicité ; AdManager orchestre les emplacements. Le crédit
@@ -76,7 +83,7 @@ const router = new Router((name, route) => {
     .catch((e) => viewport.append(Object.assign(document.createElement('div'), { textContent: `Erreur: ${(e as Error).message}`, className: 'text-mute' })));
 }, () => api.isAuthenticated());
 
-const ctx: AppContext = { router, store, bus, api, robotService, teamService, t, ads, vip };
+const ctx: AppContext = { router, store, bus, api, session, robotService, teamService, t, ads, vip };
 
 // Initialise la publicité en arrière-plan (SDK natif + préchargements).
 void ads.initialize();
@@ -102,14 +109,30 @@ router
   .register('styleguide', StyleguideScreen, { title: 'Design system' });
 
 if (!location.hash) location.hash = api.isAuthenticated() ? '#/home' : '#/login';
-router.start();
 
-// Retirer l'écran d'initialisation (les 4 robots) dès que l'app est montée.
-// Court délai pour laisser le premier rendu s'afficher, puis fondu de sortie.
-requestAnimationFrame(() => {
-  const boot = document.getElementById('boot');
-  if (boot) { boot.classList.add('hidden'); setTimeout(() => boot.remove(), 550); }
-});
+/**
+ * Séquence de démarrage :
+ *  1. La page « waiting » (#boot) reste visible.
+ *  2. On charge la session (profil/wallet/VIP/robots) + tous les sons.
+ *  3. On démarre le routeur, puis on retire la page waiting en fondu.
+ *
+ * Si l'utilisateur n'est pas authentifié, le bootstrap est quasi instantané
+ * (juste le préchargement des sons) et on file au login.
+ */
+async function boot(): Promise<void> {
+  try {
+    await runBootstrap({ api, session, sound: soundService });
+  } catch { /* le bootstrap ne lève jamais, mais ceinture + bretelles */ }
+
+  router.start();
+
+  // Retirer l'écran d'initialisation (les 4 robots) une fois l'app montée.
+  requestAnimationFrame(() => {
+    const bootEl = document.getElementById('boot');
+    if (bootEl) { bootEl.classList.add('hidden'); setTimeout(() => bootEl.remove(), 550); }
+  });
+}
+void boot();
 
 // Exposition pour intégration externe (montage du composant Table réutilisable).
 (window as unknown as { KydosBelote: unknown }).KydosBelote = { router, robotService, teamService, store, bus, api };

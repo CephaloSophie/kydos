@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "12.4.4",
-    "generatedAt": "2026-08-05T09:00:00.000Z",
+    "currentVersion": "13.0.1",
+    "generatedAt": "2026-08-05T12:30:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -4095,9 +4095,9 @@
       "area": "server",
       "module": "robot",
       "type": "feature",
-      "status": "pending",
+      "status": "tested",
       "priority": "P1",
-      "version": "11.8.0",
+      "version": "13.0.1",
       "estimate": "4h",
       "spec": "AUDIT-3AGENTS",
       "techno": "Node/Express/Mongo",
@@ -4116,13 +4116,19 @@
         "La personnalité éditée est persistée et reflétée"
       ],
       "createdAt": "2026-07-27T02:00:00.000Z",
-      "updatedAt": "2026-07-27T02:00:00.000Z",
+      "updatedAt": "2026-08-05T12:30:00.000Z",
       "history": [
         {
           "at": "2026-07-27T02:00:00.000Z",
           "status": "pending",
           "by": "audit-3agents",
           "note": "Audit : complète le CRUD robot (create/delete déjà là)."
+        },
+        {
+          "at": "2026-08-05T12:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Édition robot complète : ApiClient.updateRobot (PUT), RobotRepository.update, RobotService.update, CreateRobotScreen mode édition via ?id=, bouton Modifier sur les cartes, refresh cache session. Test PUT vert."
         }
       ],
       "logs": []
@@ -6125,6 +6131,257 @@
           "status": "tested",
           "by": "claude",
           "note": "Dédup au niveau ApiClient : impact système sur toute l'app."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-425",
+      "title": "SessionCache : chargement unique profil/wallet/VIP/robots persisté",
+      "module": "session",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "1 j",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 8,
+      "duration": "1 j",
+      "description": "Nouveau data/SessionCache.ts : charge profil+wallet+VIP+robots UNE fois au bootstrap, garde en mémoire, persiste. Getters synchrones (zéro appel réseau au clic). Rafraîchissements CIBLÉS (refreshWallet/refreshVip/refreshProfile/refreshRobots) appelés seulement quand une donnée change. Résilience hors-ligne : garde la dernière valeur connue si le réseau tombe. Événements bus session:* pour rafraîchir les abonnés sans polling.",
+      "instructions": [],
+      "acceptance": [
+        "Chargement unique au bootstrap",
+        "Getters synchrones sans réseau",
+        "Refresh ciblé sur changement réel",
+        "Mode solo jouable hors-ligne",
+        "Événements session:wallet/vip/profile/robots"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Cœur de la v13 : le serveur reste l'autorité, le cache accélère."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-426",
+      "title": "persistentStorage : couche de stockage cross-platform versionnée",
+      "module": "session",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "5 h",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 5,
+      "duration": "5 h",
+      "description": "Nouveau data/persistentStorage.ts : abstraction sur localStorage, identique web + WebView Capacitor APK. Enveloppe {v,at,data} : versionnée (ignore schéma incompatible), datée (TTL possible), namespacée (kydos.cache.*). persistClearAll n'efface que le cache, pas le jeton. Point d'abstraction unique pour un futur stockage chiffré natif.",
+      "instructions": [],
+      "acceptance": [
+        "Fonctionne web + APK",
+        "Enveloppe versionnée",
+        "TTL via maxAgeMs",
+        "clear namespacé sans toucher au token",
+        "6 tests unitaires"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "localStorage EST persistant dans le WebView Capacitor."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-427",
+      "title": "Bootstrap : chargement session + preload de tous les sons",
+      "module": "session",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "Nouveau data/bootstrap.ts : orchestre le chargement initial (session + tous les sons) pendant la page waiting. Tolérant à l'échec réseau (Promise.allSettled) → démarrage hors-ligne possible dès la 2e ouverture. SoundService.preloadAll() précharge effets + toutes les mélodies de table en une passe. main.tsx : séquence boot() qui garde #boot visible, charge, puis démarre le router. LoginScreen : charge la session derrière un waiting overlay après connexion.",
+      "instructions": [],
+      "acceptance": [
+        "Session + sons chargés au lancement",
+        "Page waiting pendant le chargement",
+        "preloadAll effets + mélodies",
+        "Tolérant hors-ligne",
+        "Login charge la session avant home"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Après bootstrap : tout en mémoire, aucun refetch au montage."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-428",
+      "title": "Waiting : écran de chargement réutilisable (robots qui dansent)",
+      "module": "session",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "Nouveau presentation/components/Waiting.ts : extrait le visuel de #boot (wordmark + 4 robots dansants) en composant réutilisable. Waiting({label,overlay}) + showWaitingOverlay(label) qui retourne une fonction de fermeture. Réutilise les classes CSS de index.html pour une cohérence parfaite. Écran de chargement par défaut de l'app (login, rechargements).",
+      "instructions": [],
+      "acceptance": [
+        "Composant réutilisable partout",
+        "Même visuel que #boot",
+        "Mode overlay plein écran",
+        "showWaitingOverlay avec fermeture"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "La page waiting devient le standard de chargement."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-429",
+      "title": "TopBar + écrans branchés sur le cache (fin du spam API)",
+      "module": "session",
+      "type": "refactor",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "TopBar réécrit : lit TOUT depuis SessionCache (synchrone), s'abonne aux événements session:*, zéro appel réseau au montage/clic. Live-chip alimenté par session.profile.activeSession. WalletScreen : refresh via session + applyWallet pour synchroniser le TopBar. RobotsScreen : affiche depuis session.robots (instantané + hors-ligne), rafraîchit en fond. TableScreen : jeu solo depuis session.robots (hors-ligne OK). CreateRobotScreen : bloque hors-ligne + refreshRobots après création.",
+      "instructions": [],
+      "acceptance": [
+        "TopBar zéro appel réseau",
+        "Live-chip depuis le cache",
+        "RobotsScreen instantané + hors-ligne",
+        "TableScreen solo hors-ligne",
+        "CreateRobot refresh le cache"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Résout définitivement le spam d'API dénoncé en v12.4."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "13.0.0",
+      "createdAt": "2026-08-05T11:00:00.000Z",
+      "updatedAt": "2026-08-05T11:00:00.000Z",
+      "logs": [],
+      "id": "KB-430",
+      "title": "Tests + doc du cache de session",
+      "module": "tests",
+      "type": "test",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "cache session v13 2026-08-05",
+      "techno": "Mobile",
+      "category": "Architecture / Session",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "SessionCache.test.ts (9 tests : chargement, persistance entre instances, refresh+événements, résilience hors-ligne, clear) + persistentStorage.test.ts (6 tests : enveloppe, TTL, clear namespacé, corruption). Directive @vitest-environment happy-dom. Adaptation des 3 tests e2e impactés (mount hydrate la session comme le bootstrap réel). docs/session-cache.md complet.",
+      "instructions": [],
+      "acceptance": [
+        "15 nouveaux tests verts",
+        "3 tests e2e adaptés",
+        "TNR 14/14 (427 tests)",
+        "doc session-cache.md"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T11:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "187 tests mobiles verts, zéro régression."
+        }
+      ]
+    },
+    {
+      "id": "KB-431",
+      "title": "Édition de robot bout-en-bout (mobile) — KB-301 résolue",
+      "area": "mobile",
+      "version": "13.0.1",
+      "createdAt": "2026-08-05T12:30:00.000Z",
+      "updatedAt": "2026-08-05T12:30:00.000Z",
+      "logs": [],
+      "module": "robots",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "complétion défaillances de fond",
+      "techno": "Mobile",
+      "category": "Architecture / Robots",
+      "complexity": 3,
+      "duration": "3 h",
+      "description": "Le serveur avait déjà PUT /robots/:id mais le mobile n'exposait pas l'édition. Ajouté : ApiClient.updateRobot (PUT), RobotRepository.update + interface, RobotService.update (émet robots:changed), CreateRobotScreen bascule en mode édition quand le hash porte ?id= (pré-remplit depuis le cache session, dispo hors-ligne pour l'affichage mais PUT nécessite le réseau), bouton Modifier sur chaque carte de RobotsScreen, refresh du cache session après édition. Test e2e PUT /robots/:id vert.",
+      "instructions": [],
+      "acceptance": [
+        "PUT /robots/:id câblé mobile",
+        "Mode édition via ?id=",
+        "Pré-remplissage depuis le cache",
+        "Bouton Modifier sur les cartes",
+        "Refresh cache après édition",
+        "Bloque proprement hors-ligne"
+      ],
+      "history": [
+        {
+          "at": "2026-08-05T12:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "KB-301 (ouverte depuis plusieurs versions) enfin résolue."
         }
       ]
     }

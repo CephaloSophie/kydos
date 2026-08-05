@@ -24,7 +24,23 @@ const SLIDER_DEFS: { key: keyof RobotStrategy; label: string; fill: string }[] =
 export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   const { router, robotService } = ctx;
 
-  const draft: Draft = { name: 'Atné', avatarId: 'atne', strategy: { aggro: 62, risk: 38, bluff: 45, memoire: 78 } };
+  // Mode édition si le hash porte un ?id= : on pré-remplit le brouillon avec la
+  // fiche du robot (lue depuis le cache de session, donc dispo hors-ligne).
+  const editId = (() => {
+    const q = location.hash.split('?')[1] ?? '';
+    return new URLSearchParams(q).get('id');
+  })();
+  const editing = ctx.session.robots.find((r) => r.id === editId) ?? null;
+  const isEdit = !!editing;
+
+  // Brouillon initial : valeurs du robot édité, ou valeurs par défaut à la création.
+  const draft: Draft = isEdit
+    ? {
+        name: editing!.name,
+        avatarId: editing!.mobile?.avatarId ?? 'atne',
+        strategy: editing!.mobile?.strategy ?? { aggro: 55, risk: 45, bluff: 45, memoire: 60 },
+      }
+    : { name: 'Atné', avatarId: 'atne', strategy: { aggro: 62, risk: 38, bluff: 45, memoire: 78 } };
   const accent = () => (AVATAR_PRESETS.find((a) => a.id === draft.avatarId) || AVATAR_PRESETS[0]).accent;
 
   // --- Colonne aperçu -------------------------------------------------------
@@ -63,12 +79,26 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   });
 
   const openSuccess = async (createBtn: HTMLElement) => {
+    // Création et édition exigent le réseau (le serveur persiste la fiche).
+    if (!ctx.api.isAuthenticated()) {
+      const dlg = Dialog({ icon: '✕', title: 'Connexion requise',
+        body: `La ${isEdit ? 'modification' : 'création'} d\u2019un robot nécessite une connexion. Reconnectez-vous puis réessayez.`,
+        actions: [Button('OK', { size: 'sm', onClick: () => dlg.remove() })], onClose: () => dlg.remove() });
+      root.append(dlg);
+      return;
+    }
     createBtn.setAttribute('disabled', 'true');
     try {
-      const robot = await robotService.create(draft);
+      const robot = isEdit
+        ? await robotService.update(editing!.id, draft)
+        : await robotService.create(draft);
+      // Le robot (nouveau ou modifié) doit apparaître partout : on rafraîchit
+      // le cache de session — l'événement session:robots met à jour les écrans.
+      await ctx.session.refreshRobots();
       const dlg = Dialog({
-        title: 'Robot créé !',
-        body: h('span', {}, h('strong', { class: 'gold' }, robot.name), " rejoint votre écurie. Prêt à s'entraîner à la contrée."),
+        title: isEdit ? 'Robot mis à jour !' : 'Robot créé !',
+        body: h('span', {}, h('strong', { class: 'gold' }, robot.name),
+          isEdit ? ' a été mis à jour.' : " rejoint votre écurie. Prêt à s'entraîner à la contrée."),
         onClose: () => dlg.remove(),
         actions: [
           Button('Fermer', { variant: 'secondary', size: 'sm', onClick: () => { dlg.remove(); router.go('robots'); } }),
@@ -82,11 +112,11 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
       root.append(dlg);
     }
   };
-  const createBtn = Button('Créer le robot', { block: true, onClick: () => void openSuccess(createBtn) });
+  const createBtn = Button(isEdit ? 'Enregistrer les modifications' : 'Créer le robot', { block: true, onClick: () => void openSuccess(createBtn) });
 
   const form = h('div', { class: 'col fill', style: { minWidth: '0' } },
-    h('div', { class: 'eyebrow' }, 'ÉDITEUR DE ROBOT'),
-    h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', margin: '4px 0 16px' } }, 'Créer un robot'),
+    h('div', { class: 'eyebrow' }, isEdit ? 'MODIFIER LE ROBOT' : 'ÉDITEUR DE ROBOT'),
+    h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', margin: '4px 0 16px' } }, isEdit ? 'Modifier un robot' : 'Créer un robot'),
     h('div', { class: 'label', style: { marginBottom: '6px' } }, 'Nom du robot'),
     nameInput,
     h('div', { style: { height: '16px' } }),

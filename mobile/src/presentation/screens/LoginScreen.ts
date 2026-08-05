@@ -6,6 +6,9 @@
  * ========================================================================== */
 import { h } from '../../core/dom';
 import { Robot, Button } from '../components/ui';
+import { showWaitingOverlay } from '../components/Waiting';
+import { runBootstrap } from '../../data/bootstrap';
+import { soundService } from '../../services/sound/SoundService';
 import type { AppContext } from '../context';
 
 export function LoginScreen(ctx: AppContext): HTMLElement {
@@ -30,6 +33,11 @@ export function LoginScreen(ctx: AppContext): HTMLElement {
     try {
       const res = mode === 'login' ? await api.login(userInput.value, passInput.value) : await api.register(userInput.value, passInput.value);
       api.setToken(res.token);
+      // Charger la session (profil/wallet/VIP/robots) + sons AVANT d'entrer,
+      // derrière la page waiting — l'accueil s'affiche alors déjà peuplé.
+      const hide = showWaitingOverlay('chargement de votre partie');
+      try { await runBootstrap({ api, session: ctx.session, sound: soundService }); }
+      finally { hide(); }
       router.go('home');
     } catch (e) {
       errEl.textContent = (e as Error).message;
