@@ -97,23 +97,3 @@ ul { list-style: none; padding: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
-
-/* --- Garde d'orientation : afficher un message en mode portrait ----------- */
-.orient-guard {
-  position: fixed; inset: 0; z-index: var(--z-orient);
-  display: none; flex-direction: column; align-items: center; justify-content: center;
-  gap: var(--s-4); text-align: center; padding: var(--s-8);
-  background: var(--c-night);
-}
-.orient-guard__phone {
-  width: 56px; height: 92px; border-radius: 12px;
-  border: 2px solid var(--c-gold); position: relative;
-  animation: rotateHint 2.4s var(--e-inout) infinite;
-}
-@keyframes rotateHint { 0%,40% { transform: rotate(0);} 60%,100% { transform: rotate(-90deg);} }
-
-/* En portrait sur mobile : masquer l'app, montrer la garde */
-@media (orientation: portrait) and (max-width: 900px) {
-  .orient-guard { display: flex; }
-  .app { display: none; }
-}

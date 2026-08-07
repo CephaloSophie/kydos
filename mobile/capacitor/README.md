@@ -24,9 +24,9 @@ Après `npm install` à la racine, elles sont disponibles dans le workspace
 - `webDir` : `dist` (le build Vite)
 - couleur de fond native : `#05070f`
 
-L'orientation **paysage** est verrouillée côté natif dans les projets générés
-(voir plus bas). En portrait, l'application affiche elle-même l'écran « Pivotez
-votre appareil » (garde du design system).
+L'orientation **paysage** est verrouillée côté natif (voir plus bas) : le
+portrait n'est jamais atteignable, donc aucune garde JS/CSS n'est nécessaire
+côté app (l'ancien écran « Pivotez votre appareil » a été retiré).
 
 ## Étapes — première mise en place
 
@@ -71,9 +71,9 @@ Scripts disponibles (workspace `belote-mobile`) :
 
 ## Verrouiller l'orientation paysage
 
-Après `npx cap add android`, éditer
-`mobile/android/app/src/main/AndroidManifest.xml` et ajouter sur l'activité
-principale :
+Déjà en place sur `mobile/android/app/src/main/AndroidManifest.xml` (à
+reproduire si le projet est régénéré via `npx cap add android`) : ajouter sur
+l'activité principale :
 
 ```xml
 <activity

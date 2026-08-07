@@ -3,9 +3,10 @@ import type { CapacitorConfig } from '@capacitor/cli';
 /*
  * Configuration Capacitor — Kýdos Belote (mobile, paysage uniquement).
  * Remplace l'ancien empaquetage Cordova. Le webDir pointe vers le build Vite
- * (`dist`). L'application affiche elle-même l'écran « Pivotez votre appareil »
- * en portrait (garde du design system), et l'orientation paysage est verrouillée
- * côté natif via les projets Android/iOS générés par `npx cap add`.
+ * (`dist`). L'orientation est verrouillée en paysage côté NATIF
+ * (android:screenOrientation="landscape" dans AndroidManifest.xml — même
+ * réglage à reproduire côté iOS via Xcode si le projet est ajouté) : le portrait
+ * n'est jamais atteignable, donc aucune garde JS/CSS n'est nécessaire côté app.
  */
 const config: CapacitorConfig = {
   appId: 'com.cephalosophie.kydosbelote',

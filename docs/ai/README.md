@@ -22,7 +22,7 @@ créateur de la plateforme no-code **KANTO APLO**.
 | Abdelhamid Sghaier | Co-fondateur & CTO · expert mobile | abdelhamid.sghaier@cephalosophie.com |
 
 Clients de l'entreprise : IFPEN, La Poste, LeadsHook, Docaposte, Softia,
-JCDecaux, Unibet, Allianz.
+JCDecaux, Allianz, Genybet.
 
 ## 2. Vue d'ensemble du monorepo
 

@@ -52,19 +52,6 @@
       @keyframes botBlink { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.1); } }
       @keyframes dotPulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
 
-      /* ── Garde d'orientation (portrait) — AU THÈME également ────────────── */
-      .orient-guard {
-        position: fixed; inset: 0; z-index: 9998; display: none; flex-direction: column;
-        align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 32px;
-        background: radial-gradient(1200px 700px at 50% 30%, #0b1120, #05070f 70%);
-      }
-      .orient-guard__phone { width: 56px; height: 92px; border-radius: 12px; border: 2px solid var(--c-gold); box-shadow: 0 0 20px -4px var(--c-gold); animation: rotateHint 2.4s ease-in-out infinite; }
-      .orient-guard .title { font-family: var(--f-title); font-weight: 800; font-size: 20px; color: var(--c-text); }
-      .orient-guard p { max-width: 280px; line-height: 1.5; color: var(--c-mute); font-size: 13px; margin: 0; }
-      @keyframes rotateHint { 0%, 40% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
-      @media (orientation: portrait) and (max-width: 900px) {
-        .orient-guard { display: flex; } #app { display: none; } #boot { display: none; }
-      }
     </style>
   </head>
   <body>
@@ -79,13 +66,6 @@
         <div class="bot" style="--bot-accent:#e85d70"><div class="bot__head"><div class="bot__eyes"><i></i><i></i></div></div><div class="bot__body"></div></div>
       </div>
       <div class="waiting">waiting<span class="dots"><i></i><i></i><i></i></span></div>
-    </div>
-
-    <!-- Garde d'orientation paysage -->
-    <div class="orient-guard">
-      <div class="orient-guard__phone"></div>
-      <div class="title">Pivotez votre appareil</div>
-      <p>Kýdos Belote se joue en mode paysage pour une immersion maximale à la table.</p>
     </div>
 
     <!-- Racine de l'application -->
