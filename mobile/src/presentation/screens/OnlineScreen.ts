@@ -15,7 +15,7 @@
  * Le jeu tourne sur le SERVEUR (robots inclus) ; cet écran affiche et transmet.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Badge, Button, Dialog } from '../components/ui';
+import { Badge, Button, Dialog, BackButton } from '../components/ui';
 import { toast, confirmDialog } from '../components/feedback';
 import { TableSocket, type LiveLobbyState } from '../../data/TableSocket';
 import type { AppContext } from '../context';
@@ -260,13 +260,13 @@ export function OnlineScreen(ctx: AppContext): HTMLElement {
 
   reload();
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => { cleanupSockets(); router.go('home'); }),
     h('div', { class: 'between', style: { marginBottom: '10px' } },
       h('div', {}, h('div', { class: 'eyebrow' }, 'MULTIJOUEUR'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Jouer en ligne')),
       h('div', { class: 'row gap-2' },
         Button('+ Créer une table', { size: 'sm', onClick: openCreateDialog }),
-        Button('↻', { variant: 'ghost', size: 'sm', onClick: reload }),
-        Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => { cleanupSockets(); router.go('home'); } }))),
+        Button('↻', { variant: 'ghost', size: 'sm', onClick: reload }))),
     h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)', marginBottom: '10px' } },
       'Une seule partie à la fois. Le jeu tourne sur le serveur : si vous partez, votre robot prend la main, et vous la récupérez au retour.'),
     scopeRow,

@@ -6,7 +6,7 @@
  * rendu avec ses variantes. Si un token change, la dérive se voit ici d'abord.
  * ========================================================================== */
 import { h } from '../../core/dom';
-import { Avatar, Badge, Button, Dialog, Field, Robot, ScreenHead, Slider } from '../components/ui';
+import { Avatar, Badge, BackButton, Button, Dialog, Field, Robot, ScreenHead, Slider } from '../components/ui';
 import { AVATAR_PRESETS } from '../../domain/entities/Robot';
 import type { AppContext } from '../context';
 
@@ -73,7 +73,8 @@ export function StyleguideScreen(ctx: AppContext): HTMLElement {
           h('div', { class: 'feature-card__kicker' }, k),
           h('div', { class: 'feature-card__title' }, t)))));
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     ScreenHead('DESIGN SYSTEM', 'Aperçu des composants',
       h('div', { class: 'row gap-2' },
         Button('Ouvrir un dialogue', { variant: 'secondary', size: 'sm', onClick: () => {
@@ -81,8 +82,7 @@ export function StyleguideScreen(ctx: AppContext): HTMLElement {
             actions: [Button('Fermer', { variant: 'secondary', size: 'sm', onClick: () => dlg.remove() }), Button('Valider', { size: 'sm', onClick: () => dlg.remove() })],
             onClose: () => dlg.remove() });
           root.append(dlg);
-        } }),
-        Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }))),
+        } }))),
     section('COULEURS', 'Jetons CSS — jamais de valeur en dur dans les écrans.', swatches),
     section('TYPOGRAPHIE', 'Trois familles : titres, texte courant, monospace.', typography),
     section('BOUTONS', 'Quatre variantes, deux tailles.', buttons),

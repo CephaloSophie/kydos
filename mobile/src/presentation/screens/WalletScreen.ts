@@ -6,7 +6,7 @@
  * hors-ligne géré par `services/wallet.ts` (transparent pour l'utilisateur).
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Button, Badge, Dialog } from '../components/ui';
+import { Button, Badge, Dialog, BackButton } from '../components/ui';
 import { api, type ServerWalletTransaction } from '../../data/ApiClient';
 import { claimDaily, readWallet } from '../../services/wallet';
 import { formatPromoCode, digitsOnly, isCompleteCode } from '../../services/promoCode';
@@ -190,10 +190,10 @@ export function WalletScreen(ctx: AppContext): HTMLElement {
 
   void refresh();
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉCONOMIE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Mon porte-monnaie')),
-      Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉCONOMIE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Mon porte-monnaie'))),
     h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
       h('div', { class: 'card' },
         h('div', { class: 'eyebrow' }, 'SOLDE'),

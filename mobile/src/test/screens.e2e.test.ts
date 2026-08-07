@@ -37,14 +37,33 @@ import { WalletScreen } from '../presentation/screens/WalletScreen';
 import { TeamsScreen, MyTeamScreen } from '../presentation/screens/TeamsScreens';
 import { OnlineScreen } from '../presentation/screens/OnlineScreen';
 import { TableScreen } from '../presentation/screens/TableScreen';
+import { InvitationsScreen } from '../presentation/screens/InvitationsScreen';
 
 let uninstall: () => void;
+
+/** Métadonnées de route utilisées par l'éventail/panneau de l'accueil — reflète main.tsx. */
+function registerFanRoutes(router: Router): void {
+  router
+    .register('table',   TableScreen,         { title: 'Jouer',        fanLabel: 'LE JEU',   glyph: '♥', grad: 'var(--g-heart)', desc: 'Lancez une partie avec vos robots et défiez la table.', cta: 'Lancer la partie' })
+    .register('robots',  RobotsScreen,        { title: 'Mes robots',   fanLabel: 'ROBOTS',   glyph: '♠', grad: 'var(--g-spade)', desc: 'Gérer & entraîner votre écurie de robots.', cta: 'Gérer mes robots' })
+    .register('create',  CreateRobotScreen,   { title: 'Éditeur',      fanLabel: 'ÉDITEUR',  glyph: '♦', grad: 'var(--g-diamond)', desc: 'Concevez votre IA de belote sur-mesure.', cta: 'Créer un robot' })
+    .register('ranking', RankingScreen,       { title: 'Classements',  fanLabel: 'CLASS.',   glyph: '◆', grad: 'var(--g-slate)', desc: 'Suivez votre progression dans le classement.', cta: 'Voir le classement' })
+    .register('compet',  CompetScreen,        { title: 'Compétitions', fanLabel: 'COMPÉT.',  glyph: '★', grad: 'var(--g-gold)', desc: 'Inscrivez vos robots aux tournois et remportez des récompenses.', cta: 'Voir les compétitions' })
+    .register('history', HistoryScreen,       { title: 'Historique',   fanLabel: 'ARCHIVES', glyph: '◆', grad: 'var(--g-slate)', desc: 'Rejouez vos parties précédentes.', cta: "Voir l'historique" })
+    .register('about',   AboutScreen,         { title: 'À propos',     fanLabel: 'INFOS',    glyph: '✦', grad: 'var(--g-club)', desc: 'À propos de Kýdos Belote et Cephalo Sophie.', cta: 'En savoir plus' })
+    .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)', desc: 'Consultez vos jetons et récompenses.', cta: 'Ouvrir mon porte-monnaie' })
+    .register('teams',   TeamsScreen,         { title: 'Équipes',        fanLabel: 'ÉQUIPES', glyph: '♣', grad: 'var(--g-club)', desc: 'Rejoignez ou consultez une équipe publique.', cta: 'Voir les équipes' })
+    .register('team',    MyTeamScreen,        { title: 'Mon équipe',     fanLabel: 'MON ÉQUIPE', glyph: '♣', grad: 'var(--g-club)', desc: 'Membres, rôles et exclusions de votre équipe.', cta: 'Gérer mon équipe' })
+    .register('invitations', InvitationsScreen, { title: 'Invitations', fanLabel: 'INVITATIONS', glyph: '✉', grad: 'var(--g-club)', desc: 'Envoyez, acceptez ou refusez des invitations.', cta: 'Voir mes invitations' })
+    .register('online',  OnlineScreen,        { title: 'Jouer en ligne', fanLabel: 'EN LIGNE', glyph: '♠', grad: 'var(--g-spade)', desc: 'Rejoignez ou créez une table en ligne.', cta: 'Jouer en ligne' });
+}
 
 /** Contexte applicatif complet, identique à celui de la composition root. */
 function makeContext(): AppContext {
   const bus = new EventBus();
   const store = new Store<AppState>({ lang: 'fr', screen: 'home' });
   const router = new Router(() => {}, () => api.isAuthenticated());
+  registerFanRoutes(router);
   const vip = new VipService(api);
   const ads = new AdManager({ bus, vip, onReward: () => {}, hasClaimedDaily: () => true });
   return {
@@ -100,13 +119,31 @@ describe('Écran · Connexion', () => {
 });
 
 describe('Écran · Accueil', () => {
-  it('affiche les 3 cartes-fonctionnalités et l\'éventail de navigation', async () => {
+  it('affiche le panneau de la destination sélectionnée (avec son espace image) et l\'éventail complet', async () => {
     const el = await mount(HomeScreen);
-    expect(el.querySelectorAll('.feature-card')).toHaveLength(3);
+    // Panneau (carte de contenu) + les 2 aperçus latéraux gauche/droite.
+    expect(el.querySelectorAll('.feature-card--static')).toHaveLength(3);
+    // Par défaut, la première destination de l'éventail ('table') est sélectionnée.
     expect(el.textContent).toContain('Jouer');
+    expect(el.textContent).toContain('Lancez une partie avec vos robots et défiez la table.');
+    expect(el.querySelector('.feature-card--static .btn--primary')!.textContent).toBe('Lancer la partie');
+    expect(el.textContent).toContain('IMAGE');
+    // Toutes les destinations restent atteignables via l'éventail élargi.
+    expect(el.querySelectorAll('.nav-fan__card')).toHaveLength(12);
+  });
+
+  it('met à jour le panneau (même couleur que la carte active) et recentre l\'éventail au clic', async () => {
+    const el = await mount(HomeScreen);
+    const cards = Array.from(el.querySelectorAll<HTMLElement>('.nav-fan__card'));
+    const robotsCard = cards.find((c) => c.textContent?.includes('ROBOTS'))!;
+    robotsCard.click();
     expect(el.textContent).toContain('Mes robots');
-    expect(el.textContent).toContain('Créer un robot');
-    expect(el.querySelectorAll('.nav-fan__card').length).toBeGreaterThanOrEqual(9);
+    expect(el.textContent).toContain('Gérer & entraîner votre écurie de robots.');
+    // Une seule carte active, dont la couleur reprend celle du panneau.
+    expect(cards.filter((c) => c.classList.contains('nav-fan__card--active'))).toHaveLength(1);
+    expect(robotsCard.classList.contains('nav-fan__card--active')).toBe(true);
+    const panel = el.querySelector('.feature-card--static') as HTMLElement;
+    expect(panel.getAttribute('style')).toContain('var(--g-spade)');
   });
 
   it('affiche le solde de jetons depuis /wallet (serveur-premier)', async () => {
@@ -369,18 +406,18 @@ describe('Couverture des pages — toutes les routes de l\'éventail existent', 
 });
 
 describe('KB-100 — menus de l\'accueil (gestion d\'équipe et sections)', () => {
-  it('expose toutes les sections en un geste depuis l\'accueil', async () => {
+  it('expose toutes les sections en un geste depuis l\'éventail de l\'accueil', async () => {
     const el = await mount(HomeScreen);
     const txt = el.textContent!;
-    for (const label of ['Jouer en ligne', 'Mon équipe', 'Équipes', 'Compétitions',
-                         'Porte-monnaie', 'Classements', 'Historique', 'À propos']) {
-      expect(txt, `menu manquant : ${label}`).toContain(label);
+    for (const label of ['EN LIGNE', 'MON ÉQUIPE', 'ÉQUIPES', 'INVITATIONS', 'COMPÉT.',
+                         'JETONS', 'CLASS.', 'ARCHIVES', 'INFOS']) {
+      expect(txt, `carte manquante dans l'éventail : ${label}`).toContain(label);
     }
   });
 
-  it('les 3 cartes principales restent en tête', async () => {
+  it('le panneau de contenu et ses aperçus restent en tête', async () => {
     const el = await mount(HomeScreen);
-    expect(el.querySelectorAll('.feature-card')).toHaveLength(3);
+    expect(el.querySelectorAll('.feature-card--static')).toHaveLength(3);
   });
 });
 
@@ -495,8 +532,6 @@ describe('Reprise de partie — indicateur LIVE près du logo', () => {
     expect(el.textContent).toContain('En attente de la partie');
   });
 });
-
-import { InvitationsScreen } from '../presentation/screens/InvitationsScreen';
 
 describe('Écran · Invitations', () => {
   it('affiche l\'onglet Reçues avec une invitation et ses actions', async () => {

@@ -11,7 +11,7 @@
  * Réactif : réagit à l'évènement `invitations:changed` et rafraîchit.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Avatar, Badge, Button, Field } from '../components/ui';
+import { Avatar, Badge, Button, Field, BackButton } from '../components/ui';
 import { toast, confirmDialog } from '../components/feedback';
 import type { AppContext } from '../context';
 import type { ServerInvitationReceived, ServerInvitationSent, ServerTeamDetail } from '../../data/ApiClient';
@@ -167,10 +167,10 @@ export function InvitationsScreen(ctx: AppContext): HTMLElement {
 
   // Réactivité : toute modification d'invitation rafraîchit l'écran.
   const off = bus.on('invitations:changed', () => refresh());
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉQUIPE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Invitations')),
-      Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉQUIPE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Invitations'))),
     tabsRow,
     inviteBox,
     list);

@@ -9,7 +9,7 @@ import { createElement } from 'react';
 import { SUIT_SYMBOL, type Bid, type Card, type EngineView, type Operation, type Seat } from 'belote-core';
 import { PixiTable } from '@kydos/table-pixi';
 import { h } from '../../core/dom';
-import { Button } from '../components/ui';
+import { BackButton } from '../components/ui';
 import type { AppContext } from '../context';
 
 interface ReplayDonne {
@@ -66,8 +66,8 @@ export function ReplayScreen(ctx: AppContext): HTMLElement {
   const statusChip = chip('▶ Rejeu en direct', { background: 'rgba(126,203,152,.14)', border: '1px solid rgba(126,203,152,.35)', color: 'var(--c-success)' });
 
   const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } },
-    h('div', { style: { position: 'absolute', top: '0', left: '0', right: '0', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 22px 0 60px', zIndex: '5' } },
-      Button('← Quitter', { variant: 'secondary', size: 'sm', onClick: () => { if (timer) clearTimeout(timer); reactRoot?.unmount(); router.go('history'); } }),
+    BackButton('← Quitter', () => { if (timer) clearTimeout(timer); reactRoot?.unmount(); router.go('history'); }),
+    h('div', { style: { position: 'absolute', top: '0', left: '0', right: '0', height: '46px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 22px 0 60px', zIndex: '5' } },
       h('div', { class: 'row gap-3' }, scoreEl, trumpEl)),
     felt,
     h('div', { class: 'row center gap-2', style: { position: 'absolute', bottom: '12px', left: '60px', right: '22px', height: '38px', justifyContent: 'center' } }, pauseChip, speedChip, statusChip),

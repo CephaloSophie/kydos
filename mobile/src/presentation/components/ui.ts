@@ -30,6 +30,15 @@ export function Button(label: DomChild, { variant = 'primary', size, block, onCl
   return h('button', { class: ['btn', `btn--${variant}`, size === 'sm' && 'btn--sm', block && 'btn--block'], onClick, disabled }, label);
 }
 
+/** Bouton retour, ancré en haut à gauche de l'écran avec un léger espace du bord. */
+export function BackButton(label: DomChild, onClick: () => void) {
+  return h('button', {
+    class: ['btn', 'btn--secondary', 'btn--sm'],
+    style: { position: 'absolute', top: '10px', left: '14px', zIndex: '500' },
+    onClick,
+  }, label);
+}
+
 export type BadgeVariant = 'gold' | 'success' | 'danger' | 'info' | 'level' | 'neutral';
 /** Badge. variant: gold|success|danger|info|level|neutral. */
 export function Badge(text: DomChild, variant: BadgeVariant = 'neutral') {

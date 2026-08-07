@@ -5,7 +5,7 @@
  * FIDÈLE au design system ; chargement asynchrone avec état vide soigné.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Avatar, Badge, Button, Dialog } from '../components/ui';
+import { Avatar, Badge, Button, Dialog, BackButton } from '../components/ui';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
 import type { Robot } from '../../domain/entities/Robot';
@@ -117,10 +117,11 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
     document.querySelector('.anim-screen')?.append(backdrop);
   };
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', {}, h('div', { class: 'eyebrow' }, 'ÉCURIE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Mes robots')),
-      h('div', { class: 'row gap-2' }, Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }), Button('+ Nouveau', { size: 'sm', onClick: () => router.go('create') }))),
+      h('div', { class: 'row gap-2' }, Button('+ Nouveau', { size: 'sm', onClick: () => router.go('create') }))),
     grid,
     h('div', { class: 'row gap-3', style: { marginTop: '12px' } },
       Button('Lancer une partie', { block: true, onClick: async () => { await ads.beforeTraining(); router.go('table'); } }),

@@ -2,7 +2,55 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v13.0.1 — Édition de robot bout-en-bout (KB-301 résolue) (version actuelle)
+## v14.0.0 — Refonte navigation de l'accueil mobile + correctif design system (version actuelle)
+
+Nouvelle direction UX pour l'accueil mobile (alignée sur le nouveau prototype de
+design system) : plus de grille statique, un panneau de destination + éventail
+permanent à 12 cartes. Un bug de fond du helper DOM partagé est aussi corrigé
+au passage — il affectait silencieusement toutes les couleurs d'accent posées
+via l'objet `style` à la création d'un élément.
+
+### Accueil (HomeScreen)
+- Nouveau modèle **panneau + éventail** : une grande carte affiche la
+  destination sélectionnée (glyphe, titre, description, CTA, espace image à
+  venir) ; l'éventail permanent en bas couvre les **12 destinations** (parité
+  avec l'ancienne grille de cartes + tuiles), avec arc recentré dynamiquement
+  sur la sélection pour rester compact en paysage mobile.
+- Pagination par clic sur une carte de l'éventail, aperçus latéraux
+  cliquables, molette et swipe tactile.
+- Badge « invitations en attente » porté sur la carte correspondante de
+  l'éventail (un seul appel réseau, aucun polling).
+- `TopBar` (solde, VIP, profil, live-chip) conservé tel quel — aucune donnée
+  de session mockée.
+
+### Cohérence visuelle
+- Bouton retour normalisé : ancré en haut à gauche sur les 13 écrans
+  concernés (au lieu d'être mêlé à la ligne de titre), nouveau composant
+  partagé `BackButton`.
+- `TopBar` : marge en haut pour dégager l'antenne de la mascotte du bord de
+  l'écran.
+- Éventail (`.nav-fan`) redessiné : cartes agrandies, texture feutrée, anneau
+  doré sur la carte active.
+
+### Correctif design system (KB — helper DOM)
+- **`core/dom.ts` (`h()`)** : les propriétés CSS personnalisées (`--card-grad`,
+  `--robot-accent`, `--avatar-ring`, `--slider-fill`…) posées via l'objet
+  `style` à la création d'un élément étaient **silencieusement ignorées**
+  (`Object.assign` ne les applique pas — seul `style.setProperty()` le fait).
+  Conséquence concrète avant correctif : toutes les cartes de l'éventail
+  retombaient sur la couleur de repli grise au lieu de leur couleur de route,
+  et les mascottes/avatars perdaient leur couleur d'accent contextuelle
+  (ex. l'avatar du `TopBar` restait doré au lieu de vert). Corrigé à la
+  source — bénéficie à tous les composants du design system, pas seulement à
+  l'accueil.
+
+### Vérification
+- **189 tests mobiles verts**, typecheck propre.
+- Vérifié manuellement dans le navigateur (identifiants seed) : connexion,
+  navigation accueil (clic carte, aperçus, molette, swipe), CTA → écrans
+  réels, menu profil `TopBar`, correspondance de couleur panneau ↔ éventail.
+
+## v13.0.1 — Édition de robot bout-en-bout (KB-301 résolue)
 
 Complétion d'une défaillance de fond ouverte depuis plusieurs versions : le
 serveur exposait déjà `PUT /robots/:id` mais le mobile ne permettait pas
@@ -1910,7 +1958,7 @@ Design sont copiés VERBATIM comme source de vérité visuelle.
 - **À propos** — Cephalo Sophie, liens cephalosophie.com / kantoaplo.com /
   kydosbelote.com, l'équipe (Ameur Hamdouni CEO & Founder & Architect ;
   Abdelhamid Sghaier Co-fondateur & CTO expert mobile) et les clients
-  (IFPEN, La Poste, LeadsHook, Docaposte, Softia, JCDecaux, Unibet, Allianz).
+  (IFPEN, La Poste, LeadsHook, Docaposte, Softia, JCDecaux, Allianz, Genybet).
 
 ### Boucle de jeu isolée (services/gameLoop.ts)
 Contrôleur PUR autour de `belote-core` — plan de coup, pause, vitesse,

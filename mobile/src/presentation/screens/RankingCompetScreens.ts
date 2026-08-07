@@ -5,7 +5,7 @@
  * complété par un podium de démonstration ; les tournois restent une vitrine.
  * ========================================================================== */
 import { h } from '../../core/dom';
-import { Button } from '../components/ui';
+import { Button, BackButton } from '../components/ui';
 import type { AppContext } from '../context';
 
 interface RankRow { rank: number; name: string; accent: string; winRate: number; elo: number; me?: boolean }
@@ -48,10 +48,11 @@ export function RankingScreen(ctx: AppContext): HTMLElement {
     list.append(rowEl({ rank: 14, name: mine.name, accent: mine.accent, winRate: mine.winRate || 61, elo: mine.elo, me: true }));
   }).catch(() => {});
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', {}, h('div', { class: 'eyebrow' }, 'SAISON 1 · ROBOTS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Classements')),
-      h('div', { class: 'row gap-2' }, tab('Robots', true), tab('Joueurs', false), Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }))),
+      h('div', { class: 'row gap-2' }, tab('Robots', true), tab('Joueurs', false))),
     list,
   );
 }
@@ -73,10 +74,10 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     h('div', { class: 'title', style: { fontSize: '15px', margin: '5px 0 3px' } }, title),
     h('div', { style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, desc));
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉVÉNEMENTS & TOURNOIS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Compétitions')),
-      Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉVÉNEMENTS & TOURNOIS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Compétitions'))),
     h('div', { style: { display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px' } },
       featuredCard,
       h('div', { class: 'col gap-2' },

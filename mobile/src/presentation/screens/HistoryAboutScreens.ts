@@ -4,7 +4,7 @@
  * (Cephalo Sophie, équipe, clients, liens). FIDÈLES au design system.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, BackButton } from '../components/ui';
 import { APP_VERSION } from '../../version';
 import type { AppContext } from '../context';
 import type { ServerGame } from '../../data/ApiClient';
@@ -110,10 +110,10 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
   renderScope(); renderKinds();
   load();
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '10px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'ARCHIVES'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Historique des parties')),
-      Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'ARCHIVES'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Historique des parties'))),
     h('div', { class: 'row gap-3 wrap', style: { marginBottom: '8px' } }, scopeRow),
     h('div', { style: { marginBottom: '12px' } }, kindRow),
     list,
@@ -125,16 +125,16 @@ const TEAM = [
   { name: 'Ameur Hamdouni', role: 'CEO & Founder & Architect', mail: 'ameur.hamdouni@cephalosophie.com' },
   { name: 'Abdelhamid Sghaier', role: 'Co-fondateur & CTO · expert mobile', mail: 'abdelhamid.sghaier@cephalosophie.com' },
 ];
-const CLIENTS = ['IFPEN', 'La Poste', 'LeadsHook', 'Docaposte', 'Softia', 'JCDecaux', 'Unibet', 'Allianz'];
+const CLIENTS = ['IFPEN', 'La Poste', 'LeadsHook', 'Docaposte', 'Softia', 'JCDecaux', 'Allianz', 'Genybet'];
 
 export function AboutScreen(ctx: AppContext): HTMLElement {
   const { router } = ctx;
   const link = (href: string, label: string) => h('a', { href, target: '_blank', rel: 'noreferrer', class: 'gold', style: { fontWeight: '600' } }, label);
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'CEPHALO SOPHIE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'À propos')),
-      Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'CEPHALO SOPHIE'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'À propos'))),
     h('div', { class: 'card', style: { marginBottom: '12px' } },
       h('p', { style: { fontSize: '13px', lineHeight: '1.6', color: 'var(--c-text-soft)', margin: '0' } },
         h('strong', { class: 'gold' }, 'Kýdos Belote'), ' est édité par ', link('https://cephalosophie.com', 'Cephalo Sophie'),

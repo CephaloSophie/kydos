@@ -24,7 +24,14 @@ export function h(tag: string, props: DomProps = {}, ...children: DomChild[]): H
     if (key === 'class' || key === 'className') {
       el.className = Array.isArray(val) ? val.filter(Boolean).join(' ') : String(val);
     } else if (key === 'style' && typeof val === 'object') {
-      Object.assign(el.style, val as Record<string, string>);
+      // Les propriétés personnalisées (--xxx) doivent passer par setProperty :
+      // Object.assign(el.style, …) les ignore silencieusement (CSSStyleDeclaration
+      // ne réflète pas les clés inconnues via une simple affectation).
+      for (const [prop, v] of Object.entries(val as Record<string, string>)) {
+        if (v == null) continue;
+        if (prop.startsWith('--')) el.style.setProperty(prop, String(v));
+        else (el.style as unknown as Record<string, string>)[prop] = String(v);
+      }
     } else if (key === 'style') {
       el.setAttribute('style', String(val));
     } else if (key === 'dataset') {

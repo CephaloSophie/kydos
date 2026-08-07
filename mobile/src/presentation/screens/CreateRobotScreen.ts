@@ -9,7 +9,7 @@
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
 import { AVATAR_PRESETS, personalityLabel, type RobotStrategy } from '../../domain/entities/Robot';
-import { Robot, Avatar, Button, Badge, Slider, Dialog } from '../components/ui';
+import { Robot, Avatar, Button, Badge, Slider, Dialog, BackButton } from '../components/ui';
 import type { AppContext } from '../context';
 
 interface Draft { name: string; avatarId: string; strategy: RobotStrategy }
@@ -61,8 +61,7 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   renderAvatars();
 
   const preview = h('div', { class: 'col', style: { width: '240px' } },
-    Button('← Retour', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }),
-    h('div', { class: 'col center', style: { flex: '1', marginTop: '12px', borderRadius: 'var(--r-xl)', padding: '16px', position: 'relative', background: 'radial-gradient(300px 200px at 50% 20%, rgba(109,81,160,.3), transparent 60%), linear-gradient(180deg,#141a28,#0d1220)', border: '1px solid var(--c-line)' } },
+    h('div', { class: 'col center', style: { flex: '1', borderRadius: 'var(--r-xl)', padding: '16px', position: 'relative', background: 'radial-gradient(300px 200px at 50% 20%, rgba(109,81,160,.3), transparent 60%), linear-gradient(180deg,#141a28,#0d1220)', border: '1px solid var(--c-line)' } },
       h('div', { class: 'eyebrow', style: { position: 'absolute', top: '12px', left: '14px' } }, 'APERÇU'),
       mascotSlot,
       h('div', { style: { height: '14px' } }),
@@ -128,6 +127,7 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
       Button('Aperçu partie', { variant: 'secondary', onClick: () => router.go('table') })),
   );
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', display: 'flex', gap: '22px', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)' } }, preview, form);
+  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', display: 'flex', gap: '22px', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)' } },
+    BackButton('← Retour', () => router.go('home')), preview, form);
   return root;
 }

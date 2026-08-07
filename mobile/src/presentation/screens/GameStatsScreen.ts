@@ -9,7 +9,7 @@
  * FIDÈLE au design system. Aucun WebSocket : simple lecture du document Game.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Button, Badge } from '../components/ui';
+import { Button, Badge, BackButton } from '../components/ui';
 import type { AppContext } from '../context';
 import type { ServerGame } from '../../data/ApiClient';
 import { openPlayerProfile } from '../components/PlayerProfile';
@@ -146,10 +146,10 @@ export function GameStatsScreen(ctx: AppContext): HTMLElement {
       .catch((e) => { clear(body); body.append(h('div', { class: 'text-mute', style: { fontSize: '12px' } }, `Impossible de charger : ${(e as Error).message}`)); });
   }
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Historique', () => router.go('history')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'STATISTIQUES'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Détail de la partie')),
-      Button('← Historique', { variant: 'secondary', size: 'sm', onClick: () => router.go('history') })),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'STATISTIQUES'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Détail de la partie'))),
     body,
   );
 }

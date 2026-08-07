@@ -11,7 +11,7 @@
  * reste seul juge en cas de tentative directe.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Avatar, Badge, Button, Dialog } from '../components/ui';
+import { Avatar, Badge, Button, Dialog, BackButton } from '../components/ui';
 import {
   TEAM_MAX_MEMBERS, TEAM_ROLES, ROLE_ACCENTS, ROLE_LABELS,
   canAct, canAssign, canChangeVisibility, canInvite, canRenameTeam,
@@ -52,12 +52,12 @@ export function TeamsScreen(ctx: AppContext): HTMLElement {
     })
     .catch((e) => { clear(list); list.append(h('div', { class: 'text-mute', style: { fontSize: '12px' } }, `Impossible de charger : ${(e as Error).message}`)); });
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', {}, h('div', { class: 'eyebrow' }, 'COMMUNAUTÉ'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Équipes')),
       h('div', { class: 'row gap-2' },
-        Button('Mon équipe', { size: 'sm', onClick: () => router.go('team') }),
-        Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }))),
+        Button('Mon équipe', { size: 'sm', onClick: () => router.go('team') }))),
     list,
   );
 }
@@ -215,12 +215,12 @@ export function MyTeamScreen(ctx: AppContext): HTMLElement {
   const reload = () => { teamService.mine().then(render).catch((e) => { clear(container); container.append(h('div', { class: 'text-mute', style: { fontSize: '12px' } }, `Impossible de charger : ${(e as Error).message}`)); }); };
   reload();
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '52px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
+    BackButton('← Accueil', () => router.go('home')),
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', {}, h('div', { class: 'eyebrow' }, 'COMMUNAUTÉ'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Mon équipe')),
       h('div', { class: 'row gap-2' },
-        Button('Équipes publiques', { variant: 'secondary', size: 'sm', onClick: () => router.go('teams') }),
-        Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') }))),
+        Button('Équipes publiques', { variant: 'secondary', size: 'sm', onClick: () => router.go('teams') }))),
     container,
   );
 }

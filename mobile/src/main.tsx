@@ -92,20 +92,32 @@ void ads.initialize();
 router
   .register('login',   LoginScreen,         { title: 'Connexion', auth: false })
   .register('home',    HomeScreen,          { title: 'Accueil' })
-  .register('table',   TableScreen,         { title: 'Jouer',        fanLabel: 'LE JEU',   glyph: '♥', grad: 'var(--g-heart)' })
-  .register('robots',  RobotsScreen,        { title: 'Mes robots',   fanLabel: 'ROBOTS',   glyph: '♠', grad: 'var(--g-spade)' })
-  .register('create',  CreateRobotScreen,   { title: 'Éditeur',      fanLabel: 'ÉDITEUR',  glyph: '♦', grad: 'var(--g-diamond)' })
-  .register('ranking', RankingScreen,       { title: 'Classements',  fanLabel: 'CLASS.',   glyph: '◆', grad: 'var(--g-slate)' })
-  .register('compet',  CompetScreen,        { title: 'Compétitions', fanLabel: 'COMPÉT.',  glyph: '★', grad: 'var(--g-gold)' })
-  .register('history', HistoryScreen,       { title: 'Historique',   fanLabel: 'ARCHIVES', glyph: '◆', grad: 'var(--g-slate)' })
-  .register('about',   AboutScreen,         { title: 'À propos',     fanLabel: 'INFOS',    glyph: '✦', grad: 'var(--g-club)' })
+  .register('table',   TableScreen,         { title: 'Jouer',        fanLabel: 'LE JEU',   glyph: '♥', grad: 'var(--g-heart)',
+    desc: 'Lancez une partie avec vos robots et défiez la table.', cta: 'Lancer la partie' })
+  .register('robots',  RobotsScreen,        { title: 'Mes robots',   fanLabel: 'ROBOTS',   glyph: '♠', grad: 'var(--g-spade)',
+    desc: 'Gérer & entraîner votre écurie de robots.', cta: 'Gérer mes robots' })
+  .register('create',  CreateRobotScreen,   { title: 'Éditeur',      fanLabel: 'ÉDITEUR',  glyph: '♦', grad: 'var(--g-diamond)',
+    desc: 'Concevez votre IA de belote sur-mesure.', cta: 'Créer un robot' })
+  .register('ranking', RankingScreen,       { title: 'Classements',  fanLabel: 'CLASS.',   glyph: '◆', grad: 'var(--g-slate)',
+    desc: 'Suivez votre progression dans le classement.', cta: 'Voir le classement' })
+  .register('compet',  CompetScreen,        { title: 'Compétitions', fanLabel: 'COMPÉT.',  glyph: '★', grad: 'var(--g-gold)',
+    desc: 'Inscrivez vos robots aux tournois et remportez des récompenses.', cta: 'Voir les compétitions' })
+  .register('history', HistoryScreen,       { title: 'Historique',   fanLabel: 'ARCHIVES', glyph: '◆', grad: 'var(--g-slate)',
+    desc: 'Rejouez vos parties précédentes.', cta: "Voir l'historique" })
+  .register('about',   AboutScreen,         { title: 'À propos',     fanLabel: 'INFOS',    glyph: '✦', grad: 'var(--g-club)',
+    desc: 'À propos de Kýdos Belote et Cephalo Sophie.', cta: 'En savoir plus' })
   .register('replay',  ReplayScreen,        { title: 'Rejeu' })
   .register('gamestats', GameStatsScreen,    { title: 'Statistiques' })
-  .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)' })
-  .register('teams',   TeamsScreen,         { title: 'Équipes',        fanLabel: 'ÉQUIPES', glyph: '♣', grad: 'var(--g-club)' })
-  .register('team',    MyTeamScreen,        { title: 'Mon équipe',     fanLabel: 'MON ÉQUIPE', glyph: '♣', grad: 'var(--g-club)' })
-  .register('invitations', InvitationsScreen, { title: 'Invitations', fanLabel: 'INVITATIONS', glyph: '✉', grad: 'var(--g-club)' })
-  .register('online',  OnlineScreen,        { title: 'Jouer en ligne', fanLabel: 'EN LIGNE', glyph: '♠', grad: 'var(--g-spade)' })
+  .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)',
+    desc: 'Consultez vos jetons et récompenses.', cta: 'Ouvrir mon porte-monnaie' })
+  .register('teams',   TeamsScreen,         { title: 'Équipes',        fanLabel: 'ÉQUIPES', glyph: '♣', grad: 'var(--g-club)',
+    desc: 'Rejoignez ou consultez une équipe publique.', cta: 'Voir les équipes' })
+  .register('team',    MyTeamScreen,        { title: 'Mon équipe',     fanLabel: 'MON ÉQUIPE', glyph: '♣', grad: 'var(--g-club)',
+    desc: 'Membres, rôles et exclusions de votre équipe.', cta: 'Gérer mon équipe' })
+  .register('invitations', InvitationsScreen, { title: 'Invitations', fanLabel: 'INVITATIONS', glyph: '✉', grad: 'var(--g-club)',
+    desc: 'Envoyez, acceptez ou refusez des invitations.', cta: 'Voir mes invitations' })
+  .register('online',  OnlineScreen,        { title: 'Jouer en ligne', fanLabel: 'EN LIGNE', glyph: '♠', grad: 'var(--g-spade)',
+    desc: 'Rejoignez ou créez une table en ligne.', cta: 'Jouer en ligne' })
   .register('styleguide', StyleguideScreen, { title: 'Design system' });
 
 if (!location.hash) location.hash = api.isAuthenticated() ? '#/home' : '#/login';

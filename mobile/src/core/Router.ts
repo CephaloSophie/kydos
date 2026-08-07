@@ -10,6 +10,10 @@ export interface RouteMeta {
   fanLabel?: string;
   glyph?: string;
   grad?: string;
+  /** Description courte affichée dans le panneau de l'accueil (carrousel). */
+  desc?: string;
+  /** Libellé du bouton d'action du panneau de l'accueil. */
+  cta?: string;
   /** false = route publique (pas de token requis). Défaut : protégée. */
   auth?: boolean;
 }

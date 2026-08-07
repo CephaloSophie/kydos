@@ -1,6 +1,6 @@
 {
   "name": "belote-mobile",
-  "version": "13.0.1",
+  "version": "14.0.0",
   "private": true,
   "type": "module",
   "description": "Kýdos Belote — application MOBILE (paysage), séparée du web. Design system Claude Design + table Pixi partagée.",
