@@ -4,7 +4,7 @@
  * system. Le classement est alimenté par l'écurie réelle quand elle existe,
  * complété par un podium de démonstration ; les tournois restent une vitrine.
  * ========================================================================== */
-import { h } from '../../core/dom';
+import { h, clear } from '../../core/dom';
 import { Button } from '../components/ui';
 import type { AppContext } from '../context';
 
@@ -57,36 +57,168 @@ export function RankingScreen(ctx: AppContext): HTMLElement {
 }
 
 export function CompetScreen(ctx: AppContext): HTMLElement {
-  const { router } = ctx;
+  const { router, api } = ctx;
 
-  const featuredCard = h('div', { class: 'feature-card', style: { padding: '16px', borderRadius: 'var(--r-xl)', '--card-grad': 'var(--g-gold)' } },
-    h('div', { class: 'feature-card__glyph', style: { fontSize: '80px', right: '8px', top: '0' } }, '★'),
+  /** Description d'un format d'inscription (miroir du catalog serveur). */
+  interface FormatCard {
+    id: 'duo_steel' | 'hybrid_alliance' | 'royal_square';
+    label: string;
+    tag: string;
+    tagColor: string;
+    accent: string;
+    subtitle: string;
+    buyIn: number;
+    prize: number;
+    robotsPerPlayer: number;
+  }
+  const FORMATS: FormatCard[] = [
+    { id: 'duo_steel',      label: 'Duo d\u2019acier',    tag: '2 ROBOTS · HEADLESS', tagColor: '#e6c46a', accent: 'var(--g-gold)',
+      subtitle: '2 robots contre 2 robots — 100 % en coulisses', buyIn: 200, prize: 150, robotsPerPlayer: 2 },
+    { id: 'hybrid_alliance', label: 'Alliance hybride', tag: 'TOI + TON ROBOT',      tagColor: '#7ecb98', accent: 'linear-gradient(135deg,#3f8f5e,#1f5a3a)',
+      subtitle: 'Toi + ton robot contre un autre binôme',      buyIn: 150, prize: 225, robotsPerPlayer: 1 },
+    { id: 'royal_square',    label: 'Carr\u00e9e royale', tag: '4 HUMAINS',            tagColor: '#e85d70', accent: 'linear-gradient(135deg,#a13a4c,#5c1f2b)',
+      subtitle: 'Quatre humains, deux \u00e9quipes, la table couronn\u00e9e', buyIn: 100, prize: 150, robotsPerPlayer: 0 },
+  ];
+
+  const statusEl = h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', minHeight: '14px', marginTop: '6px' } });
+
+  /** Choisit N robots pour l'inscription (les mieux notés d'abord). */
+  const pickRobots = (n: number): string[] => ctx.session.robots.slice(0, n).map((r) => r.id);
+
+  const enqueue = async (f: FormatCard) => {
+    if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
+    const robotIds = pickRobots(f.robotsPerPlayer);
+    if (robotIds.length < f.robotsPerPlayer) {
+      statusEl.textContent = `\u2717 Il vous faut au moins ${f.robotsPerPlayer} robot(s) dans votre \u00e9curie.`;
+      return;
+    }
+    statusEl.textContent = `Inscription \u00e0 « ${f.label} » en cours\u2026`;
+    try {
+      const r = await api.enqueueMatch(f.id, robotIds);
+      // Après un match immédiat, le solde a bougé (débit + éventuel crédit).
+      await ctx.session.refreshWallet();
+      if (r.status === 'matched' && r.matchId) {
+        statusEl.textContent = `\u2713 Match trouvé (${r.matchId.slice(-6)}) — bient\u00f4t jouable.`;
+      } else {
+        statusEl.textContent = `\u23f3 En file (position ${r.queuePosition ?? '?'}). Un autre joueur va bient\u00f4t rejoindre.`;
+      }
+    } catch (e) {
+      statusEl.textContent = `\u2717 ${(e as Error).message}`;
+    }
+  };
+
+  const cancel = async (f: FormatCard) => {
+    try {
+      await api.cancelMatchQueue(f.id);
+      await ctx.session.refreshWallet();
+      statusEl.textContent = `\u2713 Inscription annul\u00e9e, buy-in rembours\u00e9.`;
+    } catch (e) {
+      statusEl.textContent = `\u2717 ${(e as Error).message}`;
+    }
+  };
+
+  const formatCard = (f: FormatCard) => h('div', { class: 'feature-card', style: { padding: '14px', borderRadius: 'var(--r-lg)', '--card-grad': f.accent, position: 'relative' } as unknown as Partial<CSSStyleDeclaration> },
     h('div', { style: { position: 'relative' } },
-      h('span', { class: 'mono', style: { fontSize: '9px', padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'rgba(0,0,0,.25)', color: '#fff' } }, '● LIVE · 512 robots'),
-      h('div', { class: 'title', style: { fontSize: '22px', color: '#fff', margin: '12px 0 4px' } }, 'Grand Prix des IA'),
-      h('div', { style: { fontSize: '12px', color: 'rgba(255,255,255,.85)', marginBottom: '16px' } }, 'Tournoi robots-vs-robots · élimination directe'),
-      h('button', { class: 'btn btn--sm', style: { color: '#8f6f1f', background: '#fff' } }, 'Inscrire un robot')),
+      h('span', { class: 'mono', style: { fontSize: '9px', padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'rgba(0,0,0,.25)', color: '#fff' } }, f.tag),
+      h('div', { class: 'title', style: { fontSize: '17px', color: '#fff', margin: '10px 0 4px' } }, f.label),
+      h('div', { style: { fontSize: '11px', color: 'rgba(255,255,255,.85)', marginBottom: '10px' } }, f.subtitle),
+      h('div', { class: 'mono', style: { fontSize: '10px', color: 'rgba(255,255,255,.75)', marginBottom: '10px' } },
+        `Buy-in ${f.buyIn} \u25c6 \u00b7 Gain ${f.prize} \u25c6`),
+      h('div', { class: 'row gap-2' },
+        h('button', { class: 'btn btn--sm', style: { color: '#222', background: '#fff' }, onClick: () => void enqueue(f) }, 'S\u2019inscrire'),
+        h('button', { class: 'btn btn--sm btn--ghost', style: { color: '#fff', borderColor: 'rgba(255,255,255,.4)' }, onClick: () => void cancel(f) }, 'Annuler'))),
   );
 
-  const miniCard = (tag: string, accent: string, title: string, desc: string) => h('div', { class: 'card fill' },
-    h('span', { class: 'mono', style: { fontSize: '9px', color: accent } }, tag),
-    h('div', { class: 'title', style: { fontSize: '15px', margin: '5px 0 3px' } }, title),
-    h('div', { style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, desc));
+  // ── Section Tournois (v14.1) ─────────────────────────────────────────────
+  interface TournamentRow {
+    _id: string; name: string; format: string; status: string;
+    capacity: number; entryFee: number; startAt: string;
+    participants?: unknown[];
+  }
+  let currentTournamentFilter: 'upcoming' | 'live' | 'finished' = 'upcoming';
+  const tournamentsList = h('div', { class: 'col gap-2', style: { marginTop: '10px' } });
+  const tournamentsMsg = h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', padding: '6px 0' } }, 'Chargement des tournois…');
+
+  const renderTournamentRow = (t: TournamentRow) => {
+    const startDate = new Date(t.startAt);
+    const startLabel = startDate.toLocaleString();
+    const participantCount = (t.participants ?? []).length;
+    const canJoin = t.status === 'upcoming';
+    const rules = FORMATS.find((f) => f.id === t.format);
+    // Le corps de la ligne (info + bouton) est CLIQUABLE (sauf le bouton lui-même)
+    // → ouvre la vue détail tournoi.
+    return h('div', { class: 'card', style: { padding: '10px', cursor: 'pointer' }, onClick: () => router.go(`tournament?id=${t._id}`) },
+      h('div', { class: 'between' },
+        h('div', { style: { flex: '1' } },
+          h('div', { class: 'title', style: { fontSize: '13px' } }, t.name),
+          h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)', marginTop: '3px' } },
+            `${rules?.label ?? t.format} \u00b7 ${participantCount}/${t.capacity} \u00b7 ${t.entryFee} \u25c6 \u00b7 ${startLabel}`)),
+        canJoin
+          ? h('button', { class: 'btn btn--sm', onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); } }, 'S\u2019inscrire')
+          : h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-gold)' } }, t.status.toUpperCase()),
+      ));
+  };
+
+  const joinTournament = async (t: TournamentRow, robotsRequired: number) => {
+    if (!api.isAuthenticated()) { tournamentsMsg.textContent = '\u2717 Connexion requise'; return; }
+    const robotIds = pickRobots(robotsRequired);
+    if (robotIds.length < robotsRequired) {
+      tournamentsMsg.textContent = `\u2717 Il vous faut ${robotsRequired} robot(s) pour ce tournoi.`;
+      return;
+    }
+    try {
+      await api.joinTournament(t._id, robotIds);
+      await ctx.session.refreshWallet();
+      tournamentsMsg.textContent = `\u2713 Inscription \u00e0 « ${t.name} » confirm\u00e9e.`;
+      void loadTournaments();
+    } catch (e) {
+      tournamentsMsg.textContent = `\u2717 ${(e as Error).message}`;
+    }
+  };
+
+  const loadTournaments = async () => {
+    try {
+      const r = await api.listTournaments(currentTournamentFilter);
+      const rows = (r.tournaments as TournamentRow[]) || [];
+      clear(tournamentsList);
+      if (rows.length === 0) {
+        tournamentsList.append(h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', padding: '10px 0' } },
+          'Aucun tournoi dans cette cat\u00e9gorie.'));
+      } else {
+        rows.forEach((t) => tournamentsList.append(renderTournamentRow(t)));
+      }
+      tournamentsMsg.textContent = '';
+    } catch (e) {
+      tournamentsMsg.textContent = `\u2717 ${(e as Error).message}`;
+    }
+  };
+  void loadTournaments();
+
+  const filterBtn = (label: string, key: 'upcoming' | 'live' | 'finished') =>
+    h('button', {
+      class: 'btn btn--sm ' + (currentTournamentFilter === key ? '' : 'btn--ghost'),
+      onClick: () => { currentTournamentFilter = key; void loadTournaments(); refreshFilters(); },
+    }, label);
+  let filterRow = h('div', { class: 'row gap-2' });
+  const refreshFilters = () => {
+    clear(filterRow);
+    filterRow.append(filterBtn('\u00c0 venir', 'upcoming'), filterBtn('En cours', 'live'), filterBtn('Termin\u00e9s', 'finished'));
+  };
+  refreshFilters();
 
   return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
     h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'ÉVÉNEMENTS & TOURNOIS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Compétitions')),
+      h('div', {}, h('div', { class: 'eyebrow' }, 'MATCHS & TOURNOIS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Compétitions')),
       Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
-    h('div', { style: { display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px' } },
-      featuredCard,
-      h('div', { class: 'col gap-2' },
-        miniCard('DANS 2H', '#e85d70', 'Coupe Contrée', 'Humains + robots · 64 équipes'),
-        miniCard('OUVERT', '#7ecb98', 'Ligue hebdo', 'Créez ou rejoignez une équipe'))),
-    h('div', { class: 'between', style: { marginTop: '12px', padding: '11px 16px', borderRadius: 'var(--r-lg)', background: 'rgba(126,203,152,.08)', border: '1px solid rgba(126,203,152,.3)' } },
-      h('div', { class: 'row gap-3' },
-        h('span', { style: { fontSize: '18px' } }, '✦'),
-        h('div', {}, h('div', { class: 'title', style: { fontSize: '13px' } }, 'Inviter des amis'), h('div', { style: { fontSize: '10px', color: 'var(--c-text-mute)' } }, '+250 ◆ par ami rejoignant votre équipe'))),
-      Button('Partager', { variant: 'ghost', size: 'sm', onClick: () => (navigator as Navigator & { share?: (d: unknown) => Promise<void> }).share?.({ title: 'Kýdos Belote', url: 'https://kydosbelote.com' }) })),
-    h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-faint)', marginTop: '10px' } }, 'Vitrine de démonstration — les inscriptions ouvriront avec la saison 1.'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' } },
+      ...FORMATS.map(formatCard)),
+    statusEl,
+    h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-faint)', marginTop: '10px', marginBottom: '10px' } },
+      'Le serveur regroupe les joueurs par format. Duo d\u2019acier se joue en coulisses ; les autres formats ouvrent une table en direct.'),
+    h('div', { class: 'between', style: { marginTop: '4px' } },
+      h('div', { class: 'title', style: { fontSize: '14px' } }, 'Tournois'),
+      filterRow),
+    tournamentsMsg,
+    tournamentsList,
   );
 }

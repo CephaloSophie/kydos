@@ -21,6 +21,8 @@ import { gameProjectionService } from './modules/analytics/gameProjection.servic
 import { TeamModel } from './modules/team/team.model.js';
 import { InvitationModel } from './modules/invitation/invitation.model.js';
 import { CompetitionTableModel } from './modules/competition/competition.model.js';
+import { TournamentModel, TournamentStatus } from './modules/tournaments/tournament.model.js';
+import { MatchFormat } from './modules/matches/matchFormat.js';
 import { PromoCodeModel } from './modules/promo/promo.model.js';
 import { TableModel } from './modules/table/table.model.js';
 import { DAILY_REWARD } from './shared/gameEconomy.js';
@@ -205,6 +207,72 @@ export async function seedDatabase() {
     { code: '999988887777', tokens: 10000, expiresAt: new Date(nowMs + 30 * 86_400_000), maxRedemptions: 50, label: 'Gros lot' },
   ]);
   console.log('[seed] 3 codes promo : 1111-2222-3333 (500), 4444-5555-6666 (2000), 9999-8888-7777 (10000)');
+
+  // ── 11. Tournois de démo (1 par statut) ───────────────────────────────
+  await TournamentModel.deleteMany({});
+  const now = new Date();
+  const oneHour = 60 * 60 * 1000;
+  await TournamentModel.create([
+    {
+      name: 'Grand Prix d\u2019acier — Draft',
+      format: MatchFormat.DUO_STEEL,
+      status: TournamentStatus.DRAFT,
+      capacity: 8,
+      minLevel: 0,
+      entryFee: 500,
+      rounds: [
+        { round: 1, prize: 0 },
+        { round: 2, prize: 200 },
+        { round: 3, prize: 800 },
+      ],
+      startAt: new Date(now.getTime() + 24 * oneHour),
+      createdBy: ameur._id,
+    },
+    {
+      name: 'Coupe Contrée — À venir',
+      format: MatchFormat.HYBRID_ALLIANCE,
+      status: TournamentStatus.UPCOMING,
+      capacity: 16,
+      minLevel: 0,
+      entryFee: 1000,
+      rounds: [
+        { round: 1, prize: 0 },
+        { round: 2, prize: 300 },
+        { round: 3, prize: 400 },
+        { round: 4, prize: 500 },
+        { round: 5, prize: 1500 },
+      ],
+      startAt: new Date(now.getTime() + 2 * oneHour),
+      createdBy: ameur._id,
+    },
+    {
+      name: 'Carrée royale — Live',
+      format: MatchFormat.ROYAL_SQUARE,
+      status: TournamentStatus.LIVE,
+      capacity: 8,
+      minLevel: 0,
+      entryFee: 200,
+      rounds: [{ round: 1, prize: 0 }, { round: 2, prize: 400 }],
+      startAt: new Date(now.getTime() - oneHour),
+      startedAt: new Date(now.getTime() - oneHour),
+      createdBy: ameur._id,
+    },
+    {
+      name: 'Duo d\u2019acier — Terminé',
+      format: MatchFormat.DUO_STEEL,
+      status: TournamentStatus.FINISHED,
+      capacity: 4,
+      minLevel: 0,
+      entryFee: 200,
+      rounds: [{ round: 1, prize: 0 }, { round: 2, prize: 400 }],
+      startAt: new Date(now.getTime() - 3 * oneHour),
+      startedAt: new Date(now.getTime() - 3 * oneHour),
+      finishedAt: new Date(now.getTime() - oneHour),
+      createdBy: ameur._id,
+      winners: [ameur._id],
+    },
+  ]);
+  console.log('[seed] 4 tournois de démo : 1 draft, 1 upcoming, 1 live, 1 finished');
 
   console.log('\n[seed] terminé ✓  — connecte-toi avec  ameur / belote123  (ou  invite / belote123 )');
 }

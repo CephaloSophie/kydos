@@ -21,7 +21,7 @@ async function bootstrap() {
   await connectDatabase();
   registerModuleSockets(socketServer);
   registerMonitorSocket(socketServer);
-  httpServer.listen(environment.port, () => logger.info(`API + WebSocket sur :${environment.port}`, { cors: environment.corsOrigins }));
+  httpServer.listen(environment.port, '0.0.0.0', () => logger.info(`API + WebSocket sur 0.0.0.0:${environment.port}`, { cors: environment.corsOrigins }));
 }
 void bootstrap();
 

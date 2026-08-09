@@ -110,6 +110,18 @@ export function installFakeServer(options: FakeServerOptions = {}): () => void {
     }
     if (/^\/robots\/[^/]+$/.test(path) && method === 'DELETE') return json({ ok: true });
 
+    // --- Matchmaking (v14.0) ---------------------------------------------
+    if (path === '/matches/enqueue' && method === 'POST') return json({ status: 'queued', queuePosition: 1 });
+    if (path === '/matches/cancel' && method === 'POST') return json({ refunded: 100 });
+    if (path === '/matches/queues' && method === 'GET') return json({ sizes: { duo_steel: 0, hybrid_alliance: 0, royal_square: 0 } });
+
+    // --- Tournaments (v14.1) ---------------------------------------------
+    if (path.startsWith('/tournaments') && !path.includes('/') && method === 'GET') return json({ tournaments: [] });
+    if (/^\/tournaments\?/.test(path) && method === 'GET') return json({ tournaments: [] });
+    if (/^\/tournaments\/[^/]+$/.test(path) && method === 'GET') return json({ tournament: null });
+    if (/^\/tournaments\/[^/]+\/join$/.test(path) && method === 'POST') return json({ joined: true });
+    if (/^\/tournaments\/[^/]+\/leave$/.test(path) && method === 'POST') return json({ refunded: 1000 });
+
     // --- Games ------------------------------------------------------------
     if (path === '/games' && method === 'GET') return json({ games: FIXTURES.games, page: 1, pageSize: 15, total: FIXTURES.games.length, totalPages: 1 });
     if (path === '/games/robots' && method === 'POST') return json({ gameId: 'g_robots', winner: 'A', scoreA: 1520, scoreB: 980 });

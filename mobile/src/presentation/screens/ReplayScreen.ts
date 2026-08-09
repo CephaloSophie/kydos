@@ -60,8 +60,20 @@ export function ReplayScreen(ctx: AppContext): HTMLElement {
   const pauseChip = chip('⏸ Pause', { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' }, () => {
     paused = !paused; pauseChip.textContent = paused ? '▶ Reprendre' : '⏸ Pause'; if (!paused) tick();
   });
+  // Cycle : 1× → 2× → 4× → 0.5× → 1× (la spec exige 0.5/1/2/4).
   const speedChip = chip('Vitesse 1×', { background: 'rgba(16,21,31,.85)', border: '1px solid var(--c-line)', color: 'var(--c-text-soft)' }, () => {
-    speed = speed === 1 ? 2 : speed === 2 ? 4 : speed === 4 ? 8 : 1; speedChip.textContent = `Vitesse ${speed}×`;
+    speed = speed === 1 ? 2 : speed === 2 ? 4 : speed === 4 ? 0.5 : 1;
+    const label = speed === 0.5 ? '0.5×' : `${speed}×`;
+    speedChip.textContent = `Vitesse ${label}`;
+  });
+  // Stop : reset complet au début du replay et pause.
+  const stopChip = chip('⏹ Stop', { background: 'rgba(232,93,112,.14)', border: '1px solid rgba(232,93,112,.35)', color: 'var(--c-danger)' }, () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    cursor = 0; cum = { A: 0, B: 0 };
+    if (donnes.length) resetDonne(0);
+    paused = true; pauseChip.textContent = '▶ Reprendre';
+    render();
+    statusChip.textContent = '⏹ Arr\u00eat\u00e9 — appuyez sur Reprendre';
   });
   const statusChip = chip('▶ Rejeu en direct', { background: 'rgba(126,203,152,.14)', border: '1px solid rgba(126,203,152,.35)', color: 'var(--c-success)' });
 
@@ -70,7 +82,7 @@ export function ReplayScreen(ctx: AppContext): HTMLElement {
       Button('← Quitter', { variant: 'secondary', size: 'sm', onClick: () => { if (timer) clearTimeout(timer); reactRoot?.unmount(); router.go('history'); } }),
       h('div', { class: 'row gap-3' }, scoreEl, trumpEl)),
     felt,
-    h('div', { class: 'row center gap-2', style: { position: 'absolute', bottom: '12px', left: '60px', right: '22px', height: '38px', justifyContent: 'center' } }, pauseChip, speedChip, statusChip),
+    h('div', { class: 'row center gap-2', style: { position: 'absolute', bottom: '12px', left: '60px', right: '22px', height: '38px', justifyContent: 'center' } }, pauseChip, stopChip, speedChip, statusChip),
   );
 
   if (!id) { statusChip.textContent = '✕ Identifiant manquant'; return root; }

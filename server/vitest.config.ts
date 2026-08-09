@@ -30,6 +30,10 @@ export default defineConfig({
           'src/**/promo.service.test.ts',
           'src/test/api.contract.test.ts',
           'src/core/logger.test.ts',
+          // v14 : logique pure catalog + queue mémoire, aucune dépendance externe.
+          'src/modules/matches/matchFormat.test.ts',
+          'src/modules/matchmaking/queue.test.ts',
+          'src/modules/tournaments/tournament.test.ts',
         ],
     environment: 'node',
     testTimeout: 15000,

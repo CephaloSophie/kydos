@@ -21,4 +21,9 @@ export const environment = {
    */
   corsOrigins: (process.env.CORS_ORIGIN ?? 'http://localhost:5173,http://localhost:5180')
     .split(',').map((o) => o.trim()).filter(Boolean),
+  /**
+   * URL Redis pour le matchmaking (optionnel). Vide → fallback InMemoryQueue.
+   * Exemple : redis://127.0.0.1:6379
+   */
+  redisUrl: (process.env.REDIS_URL ?? '').trim() || null,
 };

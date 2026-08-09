@@ -170,10 +170,14 @@ describe('Écran · Classements & Compétitions', () => {
     expect(el.textContent).toContain('Zéno·9');
   });
 
-  it('les compétitions affichent la vitrine des tournois', async () => {
+  it('les compétitions affichent les 3 formats de match', async () => {
     const el = await mount(CompetScreen);
-    expect(el.textContent).toContain('Grand Prix des IA');
-    expect(el.textContent).toContain('Coupe Contrée');
+    expect(el.textContent).toContain('Duo');
+    expect(el.textContent).toContain('Alliance hybride');
+    expect(el.textContent).toContain('Carr');   // Carrée royale (unicode)
+    // Chaque format expose un bouton d'inscription.
+    const btns = Array.from(el.querySelectorAll('button')).filter((b) => b.textContent?.includes('S'));
+    expect(btns.length).toBeGreaterThanOrEqual(3);
   });
 });
 

@@ -2,7 +2,262 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v13.0.1 — Édition de robot bout-en-bout (KB-301 résolue) (version actuelle)
+## v14.2.0 — Écran tournoi individuel + replay 0.5×/1×/2×/4× + doc (version actuelle)
+
+Dernière tranche mobile des compétitions v14. La boucle utilisateur est
+complète : le joueur peut consulter un tournoi, s'inscrire, se désinscrire,
+voir le bracket en direct, revoir le podium et rejouer chaque match. Le
+replay dispose enfin des vitesses de la spec (0.5× / 1× / 2× / 4×) et d'un
+Stop propre.
+
+### Écran tournoi individuel (KB-450)
+Nouvelle route `tournament?id=<id>` — `TournamentScreen` rend 4 vues selon
+le statut du tournoi :
+
+- **UPCOMING** — bandeau doré compte à rebours (« début dans 2h ») +
+  boutons S'inscrire / Se désinscrire + gains par tour affichés.
+- **LIVE** — bracket en colonnes (une par round) + matchs terminés
+  cliquables. Icône live discrète.
+- **FINISHED** — écran « coupe du monde » : podium 🏆 avec champion et
+  finalistes + récap des gains distribués par tour + boutons ▶ Rejouer
+  pour chaque match du bracket.
+- **DRAFT** — refusé côté serveur, message clair côté client.
+
+Chaque ligne dans `CompetScreen` est désormais cliquable et ouvre cette
+vue. Le bouton S'inscrire de la liste reste actif (stopPropagation pour
+ne pas naviguer sur clic bouton).
+
+### Replay vitesse variable (KB-451)
+`ReplayScreen` :
+
+- **Cycle des vitesses** : 1× → 2× → 4× → 0.5× → 1× (spec exacte).
+- **Bouton Stop** : reset au début du replay et met en pause. Reprise via
+  le bouton Pause existant.
+- Cleanup timer + React root intact au démontage.
+
+### Documentation (KB-452)
+`docs/matches-tournaments.md` — référence complète de l'architecture v14 :
+formats et catalog, queue Redis abstraite, orchestrateur idempotent,
+verrous 1 tournoi/robot/jour, comptabilité kydos, écrans mobiles, endpoints
+HTTP et sockets. Explique aussi ce qui reste hors périmètre v14 (back
+office admin, runner temps-réel HYBRID/ROYAL, prévus v14.3).
+
+### Vérification
+- Typecheck 3 workspaces : ✓
+- **125 tests serveur** (inchangés)
+- **188 tests mobiles** (inchangés)
+- **TNR 14/14 · 446 tests verts.** Zéro régression.
+
+### Bilan v14 (0 → 2)
+| Point | Statut |
+|---|---|
+| 3 formats de match (Duo/Alliance/Carrée) | ✅ v14.0.0 |
+| Queue Redis FIFO abstraite | ✅ v14.0.0 |
+| Runner headless DUO_STEEL | ✅ v14.0.0 |
+| Comptabilité kydos (HouseTransaction) | ✅ v14.0.0 |
+| Modèle Tournament + statuts | ✅ v14.1.0 |
+| tournamentEconomics fonction pure | ✅ v14.1.0 |
+| Bracket + orchestrateur | ✅ v14.1.0 |
+| Worker cron interne | ✅ v14.1.0 |
+| Verrous 1 tournoi/robot/jour | ✅ v14.1.0 |
+| Match socket spectateurs (10 max) | ✅ v14.1.0 |
+| Seed 4 tournois × 4 statuts | ✅ v14.1.0 |
+| Écran mobile 3 formats + liste tournois | ✅ v14.1.0 |
+| Écran tournoi individuel (4 vues + podium) | ✅ v14.2.0 |
+| Replay 0.5×/1×/2×/4× + Stop | ✅ v14.2.0 |
+| Documentation | ✅ v14.2.0 |
+| Runner temps-réel HYBRID/ROYAL (socket table) | ⏳ v14.3 |
+| Back office admin (créer/publier tournois) | ⏳ hors périmètre |
+
+## v14.1.0 — Tournois back-end : modèles, orchestrateur, seed & liste mobile
+
+Deuxième tranche compétitions. Les tournois planifiés à bracket unique sont
+opérationnels de bout en bout : inscription avec verrous, démarrage automatique
+à startAt, progression round par round via l'orchestrateur, comptabilité kydos.
+Le mobile expose la liste avec filtres par statut. Aucune régression.
+
+### Modèle Tournament (KB-441)
+`tournaments/tournament.model.ts` — enum `TournamentStatus` (draft/upcoming/live/
+finished), capacity 4-128, participants avec seedIndex + eliminatedAtRound,
+rounds configurables (round + prize). **Contrainte 1 tournoi/robot/jour**
+garantie par la collection `TournamentRobotDayLock` avec index unique
+`{robotId, dayKey}` — un robot ne peut être inscrit que dans un seul tournoi
+par jour UTC.
+
+### tournamentEconomics — fonction pure (KB-442)
+`tournaments/economics.ts` — calcule totalCollected, totalPaid, houseNet et
+breakdown par round. Testée sur le cas exact de la spec :
+
+| Round | Survivants | Prix / joueur | Total payé |
+|-------|-----------:|--------------:|-----------:|
+| 1 (départ 16) | 16 | 0 | 0 |
+| 2 (huitième) | 8 | 300 | 2 400 |
+| 3 (quart) | 4 | 400 | 1 600 |
+| 4 (demi) | 2 | 500 | 1 000 |
+| 5 (finale) | 1 | 1 500 | 1 500 |
+
+**Buy-in 1000 × 16 = 16 000 collectés**, 6 500 payés → **houseNet = 9 500 ◆**.
+Fonction pure, zéro I/O — trivialement testable, réutilisable au back office.
+
+### Service tournoi (KB-443)
+`join()` — vérifie éligibilité, pose les verrous 1/robot/jour (rollback si le
+débit du buy-in échoue), enregistre la participation, écrit HouseTransaction.
+`leave()` — remboursement complet + libération des verrous.
+`startNow()` — seed FIFO (ordre d'inscription) puis passage LIVE.
+
+### Bracket + orchestrateur (KB-444)
+`bracket.ts` (pur) — logique appariement 2×2 (DUO/HYBRID) ou 4×4 (ROYAL).
+`tournament.orchestrator.ts` — `run(tournamentId)` :
+1. Détermine survivants du round courant.
+2. Crée les Match manquants pour le round.
+3. Lance headless pour DUO_STEEL (synchrone).
+4. Marque perdants éliminés, crédite gain du round aux survivants.
+5. Passe au round suivant ou marque FINISHED.
+
+**Idempotent** : reprend proprement après interruption (worker relance).
+
+### Worker cron interne (KB-445)
+`tournament.worker.ts` — `setInterval` 30 s. Passe UPCOMING → LIVE dès startAt,
+puis orchestre les tournois LIVE. Aucun scheduler externe requis. Résilient :
+ne plante jamais, retente au tick suivant.
+
+### Match socket (KB-447)
+`matches/match.socket.ts` — événement `match:spectate` pour rejoindre une room
+de match. **10 spectateurs max**, DUO_STEEL refusé (purement backend, spec).
+Compte broadcasté à chaque entrée/sortie, cleanup à disconnect.
+
+### Endpoints (KB-446)
+- `GET /api/tournaments?status=upcoming|live|finished` — liste (draft caché aux joueurs)
+- `GET /api/tournaments/:id` — détail (draft visible seulement au créateur)
+- `POST /api/tournaments/:id/join` — inscription
+- `POST /api/tournaments/:id/leave` — désinscription
+- `POST /api/tournaments/preview-economics` — aperçu rentabilité (aucune modif)
+
+### Seed de démo (KB-448)
+`server/src/seed.ts` — 4 tournois × 4 statuts :
+- **Draft** — Grand Prix d'acier (DUO_STEEL, 8 places, invisible aux joueurs)
+- **Upcoming** — Coupe Contrée (HYBRID_ALLIANCE, 16 places, dans 2h)
+- **Live** — Carrée royale (ROYAL_SQUARE, 8 places, en cours)
+- **Finished** — Duo d'acier (terminé il y a 1h, avec vainqueur)
+
+### Écran mobile (KB-449)
+`CompetScreen` étendu : sous les 3 tuiles de match, section **Tournois** avec
+filtres **À venir / En cours / Terminés**. Chaque ligne affiche nom, format,
+places, buy-in, date. Bouton **S'inscrire** (upcoming uniquement) branché sur
+`api.joinTournament`. fakeServer complété.
+
+**UI riche « coupe du monde » (podium, replays, bracket visuel) prévue en v14.2.**
+
+### Vérification
+- Typecheck 3 workspaces : ✓
+- **125 tests serveur** (+8 : economics + bracket)
+- **188 tests mobiles** (fakeServer étendu, aucun test cassé)
+- **TNR 14/14 · 446 tests verts.** Zéro régression.
+
+### Ce qui arrive en v14.2.0 (dernière tranche)
+- Écran tournoi individuel (4 vues selon statut, podium coupe du monde)
+- Runner temps-réel HYBRID/ROYAL avec le vrai flux socket table
+- Icône LIVE dans le TopBar quand une partie est en cours
+- Replay vitesse variable 0.5×/1×/2×/4× + stop/start
+- `docs/matches-tournaments.md`
+
+## v14.0.0 — Matchs immédiats : 3 formats + queue Redis + comptabilité kydos
+
+Première tranche de la refonte compétitions. Le mot « compétition » (ambigu)
+disparaît au profit de **Match** (immédiat, 1 partie) et **Tournament** (bracket
+planifié, à venir en v14.1.0). Aucune régression sur l'existant : le module
+`competition/` d'origine reste en place le temps que le mobile bascule.
+
+### Les 3 formats (KB-432 · MatchFormat + catalog)
+
+Un enum + un catalog immuable dans `server/src/modules/matches/matchFormat.ts`.
+**Source unique** de vérité économique — pour ajuster un prix ou ajouter un
+4ᵉ format, on ne touche QUE ce fichier.
+
+| Format | Effectif | Buy-in | Gain | Rake kydos | Headless |
+|---|---|---|---|---|---|
+| `DUO_STEEL` | 2 robots × 2 joueurs | 200 ◆ | 150 ◆ | **50 ◆** | ✅ |
+| `HYBRID_ALLIANCE` | 1 humain + 1 robot × 2 | 150 ◆ | 225 ◆ | **75 ◆** | ❌ |
+| `ROYAL_SQUARE` | 4 humains | 100 ◆ | 150 ◆ × 2 | **100 ◆** | ❌ |
+
+### Queue Redis FIFO abstraite (KB-434)
+
+`server/src/modules/matchmaking/queue.ts` : interface `MatchmakingQueue` +
+2 implémentations : `InMemoryQueue` (dev/tests) et `RedisQueue` (production,
+LPUSH/RPOP FIFO strict). **Point d'extension unique** : pour passer FIFO →
+matchmaking par ELO plus tard, on remplace l'implémentation dans le factory,
+rien d'autre à changer.
+
+Le client Redis (`ioredis`) est chargé **dynamiquement** si `REDIS_URL` est
+configuré — pas de dépendance forcée. Fallback InMemoryQueue sinon (l'app
+tourne sans Redis).
+
+### Cœur du regroupement (KB-435)
+
+`matchmaking.service.enqueue()` :
+1. Vérifie l'éligibilité (nombre de robots requis, distinction, propriété).
+2. Débite le buy-in via `walletService.stake` (tout ou rien).
+3. Pousse un ticket dans la file du format.
+4. Essaie `tryMatch` : si l'effectif est atteint, crée un `Match` en base et
+   renvoie son id ; sinon renvoie la position en file.
+
+`cancel()` : sortie de file avec remboursement.
+
+### Runner headless DUO_STEEL (KB-436)
+
+`match.headlessRunner.ts` : joue une partie **en synchrone**, aucun délai,
+aucun broadcast. Réutilise `gamePersistenceService` pour rester cohérent
+avec le pipeline standard (l'historique et le replay fonctionnent
+identiquement). Crédite le vainqueur, enregistre le rake maison.
+
+### Comptabilité kydos (KB-437)
+
+Nouvelle collection `HouseTransaction` avec `HouseTransactionKind` enum
+(`MATCH_RAKE`, `TOURNAMENT_ENTRY`, `TOURNAMENT_PRIZE`). Montants **signés** :
+positif = kydos gagne, négatif = kydos perd. `houseAccountingService`
+centralise les écritures pour un reporting simple :
+
+```js
+houseTransactionModel.aggregate([
+  { $group: { _id: '$kind', total: { $sum: '$amount' } } }
+])
+```
+
+### API (KB-438 + KB-439)
+
+- `POST /api/matches/enqueue` — inscription (formats + robotIds)
+- `POST /api/matches/cancel` — désinscription (remboursement)
+- `GET  /api/matches/queues` — tailles des 3 files
+- `POST /api/matches/:id/run` — déclenche le runner headless (utile en
+  test/exploitation ; un worker automatique arrivera en v14.1)
+- Nouvelle variable env : `REDIS_URL` (optionnelle)
+
+### Écran mobile (KB-440)
+
+`CompetScreen` refondu : 3 tuiles pour les 3 formats, boutons S'inscrire /
+Annuler branchés sur les endpoints. Sélection auto des N robots requis depuis
+le cache session. Refresh du wallet après action.
+
+**Refonte visuelle plus riche (statuts en file, bracket, live) prévue en
+v14.1.0** avec les tournois.
+
+### Vérification
+- Typecheck mobile + server + pixi : ✓
+- **117 tests serveur verts** (dont 10 nouveaux : matchFormat 5, queue 5)
+- **188 tests mobiles verts** (test CompetScreen adapté)
+- **TNR 14/14 · 438 tests verts** (+10). Zéro régression.
+- Build mobile OK.
+
+### Ce qui arrive en v14.1.0
+- Modèle Tournament + statuts DRAFT/UPCOMING/LIVE/FINISHED
+- `tournamentEconomics()` (fonction pure)
+- Bracket generator + orchestrateur des rounds
+- Règle 1 tournoi/robot/jour
+- Icône LIVE + spectateurs 10 max
+- Écran résumé « coupe du monde »
+- Replay vitesse variable 0.5×/1×/2×/4× + stop/start
+
+## v13.0.1 — Édition de robot bout-en-bout (KB-301 résolue)
 
 Complétion d'une défaillance de fond ouverte depuis plusieurs versions : le
 serveur exposait déjà `PUT /robots/:id` mais le mobile ne permettait pas

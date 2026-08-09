@@ -3,8 +3,8 @@
     "project": "Kýdos Belote",
     "vendor": "Cephalo Sophie",
     "schemaVersion": "1.0.0",
-    "currentVersion": "13.0.1",
-    "generatedAt": "2026-08-05T12:30:00.000Z",
+    "currentVersion": "14.2.0",
+    "generatedAt": "2026-08-09T10:30:00.000Z",
     "owner": "Ameur Hamdouni",
     "description": "Référentiel UNIQUE des tâches du projet. Toute session de travail DOIT: (1) lire ce fichier, (2) rapprocher chaque nouvelle demande d'une tâche existante — enrichir ses instructions si c'est la même, créer une tâche sinon, (3) mettre à jour statut + history + updatedAt, (4) travailler par ordre de priorité.",
     "statuses": [
@@ -6382,6 +6382,742 @@
           "status": "tested",
           "by": "claude",
           "note": "KB-301 (ouverte depuis plusieurs versions) enfin résolue."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-432",
+      "title": "MatchFormat enum + catalog économique (source unique)",
+      "module": "matches",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "Nouveau module server/src/modules/matches/matchFormat.ts : enum MatchFormat (DUO_STEEL, HYBRID_ALLIANCE, ROYAL_SQUARE) + catalog immuable des règles économiques (buy-in, gain, rake, headless, libellés). Source UNIQUE pour ajuster un prix ou ajouter un 4e format.",
+      "instructions": [],
+      "acceptance": [
+        "3 formats couverts",
+        "catalog immuable (Object.freeze)",
+        "verifyEconomics valide la cohérence",
+        "tests unitaires 5/5"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Point d'entrée pour toutes les décisions économiques."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-433",
+      "title": "Modèle Match unifié pour les 3 formats",
+      "module": "matches",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "match.model.ts : modèle Mongoose Match avec enum MatchStatus (QUEUED/PAIRING/RUNNING/FINISHED/CANCELLED), participants (seat/userId/robotId/team/isHuman), refs tournament + game, scores, timestamps. Indexes composites status+format et tournament+round.",
+      "instructions": [],
+      "acceptance": [
+        "Modèle avec enum status",
+        "participants avec team et isHuman",
+        "indexes pour requêtes fréquentes",
+        "typecheck OK"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Remplace à terme le CompetitionTable (conservé pour compat)."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-434",
+      "title": "MatchmakingQueue : interface abstraite + InMemory + Redis",
+      "module": "matchmaking",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "6 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 8,
+      "duration": "6 h",
+      "description": "queue.ts : interface MatchmakingQueue (push/pop/size/remove/close) + 2 implémentations. InMemoryQueue pour tests/dev. RedisQueue avec LPUSH/RPOP (FIFO strict). queueFactory choisit selon REDIS_URL. Point d'extension unique pour changer FIFO → ELO plus tard sans toucher au reste.",
+      "instructions": [],
+      "acceptance": [
+        "Interface abstraite",
+        "InMemoryQueue FIFO strict",
+        "RedisQueue LPUSH/RPOP",
+        "factory conditionnelle",
+        "tests queue 5/5"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Isolation totale : changer la stratégie = changer 1 fichier."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-435",
+      "title": "MatchmakingService : enqueue, matching, création Match",
+      "module": "matchmaking",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "6 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 8,
+      "duration": "6 h",
+      "description": "matchmaking.service.ts : enqueue vérifie éligibilité (robots possédés, distincts), débite le buy-in via walletService.stake, ajoute en file, essaie tryMatch (extraction FIFO puis création Match en base). cancel rembourse. buildParticipants distribue selon le format (sièges 0,2=A / 1,3=B).",
+      "instructions": [],
+      "acceptance": [
+        "Débit atomique buy-in",
+        "Ownership check robots",
+        "FIFO respecté",
+        "cancel rembourse",
+        "distribution sièges correcte"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Cœur du regroupement."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-436",
+      "title": "MatchHeadlessRunner : exécution DUO_STEEL sans délai",
+      "module": "matches",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "5 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 8,
+      "duration": "5 h",
+      "description": "match.headlessRunner.ts : lance et termine un DUO_STEEL en synchrone (aucun délai, aucun broadcast). Réutilise gamePersistenceService pour cohérence avec le pipeline standard. Crédite le vainqueur, enregistre le rake maison via houseAccountingService. Le replay archivé permet la relecture avec vraies vitesses côté client.",
+      "instructions": [],
+      "acceptance": [
+        "Boucle synchrone MAX_STEPS",
+        "Persistance via pipeline standard",
+        "Crédit vainqueur automatique",
+        "Rake enregistré",
+        "Replay archivé"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Le format DUO_STEEL tourne en coulisses comme demandé."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-437",
+      "title": "HouseAccounting : comptabilité kydos (rake, entrées, prix)",
+      "module": "houseAccounting",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "houseTransaction.model.ts + service : nouvelle collection HouseTransaction avec enum HouseTransactionKind (MATCH_RAKE, TOURNAMENT_ENTRY, TOURNAMENT_PRIZE), amount signé (+ kydos gagne, − kydos perd), refs match/tournoi/user, round. Service centralise les écritures pour reporting simple par aggregate.",
+      "instructions": [],
+      "acceptance": [
+        "Collection HouseTransaction",
+        "enum kind",
+        "amount signé",
+        "service centralisé"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Permet d'agréger les gains/pertes kydos par période et type."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-438",
+      "title": "Redis URL dans environment (fallback InMemory)",
+      "module": "core",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "30 min",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 2,
+      "duration": "30 min",
+      "description": "environment.ts : nouvelle propriété redisUrl (env REDIS_URL, null par défaut → fallback InMemoryQueue). Aucune dépendance forcée à ioredis, chargée dynamiquement si REDIS_URL configuré.",
+      "instructions": [],
+      "acceptance": [
+        "Nouvelle propriété config",
+        "null par défaut",
+        "ioredis en require dynamique"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "L'app fonctionne sans Redis, s'y branche si on active REDIS_URL."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-439",
+      "title": "Controller + routes matchmaking + wiring module",
+      "module": "matchmaking",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "matchmaking.controller.ts + matchmaking.routes.ts : endpoints POST /matches/enqueue, POST /matches/cancel, GET /matches/queues, POST /matches/:id/run (déclenche le runner headless). matchmakingModule ajouté à applicationModules.",
+      "instructions": [],
+      "acceptance": [
+        "4 endpoints REST",
+        "asyncHandler + auth",
+        "module enregistré",
+        "routes ne cassent aucune existante"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Surface API complète pour le mobile."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "14.0.0",
+      "createdAt": "2026-08-09T09:00:00.000Z",
+      "updatedAt": "2026-08-09T09:00:00.000Z",
+      "logs": [],
+      "id": "KB-440",
+      "title": "Refonte CompetScreen mobile : 3 tuiles + inscription réelle",
+      "module": "screens",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "v14 matchs & tournois 2026-08-09",
+      "techno": "Mobile",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "RankingCompetScreens.ts (CompetScreen) : remplace la vitrine décorative par 3 tuiles pour les 3 formats. Boutons S'inscrire / Annuler branchés sur api.enqueueMatch / cancelMatchQueue. Sélection auto des N robots requis depuis session.robots. Refresh session.wallet après action (débit/remboursement).",
+      "instructions": [],
+      "acceptance": [
+        "3 tuiles Duo/Alliance/Carrée",
+        "Inscription réelle via API",
+        "Annulation avec remboursement",
+        "Refresh wallet automatique",
+        "Test e2e adapté 188/188"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:00:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Interface utilisable ; UI plus riche prévue en v14.1.0."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-441",
+      "title": "Tournament model + statuts + verrou 1 tournoi/robot/jour",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "3 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "tournament.model.ts : modèle Mongoose avec enum TournamentStatus (DRAFT/UPCOMING/LIVE/FINISHED), participants (userId/robotIds/seedIndex/eliminatedAtRound), rounds configurables, capacity 4-128. TournamentRobotDayLock avec index unique {robotId,dayKey} garantit qu'un robot ne peut être inscrit qu'à un tournoi par jour.",
+      "instructions": [],
+      "acceptance": [
+        "Modèle avec 4 statuts",
+        "Capacities 4/8/16/32/64/128",
+        "Verrou 1 robot/jour via index unique",
+        "Indexes composites"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Fondation des tournois."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-442",
+      "title": "tournamentEconomics : rentabilité (fonction pure)",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "2 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "economics.ts : fonction pure tournamentEconomics(input) calcule totalCollected, totalPaid, houseNet et breakdown par round. Testée sur la spec exacte : 16 participants × 1000 buy-in, gains 300/400/500/1500 → houseNet 9500.",
+      "instructions": [],
+      "acceptance": [
+        "Fonction pure",
+        "Cas de la spec validé",
+        "houseNet peut être négatif (alerte)",
+        "survivorsAtRound testé"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Prêt pour l'aperçu back office."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-443",
+      "title": "TournamentService : join/leave avec règle 1/robot/jour",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "6 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 8,
+      "duration": "6 h",
+      "description": "tournament.service.ts : join vérifie éligibilité (nb robots, ownership), pose les verrous, débite via walletService.stake, enregistre TournamentEntry en comptabilité. leave rembourse + libère les verrous. startNow seed FIFO. markFinished enregistre les vainqueurs. Rollback des verrous si le débit échoue.",
+      "instructions": [],
+      "acceptance": [
+        "Join avec verrou 1/robot/jour",
+        "Leave avec remboursement",
+        "Seed FIFO à startNow",
+        "Rollback atomique"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Coeur inscription tournoi."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-444",
+      "title": "Bracket + orchestrateur : progression round par round",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "6 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 8,
+      "duration": "6 h",
+      "description": "bracket.ts (pur) : roundCount, pairForRound (2 pour DUO/HYBRID, 4 pour ROYAL), survivorsAtStartOfRound, isBracketFinished. tournament.orchestrator.ts : run(tournamentId) crée les Match manquants pour le round courant, lance headless pour DUO_STEEL, marque les perdants éliminés, crédite le gain du round aux survivants, enregistre en comptabilité, passe au round suivant. Idempotent : peut reprendre après interruption.",
+      "instructions": [],
+      "acceptance": [
+        "Fonctions bracket pures testées",
+        "Orchestrateur idempotent",
+        "Crédit du gain par round",
+        "Comptabilité kydos synchronisée"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Machinerie tournois en marche."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-445",
+      "title": "Worker cron interne : upcoming→live et progression",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "tournament.worker.ts : setInterval 30s. Passe UPCOMING→LIVE dès startAt atteint, puis appelle orchestrator.run() sur chaque tournoi LIVE pour faire avancer. Résilient : ne plante jamais, retente au tick suivant.",
+      "instructions": [],
+      "acceptance": [
+        "Auto-démarrage à startAt",
+        "Progression LIVE automatique",
+        "Résilient aux erreurs",
+        "Se branche via startBackgroundTasks"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Aucun scheduler externe requis."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-446",
+      "title": "Controller HTTP tournois + endpoints joueur",
+      "module": "tournaments",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "2 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 3,
+      "duration": "2 h",
+      "description": "tournament.controller.ts + routes : GET /tournaments (liste filtrée par statut), GET /:id (détail, draft caché aux non-créateurs), POST /:id/join, POST /:id/leave, POST /preview-economics (aperçu rentabilité).",
+      "instructions": [],
+      "acceptance": [
+        "5 endpoints REST",
+        "Draft invisible aux joueurs",
+        "preview-economics ne modifie rien"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Surface API tournois."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-447",
+      "title": "Match socket : spectateurs 10 max (DUO_STEEL exclu)",
+      "module": "matches",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "3 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "match.socket.ts : handler WebSocket. Événement match:spectate → rejoint la room match:<id>. Max 10 spectateurs (MAX_SPECTATORS_PER_MATCH). DUO_STEEL refuse (purement backend). Compte broadcasté à chaque entrée/sortie. Cleanup automatique à disconnect. Branché via matchmakingModule.registerSocketHandlers.",
+      "instructions": [],
+      "acceptance": [
+        "10 spectateurs max",
+        "DUO_STEEL exclu",
+        "Compte broadcasté",
+        "Cleanup disconnect"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Prêt pour l'icône LIVE mobile en v14.2."
+        }
+      ]
+    },
+    {
+      "area": "server",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-448",
+      "title": "Seed : 4 tournois de démo (1 par statut)",
+      "module": "seed",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Server",
+      "category": "Compétitions",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "server/src/seed.ts : crée 4 tournois de démo : DRAFT (invisible aux joueurs), UPCOMING (Coupe Contrée dans 2h), LIVE (Carrée royale), FINISHED (Duo d'acier). Permet de tester tous les écrans mobiles sans configurer manuellement.",
+      "instructions": [],
+      "acceptance": [
+        "4 tournois × 4 statuts",
+        "Idempotent (deleteMany avant create)",
+        "Créés par ameur"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Base de test immédiate."
+        }
+      ]
+    },
+    {
+      "area": "mobile",
+      "version": "14.1.0",
+      "createdAt": "2026-08-09T09:30:00.000Z",
+      "updatedAt": "2026-08-09T09:30:00.000Z",
+      "logs": [],
+      "id": "KB-449",
+      "title": "Écran mobile : liste des tournois avec filtres",
+      "module": "screens",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "3 h",
+      "spec": "v14.1 tournois back",
+      "techno": "Mobile",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "3 h",
+      "description": "CompetScreen étendu : section Tournois sous les 3 tuiles de match. Filtres À venir / En cours / Terminés. Chaque ligne affiche nom, format, participants/capacity, buy-in, date. Bouton S'inscrire (upcoming uniquement) branché sur api.joinTournament. fakeServer complété avec routes /tournaments et /matches.",
+      "instructions": [],
+      "acceptance": [
+        "3 filtres statut",
+        "Ligne avec info clé",
+        "Inscription branchée",
+        "Tests 188/188 verts"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T09:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "UI riche « coupe du monde » prévue en v14.2."
+        }
+      ]
+    },
+    {
+      "version": "14.2.0",
+      "createdAt": "2026-08-09T10:30:00.000Z",
+      "updatedAt": "2026-08-09T10:30:00.000Z",
+      "logs": [],
+      "area": "mobile",
+      "id": "KB-450",
+      "title": "Écran tournoi individuel (4 vues + podium coupe du monde)",
+      "module": "screens",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P1",
+      "estimate": "4 h",
+      "spec": "v14.2 mobile tournois",
+      "techno": "Mobile",
+      "category": "Compétitions",
+      "complexity": 5,
+      "duration": "4 h",
+      "description": "TournamentScreen : nouvelle route tournament?id=. Rend 4 vues selon le statut : UPCOMING (bandeau doré compte à rebours + boutons S'inscrire/Se désinscrire + gains par tour), LIVE (bracket en colonnes par round + matchs cliquables), FINISHED (podium 🏆 + récap gains + boutons Rejouer pour chaque match), DRAFT (message non publié). Cliquer une ligne dans CompetScreen ouvre cette vue.",
+      "instructions": [],
+      "acceptance": [
+        "4 vues distinctes",
+        "Podium visible en FINISHED",
+        "Boutons S'inscrire/Se désinscrire fonctionnels",
+        "Bracket lisible en LIVE",
+        "Cleanup au démontage"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T10:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Complète la boucle utilisateur des tournois."
+        }
+      ]
+    },
+    {
+      "version": "14.2.0",
+      "createdAt": "2026-08-09T10:30:00.000Z",
+      "updatedAt": "2026-08-09T10:30:00.000Z",
+      "logs": [],
+      "area": "mobile",
+      "id": "KB-451",
+      "title": "Replay : vitesses 0.5×/1×/2×/4× + Stop",
+      "module": "screens",
+      "type": "feature",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "v14.2 mobile tournois",
+      "techno": "Mobile",
+      "category": "Compétitions",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "ReplayScreen : cycle de vitesse changé pour 1×→2×→4×→0.5×→1× (spec Ameur). Nouveau bouton Stop qui reset au début du replay et met en pause. Affichage 0.5× au lieu de 0.5. Cleanup timer intact.",
+      "instructions": [],
+      "acceptance": [
+        "Cycle 1/2/4/0.5 correct",
+        "Stop reset au début",
+        "Reprise via bouton Pause",
+        "Cleanup timer OK"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T10:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Contrôles replay complets."
+        }
+      ]
+    },
+    {
+      "version": "14.2.0",
+      "createdAt": "2026-08-09T10:30:00.000Z",
+      "updatedAt": "2026-08-09T10:30:00.000Z",
+      "logs": [],
+      "area": "mobile",
+      "id": "KB-452",
+      "title": "Documentation matches-tournaments",
+      "module": "docs",
+      "type": "doc",
+      "status": "tested",
+      "priority": "P2",
+      "estimate": "1 h",
+      "spec": "v14.2 mobile tournois",
+      "techno": "Mobile",
+      "category": "Compétitions",
+      "complexity": 2,
+      "duration": "1 h",
+      "description": "docs/matches-tournaments.md : architecture complète v14 (formats, matchmaking, tournois, comptabilité, écrans, API HTTP, sockets). Explique les décisions (Redis abstrait, orchestrateur idempotent, verrous 1/robot/jour) et pointe le hors périmètre v14 (back office admin, runner temps-réel HYBRID/ROYAL).",
+      "instructions": [],
+      "acceptance": [
+        "Doc complète et à jour",
+        "Explique les points d'extension",
+        "Note explicite hors périmètre"
+      ],
+      "history": [
+        {
+          "at": "2026-08-09T10:30:00.000Z",
+          "status": "tested",
+          "by": "claude",
+          "note": "Référence pour la reprise."
         }
       ]
     }

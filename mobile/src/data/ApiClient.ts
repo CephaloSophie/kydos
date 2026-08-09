@@ -91,6 +91,37 @@ export class ApiClient {
   updateRobot(id: string, body: unknown) { return this.call<{ robot: { id: string; name: string } }>(`/robots/${id}`, { method: 'PUT', body: JSON.stringify(body) }); }
   deleteRobot(id: string) { return this.call<{ ok: boolean }>(`/robots/${id}`, { method: 'DELETE' }); }
 
+  // --- Matchmaking (v14) --------------------------------------------------
+  /** Inscrit le joueur en file d'attente pour un format. Renvoie 'queued' ou 'matched' avec l'id de match. */
+  enqueueMatch(format: string, robotIds: string[] = []) {
+    return this.call<{ status: 'queued' | 'matched'; matchId?: string; queuePosition?: number }>('/matches/enqueue', {
+      method: 'POST', body: JSON.stringify({ format, robotIds }),
+    });
+  }
+  /** Annule l'inscription en file pour un format (remboursement). */
+  cancelMatchQueue(format: string) {
+    return this.call<{ refunded: number }>('/matches/cancel', { method: 'POST', body: JSON.stringify({ format }) });
+  }
+  /** Tailles de chaque file (Duo d'acier, Alliance hybride, Carrée royale). */
+  matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }
+
+  // --- Tournaments (v14.1) ------------------------------------------------
+  /** Liste les tournois visibles (filtrable par statut : upcoming, live, finished). */
+  listTournaments(status?: 'upcoming' | 'live' | 'finished' | 'all') {
+    const s = status && status !== 'all' ? `?status=${status}` : '';
+    return this.call<{ tournaments: unknown[] }>(`/tournaments${s}`);
+  }
+  /** Détail complet d'un tournoi. */
+  getTournament(id: string) { return this.call<{ tournament: unknown }>(`/tournaments/${id}`); }
+  /** Inscription au tournoi (débit du buy-in, verrous 1/robot/jour). */
+  joinTournament(id: string, robotIds: string[] = []) {
+    return this.call<{ joined: true }>(`/tournaments/${id}/join`, { method: 'POST', body: JSON.stringify({ robotIds }) });
+  }
+  /** Désinscription (autorisée seulement en UPCOMING, remboursement complet). */
+  leaveTournament(id: string) {
+    return this.call<{ refunded: number }>(`/tournaments/${id}/leave`, { method: 'POST' });
+  }
+
   // --- Games / replays ----------------------------------------------------
   listGames(scope: HistoryScope = 'mine', opts: { page?: number; kind?: string } = {}) {
     const params = new URLSearchParams({ scope, page: String(opts.page ?? 1) });

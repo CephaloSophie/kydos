@@ -8,6 +8,8 @@ import { tableModule } from './table/index.js';
 import { gameModule } from './game/index.js';
 import { analyticsModule } from './analytics/index.js';
 import { competitionModule } from './competition/index.js';
+import { matchmakingModule } from './matchmaking/index.js';
+import { tournamentModule } from './tournaments/index.js';
 import { brainModule } from './brain/index.js';
 import { walletModule } from './wallet/index.js';
 import { promoModule } from './promo/index.js';
@@ -26,6 +28,8 @@ export const applicationModules: AppModule[] = [
   gameModule,
   analyticsModule,
   competitionModule,
+  matchmakingModule,
+  tournamentModule,
   brainModule,
   walletModule,
   promoModule,
