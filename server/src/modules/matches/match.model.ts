@@ -47,6 +47,8 @@ const MatchSchema = new Schema(
 
     /** Ref au Game archivé (rempli à la fin). */
     game: { type: Schema.Types.ObjectId, ref: 'Game', default: null },
+    /** Ref à la Table éphémère créée pour les formats non-headless (v14.4). */
+    liveTableId: { type: Schema.Types.ObjectId, ref: 'Table', default: null },
     winnerTeam: { type: String, enum: ['A', 'B', null], default: null },
     scoreTeamA: { type: Number, default: 0 },
     scoreTeamB: { type: Number, default: 0 },

@@ -1,19 +1,26 @@
 /* =============================================================================
  * MATCHES · match.socket.ts — Broadcast des événements de match.
  * -----------------------------------------------------------------------------
- * Handler WebSocket minimal pour les matchs (hors DUO_STEEL) : les clients
- * s'abonnent à une room `match:<id>` pour recevoir les updates de score, les
- * annonces de fin, et pour se manifester comme spectateur (max 10 sauf pour
- * DUO_STEEL qui est purement backend).
+ * Handler WebSocket pour les matchs (hors DUO_STEEL) :
+ *   • `match:spectate`  — un client rejoint la room `match:<id>` (max 10,
+ *                          DUO_STEEL refusé).
+ *   • `match:leave-spectate` — quitte la room.
  *
- * Version v14.1 : structure prête, pas encore de joueur temps-réel branché
- * sur le moteur belote — la table full temps-réel arrive en v14.2. Cet
- * ancêtre expose déjà l'API socket que le mobile appellera.
+ * Le serveur écoute aussi ses propres émissions internes pour SETTLER les
+ * matchs temps-réel : dès qu'une Table éphémère finit, on cherche le Match
+ * lié via `liveTableId` et on lance `matchLiveService.settle` qui copie le
+ * résultat, crédite les gagnants et enregistre le rake.
+ *
+ * Le résultat est ainsi consistant qu'on ait joué en headless (DUO_STEEL)
+ * ou en temps-réel (HYBRID / ROYAL) : le Match a toujours `winnerTeam`,
+ * `scoreTeamA/B`, `gameId`, `status: finished` en fin de partie.
  * ========================================================================== */
 import type { Server, Socket } from 'socket.io';
 import { MatchModel } from './match.model.js';
 import { MatchFormat } from './matchFormat.js';
+import { createLogger } from '../../core/logger.js';
 
+const log = createLogger('match-socket');
 export const MAX_SPECTATORS_PER_MATCH = 10;
 const MATCH_ROOM_PREFIX = 'match:';
 
@@ -24,6 +31,20 @@ function roomFor(matchId: string): string { return `${MATCH_ROOM_PREFIX}${matchI
 
 export class MatchSocket {
   attachTo(server: Server): void {
+    // Sweep périodique : détecte les tables liées à un Match qui sont
+    // terminées (via liveGameService.finishedInfo) et fait le settle. Un
+    // simple setInterval évite d'introduire un couplage direct avec
+    // liveGameService.
+    const SWEEP_INTERVAL_MS = 3000;
+    const sweepHandle = setInterval(async () => {
+      try {
+        const { matchLiveService } = await import('./match.liveRunner.js');
+        await matchLiveService.sweepFinishedMatches(server);
+      } catch { /* résilience */ }
+    }, SWEEP_INTERVAL_MS);
+    // Le handle est référencé pour cleanup éventuel (server.on('close')).
+    (server as any).__matchSocketSweep = sweepHandle;
+
     server.on('connection', (socket: Socket) => {
       socket.on('match:spectate', async (payload: { matchId: string }, ack?: (r: { ok: boolean; error?: string }) => void) => {
         try {
@@ -67,6 +88,8 @@ export class MatchSocket {
         if (matchId) socket.leave(roomFor(matchId));
       });
     });
+
+    log.info('match socket handler attaché', { sweepMs: SWEEP_INTERVAL_MS });
   }
 
   /** Broadcast interne (appelé par le runner à chaque événement moteur). */

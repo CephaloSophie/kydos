@@ -27,6 +27,12 @@ export interface MatchmakingQueue {
   push(key: string, ticket: MatchmakingTicket): Promise<void>;
   /** Retire jusqu'à `count` tickets en tête de file (FIFO). Renvoie moins si insuffisant. */
   pop(key: string, count: number): Promise<MatchmakingTicket[]>;
+  /**
+   * Lit les tickets SANS les retirer. Utilisé pour vérifier la présence d'un
+   * user en file. Perf critique : implémentation Redis via LRANGE (1 aller-
+   * retour), pas de pop/repush.
+   */
+  peek(key: string, limit?: number): Promise<MatchmakingTicket[]>;
   /** Taille courante (utile pour savoir si on peut lancer un match). */
   size(key: string): Promise<number>;
   /** Retire un ticket d'un utilisateur (annulation). Renvoie vrai s'il a été trouvé. */
@@ -46,6 +52,11 @@ export class InMemoryQueue implements MatchmakingQueue {
   async push(key: string, ticket: MatchmakingTicket): Promise<void> { this.get(key).push(ticket); }
   async pop(key: string, count: number): Promise<MatchmakingTicket[]> {
     const q = this.get(key); return q.splice(0, count);
+  }
+  async peek(key: string, limit = -1): Promise<MatchmakingTicket[]> {
+    const q = this.get(key);
+    // Copie superficielle pour éviter les mutations externes.
+    return limit < 0 ? q.slice() : q.slice(0, limit);
   }
   async size(key: string): Promise<number> { return this.get(key).length; }
   async remove(key: string, userId: string): Promise<boolean> {
@@ -88,6 +99,22 @@ export class RedisQueue implements MatchmakingQueue {
     if (!raw) return [];
     const list = Array.isArray(raw) ? raw : [raw];
     return list.map((s) => JSON.parse(s) as MatchmakingTicket);
+  }
+  /**
+   * PERF : LRANGE en 1 aller-retour, aucune mutation. Remplace l'ancien
+   * pattern pop+repush qui coûtait 2N appels Redis par lecture. FIFO reste
+   * garanti par LPUSH (tête = fin) + RPOP (queue = début).
+   *
+   * Attention à l'ordre : LPUSH insère en tête. La queue effective (ordre
+   * FIFO) est donc parcourue de la fin vers le début. On récupère toute la
+   * liste puis on inverse pour rendre les tickets dans l'ordre chronologique
+   * d'arrivée.
+   */
+  async peek(key: string, limit = -1): Promise<MatchmakingTicket[]> {
+    const raw = await this.redis.lrange(this.k(key), 0, -1);
+    if (!raw || raw.length === 0) return [];
+    const parsed = raw.map((s) => JSON.parse(s) as MatchmakingTicket).reverse();
+    return limit < 0 ? parsed : parsed.slice(0, limit);
   }
   async size(key: string): Promise<number> { return this.redis.llen(this.k(key)); }
   async remove(key: string, userId: string): Promise<boolean> {

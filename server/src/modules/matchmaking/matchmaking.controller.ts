@@ -10,11 +10,13 @@
  * La logique métier est dans matchmaking.service et match.headlessRunner.
  * ========================================================================== */
 import type { Response } from 'express';
+import { Types } from 'mongoose';
 import type { AuthenticatedRequest } from '../../shared/authentication.js';
 import { matchmakingService } from './matchmaking.service.js';
 import { matchHeadlessRunner } from '../matches/match.headlessRunner.js';
+import { MatchModel } from '../matches/match.model.js';
 import { MatchFormat } from '../matches/matchFormat.js';
-import { badRequest } from '../../core/HttpError.js';
+import { badRequest, notFound } from '../../core/HttpError.js';
 
 function parseFormat(raw: unknown): MatchFormat {
   const s = String(raw ?? '').trim() as MatchFormat;
@@ -37,6 +39,45 @@ export class MatchmakingController {
 
   async queues(_request: AuthenticatedRequest, response: Response) {
     response.json({ sizes: await matchmakingService.queueSizes() });
+  }
+
+  /**
+   * Retourne le match en cours ou récemment terminé de l'utilisateur.
+   * Utile pour le mobile qui poll après matching pour savoir si un match a
+   * été créé pour lui (statut running → aller sur l'écran match ;
+   * finished → afficher le résultat).
+   */
+  async mine(request: AuthenticatedRequest, response: Response) {
+    const userId = new Types.ObjectId(request.userId!);
+    // On cherche le plus récent match où l'utilisateur figure comme
+    // participant, en priorité les non-terminés.
+    const match = await MatchModel.findOne({ 'participants.userId': userId })
+      .sort({ createdAt: -1 })
+      .populate('participants.robotId', 'name mobile owner')
+      .lean();
+    response.json({ match: match ?? null });
+  }
+
+  async getById(request: AuthenticatedRequest, response: Response) {
+    const match = await MatchModel.findById(request.params.id)
+      .populate('participants.robotId', 'name mobile owner')
+      .populate('participants.userId', 'username')
+      .lean();
+    if (!match) throw notFound('Match introuvable.');
+    response.json({ match });
+  }
+
+  /**
+   * Récupère (ou crée) la Table éphémère associée à un match non-headless.
+   * Le client peut ensuite ouvrir l'écran table classique via `tableId`.
+   *
+   * Utilisé par le mobile après matching : quand `getMyMatch` renvoie un
+   * match en RUNNING de format HYBRID/ROYAL, on appelle cet endpoint pour
+   * obtenir le tableId et naviguer vers `table?id=<tableId>`.
+   */
+  async provisionLiveTable(request: AuthenticatedRequest, response: Response) {
+    const { matchLiveService } = await import('../matches/match.liveRunner.js');
+    response.json(await matchLiveService.provision(request.params.id));
   }
 
   /**

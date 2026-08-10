@@ -1,21 +1,3 @@
-// ecosystem.config.js — PM2 · Kýdos Belote sur VPS 217.160.186.250
-//
-// Prérequis (une seule fois) :
-//   sudo mkdir -p /var/log/kydos && sudo chown $USER /var/log/kydos
-//   cp .env.vps.example server/.env
-//   cp .env.vps.example mobile/.env.production
-//   npm install
-//   cd mobile && npm run build && cd ..
-//
-// Lancer :
-//   pm2 start ecosystem.config.js
-//   pm2 save
-//   pm2 startup   (copier-coller la commande sudo affichée)
-//
-// URLs finales :
-//   Jeu : http://217.160.186.250:8881
-//   API : http://217.160.186.250:8882/api/health
-
 module.exports = {
   apps: [
     {
@@ -38,18 +20,17 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
       env: {
         NODE_ENV: 'production',
-        PORT: 8882,
-        MONGO_URI: 'mongodb://root:toor@127.0.0.1:27017/beloteKydosV14?authSource=admin',
-        JWT_SECRET: 'change-moi-avec-openssl-rand-hex-32-svp-64-chars-mini-obligatoire',
+        PORT: 8881,
+        MONGO_URI: 'mongodb://root:toor@127.0.0.1:27017/beloteKK13?authSource=admin',
+        JWT_SECRET: 'kydos-prod-jwt-secret-changez-moi-en-vrai-64-chars-minimum-svp',
         CORS_ORIGIN: '*',
-        REDIS_URL: '',
       },
     },
     {
       name: 'kydos-mobile',
       cwd: './mobile',
       script: './node_modules/.bin/vite',
-      args: 'preview --host 0.0.0.0 --port 8881 --strictPort',
+      args: 'preview --host 0.0.0.0 --port 8882 --strictPort',
       interpreter: 'none',
       instances: 1,
       exec_mode: 'fork',
@@ -62,9 +43,7 @@ module.exports = {
       merge_logs: true,
       time: true,
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-      env: {
-        NODE_ENV: 'production',
-      },
+      env: { NODE_ENV: 'production' },
     },
   ],
 };

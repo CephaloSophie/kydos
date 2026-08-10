@@ -36,6 +36,7 @@ import { InvitationsScreen } from './presentation/screens/InvitationsScreen';
 import { GameStatsScreen } from './presentation/screens/GameStatsScreen';
 import { ReplayScreen } from './presentation/screens/ReplayScreen';
 import { TournamentScreen } from './presentation/screens/TournamentScreen';
+import { MatchmakingScreen } from './presentation/screens/MatchmakingScreen';
 import { WalletScreen } from './presentation/screens/WalletScreen';
 import { TeamsScreen, MyTeamScreen } from './presentation/screens/TeamsScreens';
 import { OnlineScreen } from './presentation/screens/OnlineScreen';
@@ -102,6 +103,7 @@ router
   .register('about',   AboutScreen,         { title: 'À propos',     fanLabel: 'INFOS',    glyph: '✦', grad: 'var(--g-club)' })
   .register('replay',  ReplayScreen,        { title: 'Rejeu' })
   .register('tournament', TournamentScreen, { title: 'Tournoi' })
+  .register('matchmaking', MatchmakingScreen, { title: 'Recherche…' })
   .register('gamestats', GameStatsScreen,    { title: 'Statistiques' })
   .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)' })
   .register('teams',   TeamsScreen,         { title: 'Équipes',        fanLabel: 'ÉQUIPES', glyph: '♣', grad: 'var(--g-club)' })

@@ -1,6 +1,6 @@
 {
   "name": "belote-server",
-  "version": "14.2.0",
+  "version": "14.4.0",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -18,7 +18,8 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.1",
-    "socket.io": "^4.7.5"
+    "socket.io": "^4.7.5",
+    "ioredis": "^5.4.1"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

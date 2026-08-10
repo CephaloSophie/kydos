@@ -59,8 +59,9 @@ export class MatchmakingService {
     // L'utilisateur est-il déjà en file pour ce format ?
     const queue = getMatchmakingQueue();
     const already = await queue.size(req.format);
-    // On lit la liste pour vérifier (petit coût, files courtes).
-    const existing = await this.#peekAll(req.format);
+    // PERF v14.4 : peek natif (1 aller-retour Redis, aucune mutation) au lieu
+    // de l'ancien pop+repush qui coûtait 2N appels par vérification.
+    const existing = await queue.peek(req.format);
     if (existing.some((t) => t.userId === req.userId)) {
       throw badRequest('Vous êtes déjà en file pour ce format.');
     }
@@ -88,19 +89,6 @@ export class MatchmakingService {
     return { refunded: rules.buyInPerPlayer };
   }
 
-  /** Récupère la file (sans dépiler). */
-  async #peekAll(format: MatchFormat): Promise<MatchmakingTicket[]> {
-    // L'interface ne définit pas de peek : on pop puis on re-push l'ordre est
-    // préservé (le pop renvoie les plus anciens en tête). Pour éviter de
-    // vider la file par erreur, on ne fait ça QUE si nécessaire.
-    const queue = getMatchmakingQueue();
-    const size = await queue.size(format);
-    if (size === 0) return [];
-    const items = await queue.pop(format, size);
-    for (const t of items) await queue.push(format, t);
-    return items;
-  }
-
   /** Extrait les N joueurs de tête et crée un Match, si l'effectif est atteint. */
   async #tryMatch(format: MatchFormat): Promise<string | null> {
     const rules = getMatchFormatRules(format);
@@ -123,7 +111,46 @@ export class MatchmakingService {
       queuedAt: new Date(),
       startedAt: null,
     });
-    return String(match._id);
+    const matchId = String(match._id);
+
+    // Lancement automatique :
+    //   - DUO_STEEL (headless) : joué en synchrone dans un worker background.
+    //   - HYBRID_ALLIANCE / ROYAL_SQUARE : provisionne une Table éphémère et
+    //     laisse liveGameService démarrer dès que les joueurs se connectent.
+    if (rules.isHeadless) {
+      void this.#runHeadlessInBackground(matchId);
+    } else {
+      // Fire-and-forget aussi pour ne pas bloquer la réponse HTTP.
+      void this.#provisionLiveTableInBackground(matchId);
+    }
+
+    return matchId;
+  }
+
+  /** Lance le runner headless en arrière-plan (import dynamique pour éviter les cycles). */
+  async #runHeadlessInBackground(matchId: string): Promise<void> {
+    try {
+      const { matchHeadlessRunner } = await import('../matches/match.headlessRunner.js');
+      await matchHeadlessRunner.run(matchId, { manches: 2 });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`[matchmaking] échec du runner headless ${matchId}:`, e);
+    }
+  }
+
+  /** Provisionne la Table éphémère et met le Match en RUNNING (les joueurs peuvent rejoindre). */
+  async #provisionLiveTableInBackground(matchId: string): Promise<void> {
+    try {
+      const { matchLiveService } = await import('../matches/match.liveRunner.js');
+      await matchLiveService.provision(matchId);
+      // Passe le match en RUNNING dès que la table est prête. Les joueurs
+      // peuvent se connecter ; liveGameService.launch se déclenchera quand
+      // tous les sièges seront présents (ou après un timeout de grâce).
+      await MatchModel.updateOne({ _id: matchId }, { $set: { status: MatchStatus.RUNNING, startedAt: new Date() } });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(`[matchmaking] provisionnement live-table ${matchId} échoué :`, e);
+    }
   }
 
   /**

@@ -104,6 +104,14 @@ export class ApiClient {
   }
   /** Tailles de chaque file (Duo d'acier, Alliance hybride, Carrée royale). */
   matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }
+  /** Match courant ou plus récent du joueur (pour polling après matching). */
+  getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }
+  /** Détail complet d'un match (participants avec robots populés). */
+  getMatch(id: string) { return this.call<{ match: unknown }>(`/matches/${id}`); }
+  /** Récupère (ou crée) la Table éphémère associée à un match non-headless. */
+  provisionMatchLiveTable(id: string) {
+    return this.call<{ tableId: string }>(`/matches/${id}/live-table`, { method: 'POST' });
+  }
 
   // --- Tournaments (v14.1) ------------------------------------------------
   /** Liste les tournois visibles (filtrable par statut : upcoming, live, finished). */

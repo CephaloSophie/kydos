@@ -63,24 +63,25 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   interface FormatCard {
     id: 'duo_steel' | 'hybrid_alliance' | 'royal_square';
     label: string;
+    glyph: string;
     tag: string;
-    tagColor: string;
     accent: string;
     subtitle: string;
     buyIn: number;
     prize: number;
     robotsPerPlayer: number;
+    isHeadless: boolean;
   }
   const FORMATS: FormatCard[] = [
-    { id: 'duo_steel',      label: 'Duo d\u2019acier',    tag: '2 ROBOTS · HEADLESS', tagColor: '#e6c46a', accent: 'var(--g-gold)',
-      subtitle: '2 robots contre 2 robots — 100 % en coulisses', buyIn: 200, prize: 150, robotsPerPlayer: 2 },
-    { id: 'hybrid_alliance', label: 'Alliance hybride', tag: 'TOI + TON ROBOT',      tagColor: '#7ecb98', accent: 'linear-gradient(135deg,#3f8f5e,#1f5a3a)',
-      subtitle: 'Toi + ton robot contre un autre binôme',      buyIn: 150, prize: 225, robotsPerPlayer: 1 },
-    { id: 'royal_square',    label: 'Carr\u00e9e royale', tag: '4 HUMAINS',            tagColor: '#e85d70', accent: 'linear-gradient(135deg,#a13a4c,#5c1f2b)',
-      subtitle: 'Quatre humains, deux \u00e9quipes, la table couronn\u00e9e', buyIn: 100, prize: 150, robotsPerPlayer: 0 },
+    { id: 'duo_steel', label: 'Duo d\u2019acier', glyph: '\u2666', tag: '2 ROBOTS \u00d7 2', accent: 'linear-gradient(160deg,#c99c3f 0%,#8b6a1e 100%)',
+      subtitle: 'Un affrontement 100 % en coulisses.', buyIn: 200, prize: 150, robotsPerPlayer: 2, isHeadless: true },
+    { id: 'hybrid_alliance', label: 'Alliance hybride', glyph: '\u2660', tag: 'HUMAIN + ROBOT', accent: 'linear-gradient(160deg,#3f8f5e 0%,#1a4a2f 100%)',
+      subtitle: 'Vous + votre robot, tous ensemble.', buyIn: 150, prize: 225, robotsPerPlayer: 1, isHeadless: false },
+    { id: 'royal_square', label: 'Carr\u00e9e royale', glyph: '\u2665', tag: '4 HUMAINS', accent: 'linear-gradient(160deg,#b0384a 0%,#5f1f2a 100%)',
+      subtitle: 'Quatre humains, deux \u00e9quipes, une couronne.', buyIn: 100, prize: 150, robotsPerPlayer: 0, isHeadless: false },
   ];
 
-  const statusEl = h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', minHeight: '14px', marginTop: '6px' } });
+  const statusEl = h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)', minHeight: '14px', marginTop: '10px', textAlign: 'center' } });
 
   /** Choisit N robots pour l'inscription (les mieux notés d'abord). */
   const pickRobots = (n: number): string[] => ctx.session.robots.slice(0, n).map((r) => r.id);
@@ -89,19 +90,16 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
     const robotIds = pickRobots(f.robotsPerPlayer);
     if (robotIds.length < f.robotsPerPlayer) {
-      statusEl.textContent = `\u2717 Il vous faut au moins ${f.robotsPerPlayer} robot(s) dans votre \u00e9curie.`;
+      statusEl.textContent = `\u2717 Il vous faut ${f.robotsPerPlayer} robot(s) dans votre \u00e9curie.`;
       return;
     }
-    statusEl.textContent = `Inscription \u00e0 « ${f.label} » en cours\u2026`;
+    statusEl.textContent = `Inscription \u00e0 « ${f.label} »\u2026`;
     try {
-      const r = await api.enqueueMatch(f.id, robotIds);
-      // Après un match immédiat, le solde a bougé (débit + éventuel crédit).
+      await api.enqueueMatch(f.id, robotIds);
       await ctx.session.refreshWallet();
-      if (r.status === 'matched' && r.matchId) {
-        statusEl.textContent = `\u2713 Match trouvé (${r.matchId.slice(-6)}) — bient\u00f4t jouable.`;
-      } else {
-        statusEl.textContent = `\u23f3 En file (position ${r.queuePosition ?? '?'}). Un autre joueur va bient\u00f4t rejoindre.`;
-      }
+      // Redirection immédiate vers l'écran waiting/match. Le polling y détecte
+      // le match dès qu'il est créé (souvent < 2s si le second joueur est là).
+      router.go(`matchmaking?format=${f.id}`);
     } catch (e) {
       statusEl.textContent = `\u2717 ${(e as Error).message}`;
     }
@@ -117,16 +115,58 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     }
   };
 
-  const formatCard = (f: FormatCard) => h('div', { class: 'feature-card', style: { padding: '14px', borderRadius: 'var(--r-lg)', '--card-grad': f.accent, position: 'relative' } as unknown as Partial<CSSStyleDeclaration> },
+  /**
+   * Carte de format redessinée : glyphe belote en filigrane, hiérarchie
+   * typographique claire (tag → titre → sous-titre → économie → CTA).
+   * Effet de survol subtil, ombre douce.
+   */
+  const formatCard = (f: FormatCard) => h('div', {
+    class: 'compet-card',
+    style: {
+      position: 'relative', padding: '18px 16px', borderRadius: 'var(--r-lg)',
+      background: f.accent, color: '#fff', overflow: 'hidden',
+      boxShadow: '0 10px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15)',
+      cursor: 'default', minHeight: '210px',
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+    },
+  },
+    // Glyphe belote en filigrane
+    h('div', { style: {
+      position: 'absolute', right: '-10px', top: '-30px', fontSize: '150px',
+      opacity: '.09', pointerEvents: 'none', lineHeight: '1', color: '#fff',
+    } }, f.glyph),
+    // Bloc haut : tag + titre + subtitle
     h('div', { style: { position: 'relative' } },
-      h('span', { class: 'mono', style: { fontSize: '9px', padding: '3px 9px', borderRadius: 'var(--r-pill)', background: 'rgba(0,0,0,.25)', color: '#fff' } }, f.tag),
-      h('div', { class: 'title', style: { fontSize: '17px', color: '#fff', margin: '10px 0 4px' } }, f.label),
-      h('div', { style: { fontSize: '11px', color: 'rgba(255,255,255,.85)', marginBottom: '10px' } }, f.subtitle),
-      h('div', { class: 'mono', style: { fontSize: '10px', color: 'rgba(255,255,255,.75)', marginBottom: '10px' } },
-        `Buy-in ${f.buyIn} \u25c6 \u00b7 Gain ${f.prize} \u25c6`),
+      h('span', { class: 'mono', style: {
+        display: 'inline-block', fontSize: '9px', padding: '4px 10px',
+        borderRadius: 'var(--r-pill)', background: 'rgba(0,0,0,.35)',
+        color: '#fff', letterSpacing: '.06em',
+      } }, f.tag),
+      h('div', { class: 'title', style: { fontSize: '19px', color: '#fff', margin: '10px 0 4px', lineHeight: '1.2' } }, f.label),
+      h('div', { style: { fontSize: '11px', color: 'rgba(255,255,255,.88)', marginBottom: '10px' } }, f.subtitle),
+    ),
+    // Bloc bas : économie + CTA
+    h('div', { style: { position: 'relative' } },
+      h('div', { class: 'mono', style: {
+        fontSize: '10px', color: 'rgba(255,255,255,.85)', marginBottom: '10px',
+        display: 'flex', justifyContent: 'space-between',
+      } },
+        h('span', {}, `Buy-in ${f.buyIn} \u25c6`),
+        h('span', {}, `Gain ${f.prize} \u25c6`),
+      ),
       h('div', { class: 'row gap-2' },
-        h('button', { class: 'btn btn--sm', style: { color: '#222', background: '#fff' }, onClick: () => void enqueue(f) }, 'S\u2019inscrire'),
-        h('button', { class: 'btn btn--sm btn--ghost', style: { color: '#fff', borderColor: 'rgba(255,255,255,.4)' }, onClick: () => void cancel(f) }, 'Annuler'))),
+        h('button', {
+          class: 'btn btn--sm',
+          style: { color: '#1a1a1a', background: '#fff', flex: '1', fontWeight: '600' },
+          onClick: () => void enqueue(f),
+        }, 'S\u2019inscrire'),
+        h('button', {
+          class: 'btn btn--sm btn--ghost',
+          style: { color: '#fff', borderColor: 'rgba(255,255,255,.4)' },
+          onClick: () => void cancel(f),
+        }, 'Annuler'),
+      ),
+    ),
   );
 
   // ── Section Tournois (v14.1) ─────────────────────────────────────────────
@@ -139,23 +179,48 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   const tournamentsList = h('div', { class: 'col gap-2', style: { marginTop: '10px' } });
   const tournamentsMsg = h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', padding: '6px 0' } }, 'Chargement des tournois…');
 
+  const STATUS_COLORS: Record<string, { bg: string; border: string; label: string; color: string }> = {
+    upcoming: { bg: 'rgba(230,196,106,.10)', border: 'rgba(230,196,106,.35)', label: '\u00c0 VENIR', color: 'var(--c-gold)' },
+    live: { bg: 'rgba(126,203,152,.10)', border: 'rgba(126,203,152,.35)', label: 'EN COURS', color: 'var(--c-success)' },
+    finished: { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.08)', label: 'TERMIN\u00c9', color: 'var(--c-text-mute)' },
+    draft: { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.08)', label: 'DRAFT', color: 'var(--c-text-mute)' },
+  };
+
   const renderTournamentRow = (t: TournamentRow) => {
     const startDate = new Date(t.startAt);
     const startLabel = startDate.toLocaleString();
     const participantCount = (t.participants ?? []).length;
     const canJoin = t.status === 'upcoming';
     const rules = FORMATS.find((f) => f.id === t.format);
-    // Le corps de la ligne (info + bouton) est CLIQUABLE (sauf le bouton lui-même)
-    // → ouvre la vue détail tournoi.
-    return h('div', { class: 'card', style: { padding: '10px', cursor: 'pointer' }, onClick: () => router.go(`tournament?id=${t._id}`) },
+    const style = STATUS_COLORS[t.status] ?? STATUS_COLORS.finished;
+    // Ligne CLIQUABLE (sauf le bouton) → ouvre la vue détail tournoi.
+    return h('div', {
+      style: {
+        padding: '14px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer',
+        background: style.bg, border: `1px solid ${style.border}`,
+        transition: 'transform .15s ease, background .15s ease',
+      },
+      onClick: () => router.go(`tournament?id=${t._id}`),
+      onmouseover: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(3px)'; },
+      onmouseout: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(0)'; },
+    },
       h('div', { class: 'between' },
         h('div', { style: { flex: '1' } },
-          h('div', { class: 'title', style: { fontSize: '13px' } }, t.name),
-          h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)', marginTop: '3px' } },
+          h('div', { class: 'row gap-2', style: { alignItems: 'center', marginBottom: '4px' } },
+            h('span', { class: 'mono', style: {
+              fontSize: '9px', padding: '2px 8px', borderRadius: 'var(--r-pill)',
+              background: 'rgba(0,0,0,.3)', color: style.color, letterSpacing: '.06em',
+            } }, style.label),
+            h('div', { class: 'title', style: { fontSize: '13px', color: 'var(--c-text)' } }, t.name),
+          ),
+          h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', marginTop: '3px' } },
             `${rules?.label ?? t.format} \u00b7 ${participantCount}/${t.capacity} \u00b7 ${t.entryFee} \u25c6 \u00b7 ${startLabel}`)),
         canJoin
-          ? h('button', { class: 'btn btn--sm', onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); } }, 'S\u2019inscrire')
-          : h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-gold)' } }, t.status.toUpperCase()),
+          ? h('button', {
+              class: 'btn btn--sm',
+              onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); },
+            }, 'S\u2019inscrire')
+          : h('span', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, '\u203a'),
       ));
   };
 
@@ -206,19 +271,38 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   };
   refreshFilters();
 
-  return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
-    h('div', { class: 'between', style: { marginBottom: '12px' } },
-      h('div', {}, h('div', { class: 'eyebrow' }, 'MATCHS & TOURNOIS'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Compétitions')),
+  return h('div', { class: 'anim-screen', style: {
+    position: 'absolute', inset: '0', padding: '20px 26px 20px 62px',
+    background: 'radial-gradient(1000px 500px at 30% 0%, #101b2f, #05070f 70%)',
+    overflow: 'auto',
+  } },
+    // En-tête
+    h('div', { class: 'between', style: { marginBottom: '20px' } },
+      h('div', {},
+        h('div', { class: 'eyebrow', style: { color: 'var(--c-gold)' } }, 'MATCHS & TOURNOIS'),
+        h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '4px', letterSpacing: '.01em' } }, 'Compétitions')),
       Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
-    h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' } },
+
+    // Section 1 : Match rapide
+    h('div', { class: 'eyebrow', style: { marginBottom: '10px', color: 'var(--c-text-mute)' } }, 'MATCH RAPIDE — 3 FORMATS'),
+    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' } },
       ...FORMATS.map(formatCard)),
     statusEl,
-    h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-faint)', marginTop: '10px', marginBottom: '10px' } },
-      'Le serveur regroupe les joueurs par format. Duo d\u2019acier se joue en coulisses ; les autres formats ouvrent une table en direct.'),
-    h('div', { class: 'between', style: { marginTop: '4px' } },
-      h('div', { class: 'title', style: { fontSize: '14px' } }, 'Tournois'),
+
+    // Séparateur
+    h('div', { style: { height: '1px', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)', margin: '24px 0 18px' } }),
+
+    // Section 2 : Tournois
+    h('div', { class: 'between', style: { marginBottom: '12px' } },
+      h('div', {},
+        h('div', { class: 'eyebrow', style: { color: 'var(--c-gold)' } }, 'TOURNOIS'),
+        h('h3', { class: 'title', style: { fontSize: '16px', marginTop: '4px' } }, 'Bracket \u00e0 \u00e9limination directe')),
       filterRow),
     tournamentsMsg,
     tournamentsList,
+
+    // Note de bas
+    h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-faint)', marginTop: '20px', textAlign: 'center' } },
+      'Le serveur regroupe les joueurs par format. Duo d\u2019acier se joue en coulisses ; les autres formats ouvrent une table en direct.'),
   );
 }

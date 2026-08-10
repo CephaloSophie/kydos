@@ -46,7 +46,7 @@ tryMatch : si (size >= humansPerMatch) → pop(humansPerMatch)
 
 Le match en `PAIRING` est ensuite :
 - **DUO_STEEL** → `matchHeadlessRunner.run(matchId)` : partie jouée en synchrone, aucun délai, aucun broadcast, replay archivé. Crédit du vainqueur, écriture `HouseTransaction(kind=MATCH_RAKE)`.
-- **HYBRID_ALLIANCE / ROYAL_SQUARE** → passage en `RUNNING`, les joueurs se connectent via socket. **Runner temps-réel branché sur socket table à venir en v14.3.**
+- **HYBRID_ALLIANCE / ROYAL_SQUARE** → `matchLiveService.provision()` crée une Table éphémère (kind = `hybride` ou `royal`) avec les 4 sièges pré-remplis depuis les participants. Le mobile récupère le `tableId` via `POST /matches/:id/live-table` et ouvre l'écran table classique (`liveGameService` prend le relais). À la fin, un sweep 3s fait le settle : score copié dans le Match, gains crédités, rake enregistré. Détails : voir `docs/match-live-runner.md`.
 
 ## Tournois
 
@@ -163,4 +163,4 @@ Rejeu d'une partie archivée avec **vitesses 0.5× / 1× / 2× / 4×**, **pause/
 
 Comme demandé, **le back office admin** (création/publication/annulation de tournois) est hors périmètre v14. Le seed inclut 4 tournois de démo (1 par statut) pour valider tous les écrans immédiatement. Le back office pourra être branché sur les endpoints existants et un futur `admin.controller.ts` sans refactoring.
 
-Le **runner temps-réel HYBRID/ROYAL** (partie belote jouée sur socket table pour ces 2 formats) est également reporté à v14.3 — le socket handler des spectateurs est déjà en place.
+Le **runner temps-réel HYBRID/ROYAL** est implémenté (v14.4) via `matchLiveService` qui convertit un Match en Table éphémère et délègue à `liveGameService`. Voir `docs/match-live-runner.md` pour les détails du cycle de vie.

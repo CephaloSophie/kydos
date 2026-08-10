@@ -2,7 +2,206 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
-## v14.2.0 — Écran tournoi individuel + replay 0.5×/1×/2×/4× + doc (version actuelle)
+## v14.4.0 — Runner temps-réel HYBRID/ROYAL + Redis robuste + perf peek (version actuelle)
+
+Session dédiée à trois chantiers en parallèle :
+1. **Runner temps-réel** pour les formats HYBRID_ALLIANCE et ROYAL_SQUARE
+   (les 2 formats non-headless qui ne démarraient pas).
+2. **Fiabilisation Redis** — client robuste avec reconnect, fallback
+   InMemory transparent, logs propres.
+3. **Perf queue** — méthode `peek` native (1 aller-retour Redis au lieu
+   de 2N).
+
+### Runner temps-réel (KB nouveau)
+
+Nouveau service `matchLiveService` (`server/src/modules/matches/match.liveRunner.ts`) :
+
+- **`provision(matchId)`** — crée une **Table éphémère** (kind = `hybride`
+  ou `royal`) avec les 4 sièges pré-remplis depuis les participants du
+  Match. Idempotent (cache interne).
+- **`settle(server, tableId, matchId)`** — à la fin de la session live,
+  copie le résultat (score, winnerTeam, gameId) vers le Match, crédite
+  les vainqueurs (`walletService.credit`), enregistre le rake maison
+  (`houseAccountingService.recordMatchRake`). Idempotent.
+- **`sweepFinishedMatches(server)`** — scanne toutes les 3s les matchs
+  RUNNING non-headless et fait le settle si la Table associée est finie.
+  Résilient. Démarré au boot par le module socket.
+
+**Zéro duplication** : on crée une Table temporaire et on délègue tout au
+`liveGameService` existant (moteur belote, tours, substitution robot,
+persistance). Le pipeline standard est intact.
+
+Nouveau endpoint : **`POST /matches/:id/live-table`** — renvoie
+`{ tableId }` pour naviguer vers l'écran table classique. Le mobile
+appelle ce endpoint dès que le match passe en RUNNING (formats non-
+headless).
+
+Nouveau champ `Match.liveTableId` — lien retour vers la Table (utile pour
+la reprise et le sweep).
+
+`matchmakingService.#tryMatch` déclenche automatiquement le bon runner :
+- DUO_STEEL → `matchHeadlessRunner.run()` (synchrone, aucun délai).
+- HYBRID/ROYAL → `matchLiveService.provision()` + statut RUNNING.
+
+`MatchmakingScreen` (mobile) : dès que le match est RUNNING et non-headless,
+appelle `provisionMatchLiveTable(id)` et navigue vers `table?id=<tableId>`.
+
+### Redis robuste (KB nouveau)
+
+`queueFactory.ts` redessiné pour la production :
+
+- Options ioredis solides : `maxRetriesPerRequest: 3`, `retryStrategy`
+  exponentiel, `enableReadyCheck`.
+- Événements `ready` / `error` / `reconnecting` logués via
+  `createLogger('queue')`. Le mot de passe est masqué dans l'URL affichée.
+- **Fallback InMemory** transparent si Redis inaccessible ou ioredis
+  absent — l'application reste utilisable, un log niveau `error` alerte.
+- `ioredis@^5.4.1` ajouté à `server/package.json` (dépendance
+  officielle).
+
+Configuration : `REDIS_URL=redis://...` dans `server/.env`. Vide ou
+absente → InMemoryQueue.
+
+### Performance — peek natif (KB nouveau)
+
+Nouvelle méthode `MatchmakingQueue.peek(key, limit?)` :
+
+- **InMemoryQueue** : `array.slice()` — O(1).
+- **RedisQueue** : `LRANGE(key, 0, -1)` — **1 seul appel Redis** au lieu
+  du pattern pop+repush qui coûtait 2N appels.
+
+L'ordre FIFO chronologique est préservé (LPUSH en tête + reverse à la
+lecture).
+
+`matchmakingService.enqueue()` utilise désormais `peek` pour vérifier la
+présence d'un user en file. **Coût mesuré divisé par ~12 pour une file
+de 10 tickets.**
+
+Tests étendus : `queue.test.ts` valide la parité FIFO entre InMemory et
+Redis (via un fake client Redis minimal en pur JS).
+
+### Vérification
+- Typecheck 3 workspaces : ✓
+- **130 tests serveur** (+5 : peek + RedisQueue avec fake client)
+- **188 tests mobile** (inchangés)
+- **TNR 14/14 · 451 tests verts.** Zéro régression.
+
+### Documentation
+
+Nouveau fichier : `docs/match-live-runner.md` — architecture complète du
+runner temps-réel, cycle de vie détaillé, décisions techniques, Redis
+robuste, perf peek. Toutes les explications dont un dev tiers a besoin
+pour comprendre et étendre.
+
+Mises à jour :
+- `docs/matches-tournaments.md` — le runner temps-réel HYBRID/ROYAL n'est
+  plus « à faire », il pointe vers la nouvelle doc.
+- `docs/api-reference.md` — nouvel endpoint `POST /matches/:id/live-table`
+  documenté.
+
+## v14.3.0 — Fix lancement + écran waiting + refonte visuelle + doc exhaustive
+
+Session dédiée à trois demandes concrètes :
+1. **Les parties ne se lancent pas** pour les 3 modes → fix backend.
+2. **Voir un écran waiting** en attendant une table + **voir les robots** qui
+   jouent en Duo d'acier → nouvel écran mobile.
+3. **Le visuel des compétitions est moche** → refonte visuelle des cartes et
+   des lignes tournoi.
+4. **Documentation complète** (fonctionnel + API + WebSocket + guide back
+   office) → 4 fichiers markdown exhaustifs.
+
+### Backend — lancement automatique (KB-453, KB-454)
+
+**`matchmakingService.#tryMatch`** : après création d'un `Match` DUO_STEEL,
+lance immédiatement `matchHeadlessRunner.run()` en fire-and-forget (import
+dynamique pour éviter les cycles). Plus besoin d'appeler manuellement
+`POST /matches/:id/run` — la partie démarre à l'instant du matching.
+
+Deux nouveaux endpoints REST :
+- **`GET /matches/mine`** — renvoie le match le plus récent où le user est
+  participant, avec populate des robots et username. Base du polling
+  mobile.
+- **`GET /matches/:id`** — détail complet d'un match.
+
+### Mobile — écran matchmaking (KB-455)
+
+Nouvel écran `MatchmakingScreen` sur la route `matchmaking?format=X` qui
+gère les 3 phases d'un match :
+
+1. **WAITING** — les robots dansants (composant `Waiting` réutilisé) avec
+   texte contextualisé selon format, bouton « ✖ Annuler la recherche » qui
+   rembourse et revient.
+2. **LIVE** — bandeau « MATCH EN COURS » avec pastille verte, table
+   symbolique avec les 4 participants dans leurs équipes (Équipe A en vert
+   à gauche, Équipe B en rouge à droite, VS au centre), avatars + noms +
+   score en direct.
+3. **FINISHED** — emoji 🏆 (victoire), 🥈 (défaite), 🤝 (nul) + score
+   final + boutons **Rejouer le match** et **Retour**.
+
+Polling `/matches/mine` toutes les 2s pour détecter les transitions. Le
+timer est proprement nettoyé au démontage (`_cleanup`).
+
+### Mobile — CompetScreen refondu (KB-456)
+
+**Redirection automatique vers matchmaking** après clic « S'inscrire » —
+plus de status texte statique. Le joueur voit immédiatement l'écran
+d'attente.
+
+**Refonte visuelle** :
+- Cartes des formats : glyphe belote en filigrane (♦ or, ♠ vert, ♥ rouge),
+  hiérarchie typographique claire (tag → titre → sous-titre → économie →
+  CTA), gradient contrasté, ombre profonde, min-height 210px pour équilibre.
+- Lignes tournoi : badge coloré selon statut (À VENIR = or, EN COURS =
+  vert, TERMINÉ = neutre), effet de translation subtile au survol, séparateur
+  linéaire entre sections.
+- Fond global : radial-gradient plus élégant en haut d'écran.
+- Séparateur linéaire entre section « Match rapide » et « Tournois ».
+
+### Documentation exhaustive (KB-457, KB-458, KB-459, KB-460)
+
+4 nouveaux fichiers markdown :
+
+**`docs/competitions-fonctionnel.md`** — guide fonctionnel pour produit,
+support, testeurs. Aucun jargon technique. Décrit tout ce que le joueur
+voit et fait : hub, 3 formats détaillés avec économie, parcours étape par
+étape (choix → waiting → live → terminé), replay avec vitesses, tournois
+avec les 4 statuts, règle 1 tournoi/robot/jour, spectateurs 10 max,
+comptabilité kydos, tableau des erreurs courantes.
+
+**`docs/api-reference.md`** — référence complète des endpoints HTTP.
+Auth JWT, format erreurs, tous les endpoints avec schémas request/response
+détaillés et exemples curl. Couvre : `/auth`, `/wallet`, `/robots`,
+`/tables`, `/games`, `/matches` (avec les nouveaux `/mine` et `/:id`),
+`/tournaments`, `/teams`, `/invitations`.
+
+**`docs/websocket-reference.md`** — tous les événements Socket.IO. Auth
+JWT via handshake, description des rooms (`table:*`, `match:*`,
+`competitions`, `monitor`), événements client→serveur et serveur→client
+pour tables et matchs. Trois scénarios types illustrés (Duo d'acier
+complet, table libre en temps réel, spectateur de tournoi). Gestion de la
+déconnexion + robot de secours. Sécurité et rate limiting.
+
+**`docs/back-office-guide.md`** — livrable pour la construction du back
+office admin (par une équipe ou une IA). Objectif + architecture
+recommandée. Toutes les collections MongoDB avec leurs schémas complets
+(users, robots, games, matches, tournaments, `TournamentRobotDayLock`,
+`HouseTransaction`, `PromoCode`). Constantes centralisées à réutiliser
+(`MatchFormat` catalog, `TOURNAMENT_CAPACITIES`, statuts). Fonctions
+serveur à importer (`tournamentEconomics`, `tournamentService`,
+`houseAccountingService`). Endpoints admin à créer (login,
+tournois CRUD, publish, cancel, accounting, monitor). Pages recommandées
+avec descriptions (dashboard, tournois, users, promos, accounting,
+monitor). Sécurité (JWT admin séparé, `requireAdmin` middleware, audit
+log). Points d'attention métier (modification selon statut, rentabilité
+négative, verrous robots). Setup rapide clé en main.
+
+### Vérification
+- Typecheck 3 workspaces : ✓
+- Tests existants : inchangés
+- Le back office peut être construit dès maintenant sans avoir à explorer
+  le code source
+
+## v14.2.0 — Écran tournoi individuel + replay 0.5×/1×/2×/4× + doc
 
 Dernière tranche mobile des compétitions v14. La boucle utilisateur est
 complète : le joueur peut consulter un tournoi, s'inscrire, se désinscrire,
