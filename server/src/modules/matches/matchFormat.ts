@@ -29,8 +29,18 @@ export interface MatchFormatRules {
   humansPerMatch: number;
   /** Nombre de robots distincts nécessaires. */
   robotsPerMatch: number;
-  /** Nombre de robots à fournir par chaque humain à l'inscription. */
+  /**
+   * Nombre de robots CO-ÉQUIPIERS à fournir par chaque humain à l'inscription
+   * (ils jouent effectivement en équipe avec le joueur).
+   */
   robotsPerPlayer: number;
+  /**
+   * v14.5 — Est-ce qu'un robot REMPLAÇANT est attendu en plus (pour prendre
+   * la main quand le joueur s'absente ou dépasse le temps) ?
+   * • false pour DUO_STEEL (pas d'humain, pas de remplacement possible).
+   * • true pour HYBRID_ALLIANCE et ROYAL_SQUARE.
+   */
+  requiresSubstitute: boolean;
   /** Nombre de sièges à la table (toujours 4 à la belote contrée). */
   seatsTotal: 4;
   /** Nombre de vainqueurs (2 pour les formats en équipe, 1 pour un solo). */
@@ -53,6 +63,7 @@ export const MATCH_FORMAT_CATALOG: Readonly<Record<MatchFormat, Readonly<MatchFo
     humansPerMatch: 2,
     robotsPerMatch: 4,
     robotsPerPlayer: 2,
+    requiresSubstitute: false,   // aucun humain, aucune substitution
     seatsTotal: 4,
     winnersPerMatch: 1,    // le propriétaire de l'équipe vainqueur (2 robots)
     houseRake: 50,         // 200×2 - 150×2 = 100 ; part propriétaire = 50 (spec)
@@ -66,6 +77,7 @@ export const MATCH_FORMAT_CATALOG: Readonly<Record<MatchFormat, Readonly<MatchFo
     humansPerMatch: 2,
     robotsPerMatch: 2,
     robotsPerPlayer: 1,
+    requiresSubstitute: true,   // 1 coéquipier + 1 remplaçant
     seatsTotal: 4,
     winnersPerMatch: 1,    // l'humain vainqueur (son robot coéquipier gagne avec)
     houseRake: 75,
@@ -79,6 +91,7 @@ export const MATCH_FORMAT_CATALOG: Readonly<Record<MatchFormat, Readonly<MatchFo
     humansPerMatch: 4,
     robotsPerMatch: 0,
     robotsPerPlayer: 0,
+    requiresSubstitute: true,   // pas de coéquipier robot, mais 1 remplaçant obligatoire
     seatsTotal: 4,
     winnersPerMatch: 2,    // les 2 humains de l'équipe gagnante
     houseRake: 100,        // 100×4 - 150×2 = 100

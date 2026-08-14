@@ -88,21 +88,9 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
 
   const enqueue = async (f: FormatCard) => {
     if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
-    const robotIds = pickRobots(f.robotsPerPlayer);
-    if (robotIds.length < f.robotsPerPlayer) {
-      statusEl.textContent = `\u2717 Il vous faut ${f.robotsPerPlayer} robot(s) dans votre \u00e9curie.`;
-      return;
-    }
-    statusEl.textContent = `Inscription \u00e0 « ${f.label} »\u2026`;
-    try {
-      await api.enqueueMatch(f.id, robotIds);
-      await ctx.session.refreshWallet();
-      // Redirection immédiate vers l'écran waiting/match. Le polling y détecte
-      // le match dès qu'il est créé (souvent < 2s si le second joueur est là).
-      router.go(`matchmaking?format=${f.id}`);
-    } catch (e) {
-      statusEl.textContent = `\u2717 ${(e as Error).message}`;
-    }
+    // Redirection vers l'écran de sélection des robots. C'est là que
+    // l'utilisateur choisit ses co-équipiers et son remplaçant.
+    router.go(`enroll?format=${f.id}`);
   };
 
   const cancel = async (f: FormatCard) => {

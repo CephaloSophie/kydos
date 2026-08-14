@@ -43,9 +43,12 @@ export class MatchmakingService {
   async enqueue(req: EnqueueRequest): Promise<EnqueueResult> {
     const rules = getMatchFormatRules(req.format);
 
-    // Vérifications d'éligibilité
-    if (req.robotIds.length !== rules.robotsPerPlayer) {
-      throw badRequest(`Ce format exige ${rules.robotsPerPlayer} robot(s) par joueur.`);
+    // Vérifications d'éligibilité — v14.5 : robotIds = [co-équipiers..., remplaçant?]
+    const expected = rules.robotsPerPlayer + (rules.requiresSubstitute ? 1 : 0);
+    if (req.robotIds.length !== expected) {
+      throw badRequest(rules.requiresSubstitute
+        ? `Ce format exige ${rules.robotsPerPlayer} co\u00e9quipier(s) + 1 rempla\u00e7ant.`
+        : `Ce format exige ${rules.robotsPerPlayer} robot(s) par joueur.`);
     }
     const uniqueRobots = new Set(req.robotIds);
     if (uniqueRobots.size !== req.robotIds.length) throw badRequest('Les robots doivent être distincts.');
@@ -59,8 +62,6 @@ export class MatchmakingService {
     // L'utilisateur est-il déjà en file pour ce format ?
     const queue = getMatchmakingQueue();
     const already = await queue.size(req.format);
-    // PERF v14.4 : peek natif (1 aller-retour Redis, aucune mutation) au lieu
-    // de l'ancien pop+repush qui coûtait 2N appels par vérification.
     const existing = await queue.peek(req.format);
     if (existing.some((t) => t.userId === req.userId)) {
       throw badRequest('Vous êtes déjà en file pour ce format.');
@@ -69,7 +70,8 @@ export class MatchmakingService {
     // Débit du buy-in (tout ou rien).
     await walletService.stake(req.userId, rules.buyInPerPlayer);
 
-    // Ajout à la file.
+    // Ajout à la file. Le ticket transporte les robots dans l'ordre
+    // [coéquipier(s)…, remplaçant?]. Le buildParticipants les affectera.
     const ticket: MatchmakingTicket = { userId: req.userId, robotIds: req.robotIds, enqueuedAt: Date.now() };
     await queue.push(req.format, ticket);
 
@@ -155,34 +157,43 @@ export class MatchmakingService {
 
   /**
    * Distribue les joueurs sur les 4 sièges selon le format.
-   *   • DUO_STEEL       : joueur1 → sièges 0,2 (équipe A) avec ses 2 robots ;
-   *                       joueur2 → sièges 1,3 (équipe B) avec ses 2 robots.
-   *   • HYBRID_ALLIANCE : joueur1 en 0 + son robot en 2 (équipe A) ;
-   *                       joueur2 en 1 + son robot en 3 (équipe B).
-   *   • ROYAL_SQUARE    : 4 humains, tickets[0]→0, tickets[1]→1, tickets[2]→2, tickets[3]→3.
-   *                       Équipes : sièges 0,2 = A ; 1,3 = B.
+   *   • DUO_STEEL       : robotIds = [teammate1, teammate2] (2 co-équipiers).
+   *                       joueur1 → sièges 0,2 (équipe A) ; joueur2 → sièges 1,3 (B).
+   *   • HYBRID_ALLIANCE : robotIds = [coéquipier, remplaçant].
+   *                       joueur1 en 0 + coéquipier en 2 (équipe A) ; joueur2 idem (B).
+   *                       Le remplaçant est stocké sur le participant humain.
+   *   • ROYAL_SQUARE    : robotIds = [remplaçant].
+   *                       4 humains, chaque humain a son remplaçant enregistré.
    */
   #buildParticipants(format: MatchFormat, tickets: MatchmakingTicket[]) {
-    const p: Array<{ seat: number; userId: Types.ObjectId | null; robotId: Types.ObjectId | null; team: 'A' | 'B'; isHuman: boolean }> = [];
+    type Row = { seat: number; userId: Types.ObjectId | null; robotId: Types.ObjectId | null; substituteRobotId: Types.ObjectId | null; team: 'A' | 'B'; isHuman: boolean };
+    const p: Row[] = [];
     const asId = (id: string) => new Types.ObjectId(id);
+    const rules = getMatchFormatRules(format);
+    const substituteOf = (t: MatchmakingTicket): Types.ObjectId | null => {
+      if (!rules.requiresSubstitute) return null;
+      const last = t.robotIds[t.robotIds.length - 1];
+      return last ? asId(last) : null;
+    };
+
     if (format === MatchFormat.DUO_STEEL) {
-      // équipe A = tickets[0], équipe B = tickets[1]. Aucun humain assis, les
-      // robots occupent les 4 sièges, mais on note userId côté propriétaire.
-      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[0]), team: 'A', isHuman: false });
-      p.push({ seat: 2, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[1]), team: 'A', isHuman: false });
-      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[0]), team: 'B', isHuman: false });
-      p.push({ seat: 3, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[1]), team: 'B', isHuman: false });
+      // Pas d'humain assis, pas de substitute. tickets[i].robotIds = [r1, r2].
+      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[0]), substituteRobotId: null, team: 'A', isHuman: false });
+      p.push({ seat: 2, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[1]), substituteRobotId: null, team: 'A', isHuman: false });
+      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[0]), substituteRobotId: null, team: 'B', isHuman: false });
+      p.push({ seat: 3, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[1]), substituteRobotId: null, team: 'B', isHuman: false });
     } else if (format === MatchFormat.HYBRID_ALLIANCE) {
-      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 2, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[0]), team: 'A', isHuman: false });
-      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: null, team: 'B', isHuman: true });
-      p.push({ seat: 3, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[0]), team: 'B', isHuman: false });
+      // tickets[i].robotIds = [coéquipier, remplaçant].
+      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: null, substituteRobotId: substituteOf(tickets[0]), team: 'A', isHuman: true });
+      p.push({ seat: 2, userId: asId(tickets[0].userId), robotId: asId(tickets[0].robotIds[0]), substituteRobotId: null, team: 'A', isHuman: false });
+      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: null, substituteRobotId: substituteOf(tickets[1]), team: 'B', isHuman: true });
+      p.push({ seat: 3, userId: asId(tickets[1].userId), robotId: asId(tickets[1].robotIds[0]), substituteRobotId: null, team: 'B', isHuman: false });
     } else {
-      // ROYAL_SQUARE : 4 humains.
-      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: null, team: 'B', isHuman: true });
-      p.push({ seat: 2, userId: asId(tickets[2].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 3, userId: asId(tickets[3].userId), robotId: null, team: 'B', isHuman: true });
+      // ROYAL_SQUARE : tickets[i].robotIds = [remplaçant].
+      p.push({ seat: 0, userId: asId(tickets[0].userId), robotId: null, substituteRobotId: substituteOf(tickets[0]), team: 'A', isHuman: true });
+      p.push({ seat: 1, userId: asId(tickets[1].userId), robotId: null, substituteRobotId: substituteOf(tickets[1]), team: 'B', isHuman: true });
+      p.push({ seat: 2, userId: asId(tickets[2].userId), robotId: null, substituteRobotId: substituteOf(tickets[2]), team: 'A', isHuman: true });
+      p.push({ seat: 3, userId: asId(tickets[3].userId), robotId: null, substituteRobotId: substituteOf(tickets[3]), team: 'B', isHuman: true });
     }
     return p;
   }

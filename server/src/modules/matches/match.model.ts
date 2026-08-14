@@ -28,6 +28,12 @@ const ParticipantSchema = new Schema(
     seat: { type: Number, required: true, min: 0, max: 3 },
     userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     robotId: { type: Schema.Types.ObjectId, ref: 'Robot', default: null },
+    /**
+     * v14.5 — Robot désigné pour prendre la main si le joueur humain se
+     * déconnecte ou dépasse le temps imparti. Renseigné uniquement pour les
+     * participants humains (isHuman=true) des formats HYBRID/ROYAL.
+     */
+    substituteRobotId: { type: Schema.Types.ObjectId, ref: 'Robot', default: null },
     team: { type: String, enum: ['A', 'B'], required: true },
     isHuman: { type: Boolean, required: true },
   },

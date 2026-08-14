@@ -26,7 +26,14 @@ interface LiveGame {
   participants: PersistenceParticipant[];
   robotBrains: (RobotAlgorithm | null)[];
   robots: (RobotConfig | null)[];
+  /** Remplaçant par défaut si aucun remplaçant spécifique n'est configuré. */
   substituteBrain: RobotAlgorithm;
+  /**
+   * v14.5 — Remplaçant SPÉCIFIQUE par siège humain (renseigné pour les tables
+   * issues d'un Match compétition où chaque humain a désigné son propre robot
+   * de secours). Si undefined pour un siège, on retombe sur substituteBrain.
+   */
+  substituteBrainBySeat: Map<number, RobotAlgorithm>;
   turnTimeoutMs: number;
   turnTimer: ReturnType<typeof setTimeout> | null;
   substituteSeats: Set<number>;
@@ -51,6 +58,25 @@ export class LiveGameService {
 
   isLive(tableId: string): boolean {
     return this.games.has(tableId);
+  }
+
+  /**
+   * v14.5 — Configure le robot de secours SPÉCIFIQUE pour un siège humain.
+   * Utilisé par matchLiveService pour utiliser le robot choisi par le joueur
+   * lors de l'inscription au match, au lieu du remplaçant générique.
+   *
+   * À appeler APRÈS launch(). Si le siège n'est pas humain, la config est
+   * ignorée.
+   */
+  async setSubstituteBrainForSeat(tableId: string, seat: number, robotId: string): Promise<boolean> {
+    const live = this.games.get(tableId);
+    if (!live) return false;
+    const robotDoc: any = await RobotModel.findById(robotId).lean();
+    if (!robotDoc) return false;
+    const robotCfg = robotFromFiche(robotDoc, { id: String(robotDoc._id), name: robotDoc.name });
+    const brain = createAlgorithm(robotCfg, contreeRules);
+    live.substituteBrainBySeat.set(seat, brain);
+    return true;
   }
 
   async launch(server: Server, tableId: string): Promise<void> {
@@ -110,6 +136,7 @@ export class LiveGameService {
       robotBrains,
       robots,
       substituteBrain,
+      substituteBrainBySeat: new Map(),
       turnTimeoutMs: tableDocument.config?.turnTimeoutMs ?? DEFAULT_TURN_TIMEOUT_MS,
       turnTimer: null,
       substituteSeats: new Set(),
@@ -293,13 +320,16 @@ export class LiveGameService {
       return;
     }
 
-    // Tour d'un humain : robot de secours après turnTimeoutMs.
+    // Tour d'un humain : robot de secours après turnTimeoutMs. Le remplaçant
+    // spécifique au siège (v14.5 — configuré via un Match compétition) est
+    // utilisé s'il existe, sinon fallback sur le remplaçant générique.
     liveGame.turnTimer = setTimeout(() => {
       const current = this.games.get(tableId);
       if (!current || current.engine.turn !== currentSeat) return;
       current.substituteSeats.add(currentSeat);
       server.to(`table:${tableId}`).emit('table:substitute', { seat: currentSeat });
-      const action = robotAct(current.engine, currentSeat, current.substituteBrain);
+      const brain = current.substituteBrainBySeat.get(currentSeat) ?? current.substituteBrain;
+      const action = robotAct(current.engine, currentSeat, brain);
       if (action.kind === 'bid') { const result = current.engine.submitBid(currentSeat, action.bid); if (!result.ok) current.engine.submitBid(currentSeat, { action: 'pass' }); }
       else current.engine.playCard(currentSeat, action.card);
       this.advance(server, tableId);

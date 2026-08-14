@@ -49,12 +49,21 @@ export class MatchmakingController {
    */
   async mine(request: AuthenticatedRequest, response: Response) {
     const userId = new Types.ObjectId(request.userId!);
-    // On cherche le plus récent match où l'utilisateur figure comme
-    // participant, en priorité les non-terminés.
-    const match = await MatchModel.findOne({ 'participants.userId': userId })
-      .sort({ createdAt: -1 })
+    // Priorité 1 : un match en cours (RUNNING ou PAIRING). Sinon, prendre
+    // le plus récent (typiquement FINISHED récent que le mobile affiche
+    // pendant ~2 min sur l'accueil).
+    let match: any = await MatchModel.findOne({
+      'participants.userId': userId,
+      status: { $in: ['pairing', 'running'] },
+    }).sort({ createdAt: -1 })
       .populate('participants.robotId', 'name mobile owner')
       .lean();
+    if (!match) {
+      match = await MatchModel.findOne({ 'participants.userId': userId })
+        .sort({ createdAt: -1 })
+        .populate('participants.robotId', 'name mobile owner')
+        .lean();
+    }
     response.json({ match: match ?? null });
   }
 

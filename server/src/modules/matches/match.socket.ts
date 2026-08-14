@@ -39,6 +39,12 @@ export class MatchSocket {
     const sweepHandle = setInterval(async () => {
       try {
         const { matchLiveService } = await import('./match.liveRunner.js');
+        // 1) Démarre les Tables éphémères issues d'un Match (liveGameService.launch).
+        await matchLiveService.launchPendingMatchTables(server);
+        // 2) Configure les remplaçants pour les tables live qui viennent d'un
+        //    Match (une seule fois par table dès qu'elle est live).
+        await matchLiveService.attachPendingSubstitutes();
+        // 3) Détecte les matchs terminés et fait le settle (score, gains, rake).
         await matchLiveService.sweepFinishedMatches(server);
       } catch { /* résilience */ }
     }, SWEEP_INTERVAL_MS);

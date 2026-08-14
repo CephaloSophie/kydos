@@ -93,16 +93,94 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     style: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px' },
   }, ...MENUS.map(menuTile));
 
+  // ── Bannière COMPÉTITION en cours / récente (v14.5) ───────────────────
+  // Poll léger toutes les 5s sur /matches/mine. Affiche :
+  //   • LIVE orange + score + bouton Reprendre si status running.
+  //   • FINISHED + emoji victoire/défaite pendant ~2 min après la fin.
+  const competBanner = h('div', { style: { display: 'none' } });
+  let competPoller: ReturnType<typeof setInterval> | null = null;
+  const renderCompetBanner = (m: any | null) => {
+    if (!m) { competBanner.style.display = 'none'; competBanner.innerHTML = ''; return; }
+    const status = m.status as string;
+    const format = m.format as string;
+    const finishedAt = m.finishedAt ? new Date(m.finishedAt).getTime() : 0;
+    const showFinished = status === 'finished' && (Date.now() - finishedAt) < 120_000;
+    const showLive = status === 'running' || status === 'pairing';
+    if (!showFinished && !showLive) { competBanner.style.display = 'none'; competBanner.innerHTML = ''; return; }
+    const isHeadless = format === 'duo_steel';
+    // Détection victoire (côté humain) : sauf DUO_STEEL où c'est le propriétaire d'équipe.
+    const meId = ctx.session.profile?.id;
+    const myTeam = m.participants?.find((p: any) => {
+      const u = p.userId; const uid = typeof u === 'object' && u ? u._id : u;
+      return uid === meId;
+    })?.team;
+    const won = myTeam && m.winnerTeam && myTeam === m.winnerTeam;
+    const nul = m.winnerTeam == null;
+    const labelFormat = format === 'duo_steel' ? 'Duo d\u2019acier' : format === 'hybrid_alliance' ? 'Alliance hybride' : 'Carr\u00e9e royale';
+    competBanner.style.display = 'block';
+    competBanner.innerHTML = '';
+    // Couleur : orange pour compétition (distinct du rouge des tables libres).
+    const accent = showLive ? '#e89644' : (won ? 'var(--c-success)' : nul ? 'var(--c-text-mute)' : 'var(--c-danger)');
+    const dot = showLive ? h('span', { style: {
+      width: '8px', height: '8px', borderRadius: '50%', background: accent,
+      boxShadow: `0 0 10px ${accent}`, animation: 'pulse 1.4s ease-in-out infinite',
+    } }) : h('span', { style: { fontSize: '14px' } }, won ? '\ud83c\udfc6' : nul ? '\ud83e\udd1d' : '\ud83e\udd42');
+    const statusLabel = showLive
+      ? (status === 'running' ? 'EN COURS' : 'D\u00c9MARRAGE')
+      : (won ? 'VICTOIRE' : nul ? 'MATCH NUL' : 'D\u00c9FAITE');
+    const score = h('span', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-soft)' } },
+      `NOUS ${m.scoreTeamA ?? 0}  \u00b7  EUX ${m.scoreTeamB ?? 0}`);
+    const button = showLive
+      ? h('button', { class: 'btn btn--sm', style: { background: accent, color: '#1a0f00', fontWeight: '600' },
+          onClick: async () => {
+            // DUO_STEEL : pas de table à rejoindre — retour à l'écran matchmaking.
+            if (isHeadless) { router.go(`matchmaking?format=${format}`); return; }
+            try {
+              const { tableId } = await api.provisionMatchLiveTable(m._id);
+              router.go(`table?online=${tableId}`);
+            } catch { router.go(`matchmaking?format=${format}`); }
+          },
+        }, isHeadless ? 'Voir' : 'Reprendre')
+      : m.game
+        ? h('button', { class: 'btn btn--sm btn--ghost', onClick: () => router.go(`replay?id=${m.game}`) }, '\u25b6 Rejouer')
+        : h('span', {}, '');
+    competBanner.append(h('div', {
+      class: 'row gap-3',
+      style: {
+        padding: '10px 14px', borderRadius: 'var(--r-md)', alignItems: 'center',
+        background: showLive ? 'rgba(232,150,68,.10)' : 'rgba(255,255,255,.03)',
+        border: `1px solid ${showLive ? 'rgba(232,150,68,.35)' : 'rgba(255,255,255,.08)'}`,
+      },
+    },
+      dot,
+      h('div', { style: { flex: '1', minWidth: 0 } },
+        h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
+          h('span', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: accent } }, `COMP\u00c9TITION \u00b7 ${statusLabel}`),
+          h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)' } }, labelFormat)),
+        h('div', { class: 'row gap-3', style: { marginTop: '4px', alignItems: 'center' } }, score)),
+      button,
+    ));
+  };
+  const pollCompet = async () => {
+    try {
+      const { match } = await api.getMyMatch();
+      renderCompetBanner(match);
+    } catch { /* transient */ }
+  };
+  competPoller = setInterval(() => void pollCompet(), 5000);
+  void pollCompet();
+
   const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } }) as HTMLElement & { _cleanup?: () => void };
   const topbar = TopBar(ctx.session, ctx.bus) as HTMLElement & { _cleanup?: () => void };
   root.append(
     topbar,
     h('div', { class: 'row gap-3', style: { position: 'absolute', top: '64px', left: '60px', right: '26px' } }, ...FEATURES.map(featureCard)),
-    h('div', { style: { position: 'absolute', top: '250px', left: '60px', right: '26px' } }, menuRow),
+    h('div', { style: { position: 'absolute', top: '224px', left: '60px', right: '26px' } }, competBanner),
+    h('div', { style: { position: 'absolute', top: '278px', left: '60px', right: '26px' } }, menuRow),
     fan,
   );
   // Le router (main.tsx) appellera ce cleanup avant de remplacer l'écran :
   // on propage celui du TopBar → les listeners globaux ne fuient pas.
-  root._cleanup = () => { topbar._cleanup?.(); };
+  root._cleanup = () => { topbar._cleanup?.(); if (competPoller) clearInterval(competPoller); };
   return root;
 }

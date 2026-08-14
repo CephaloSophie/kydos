@@ -6,12 +6,14 @@ import { createLogger } from './core/logger.js';
 import { createExpressApplication, registerModuleSockets } from './app.js';
 import { attachSocketAuthentication } from './shared/socketAuthentication.js';
 import { registerMonitorSocket } from './modules/monitor/monitor.module.js';
+import { setSocketServer } from './core/socketAccessor.js';
 
 const logger = createLogger('server');
 
 const application = createExpressApplication();
 const httpServer = http.createServer(application);
 const socketServer = new Server(httpServer, { cors: { origin: environment.corsOrigins.includes('*') ? '*' : environment.corsOrigins } });
+setSocketServer(socketServer);
 
 attachSocketAuthentication(socketServer);
 

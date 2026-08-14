@@ -117,8 +117,103 @@ export class MatchLiveService {
     (match as any).liveTableId = table._id;
     await match.save();
 
-    log.info('table éphémère créée', { matchId, tableId, format });
+    // Cache les substituteRobotId par siège pour cette table. Ils seront
+    // appliqués par attachSubstitutesForTable() dès que la partie live est
+    // démarrée (au premier subscribe socket qui déclenche liveGameService.launch).
+    const subsBySeat = new Map<number, string>();
+    for (const p of match.participants as any[]) {
+      if (p.isHuman && p.substituteRobotId) {
+        subsBySeat.set(p.seat, String(p.substituteRobotId));
+      }
+    }
+    if (subsBySeat.size > 0) this.#substituteConfig.set(tableId, subsBySeat);
+
+    log.info('table éphémère créée', { matchId, tableId, format, subs: subsBySeat.size });
+
+    // v14.6 : démarrage IMMÉDIAT si le socket server est disponible — évite
+    // d'attendre le sweep 3s. Le fallback (sweep) reste en place au cas où.
+    try {
+      const { getSocketServer } = await import('../../core/socketAccessor.js');
+      const server = getSocketServer();
+      if (server && !liveGameService.isLive(tableId)) {
+        await liveGameService.launch(server, tableId);
+        // Attache les remplaçants tout de suite après le launch.
+        for (const [seat, robotId] of subsBySeat) {
+          try { await liveGameService.setSubstituteBrainForSeat(tableId, seat, robotId); }
+          catch { /* silencieux, le sweep retentera */ }
+        }
+        this.#substituteConfig.delete(tableId);
+        log.info('table Match démarrée immédiatement', { matchId, tableId });
+      }
+    } catch (e) {
+      log.warn('démarrage immédiat échoué (sweep fera fallback)', { matchId, error: (e as Error).message });
+    }
+
     return { tableId };
+  }
+
+  /**
+   * v14.5 — Cache des remplaçants par table. Consommé par
+   * `attachSubstitutesForTable()` que le sweep appelle après le launch.
+   */
+  #substituteConfig = new Map<string, Map<number, string>>();
+
+  /**
+   * Démarre proactivement les Tables éphémères issues d'un Match : quand
+   * `provision()` les crée, elles restent en `lobby`. `table:subscribe` ne
+   * déclenche pas `launch` — on le fait ici via `liveGameService.launch`.
+   * Une fois live, `attachPendingSubstitutes()` connectera les remplaçants.
+   */
+  async launchPendingMatchTables(server: Server): Promise<void> {
+    // 1) Cache mémoire (matches provisionnés dans cette instance).
+    for (const [matchId, tableId] of this.#tableByMatch) {
+      if (liveGameService.isLive(tableId)) continue;
+      const finished = await liveGameService.finishedInfo(tableId);
+      if (finished) continue;
+      try {
+        await liveGameService.launch(server, tableId);
+        log.info('table Match démarrée (cache)', { matchId, tableId });
+      } catch (e) {
+        log.warn('launch table Match échoué', { matchId, tableId, error: (e as Error).message });
+      }
+    }
+    // 2) Fallback base : matches RUNNING non-headless avec une liveTableId
+    //    mais pas encore live (utile après un redémarrage serveur).
+    const running = await MatchModel.find({
+      status: MatchStatus.RUNNING,
+      format: { $in: [MatchFormat.HYBRID_ALLIANCE, MatchFormat.ROYAL_SQUARE] },
+      liveTableId: { $ne: null },
+    }).select('_id liveTableId').limit(20).lean();
+    for (const m of running) {
+      const tableId = String((m as any).liveTableId);
+      const matchId = String((m as any)._id);
+      if (this.#tableByMatch.get(matchId) === tableId) continue;   // déjà traité
+      if (liveGameService.isLive(tableId)) { this.#tableByMatch.set(matchId, tableId); continue; }
+      const finished = await liveGameService.finishedInfo(tableId);
+      if (finished) continue;
+      try {
+        await liveGameService.launch(server, tableId);
+        this.#tableByMatch.set(matchId, tableId);
+        log.info('table Match démarrée (DB)', { matchId, tableId });
+      } catch { /* résilience */ }
+    }
+  }
+
+  /**
+   * À appeler périodiquement (via le sweep du socket) : détecte les tables
+   * live pour lesquelles des remplaçants sont en attente de configuration et
+   * les branche sur liveGameService.
+   */
+  async attachPendingSubstitutes(): Promise<void> {
+    for (const [tableId, subs] of this.#substituteConfig) {
+      if (!liveGameService.isLive(tableId)) continue;   // pas encore démarré
+      for (const [seat, robotId] of subs) {
+        try { await liveGameService.setSubstituteBrainForSeat(tableId, seat, robotId); }
+        catch (e) { log.warn('config remplaçant échoué', { tableId, seat, error: (e as Error).message }); }
+      }
+      this.#substituteConfig.delete(tableId);   // configuré, on nettoie
+      log.info('remplaçants attachés', { tableId, count: subs.size });
+    }
   }
 
   /**

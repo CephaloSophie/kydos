@@ -78,10 +78,28 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
     h('div', { class: 'title', style: { fontSize: '20px', margin: '4px 0' } }, meta.label),
   );
   const topbar = h('div', { class: 'between', style: { marginBottom: '10px' } },
-    h('div', { class: 'eyebrow' }, 'MATCHMAKING'),
+    h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
+      h('div', { class: 'eyebrow' }, 'MATCHMAKING'),
+      statusChip('ATTENTE', '#e6c46a')),
     Button('\u2716 Annuler la recherche', { variant: 'secondary', size: 'sm', onClick: () => void doCancel() }));
   const stage = h('div', { class: 'col', style: { minHeight: '340px', position: 'relative' } });
   root.append(topbar, banner, stage);
+
+  function statusChip(label: string, color: string): HTMLElement {
+    return h('span', { class: 'mono', 'data-role': 'status-chip', style: {
+      fontSize: '9px', padding: '3px 10px', borderRadius: 'var(--r-pill)',
+      background: `${color}22`, color, border: `1px solid ${color}55`, letterSpacing: '.08em',
+    } }, label);
+  }
+  const setStatus = (label: string, color: string) => {
+    const chip = topbar.querySelector('[data-role="status-chip"]') as HTMLElement | null;
+    if (chip) {
+      chip.textContent = label;
+      chip.style.color = color;
+      chip.style.background = `${color}22`;
+      chip.style.borderColor = `${color}55`;
+    }
+  };
 
   let poller: ReturnType<typeof setInterval> | null = null;
   let lastMatchId: string | null = null;
@@ -95,6 +113,7 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
 
   /* ── Phase 1 : waiting (robots dansants + hint) ─────────────────────────── */
   const renderWaiting = () => {
+    setStatus('ATTENTE', '#e6c46a');
     clear(stage);
     const wait = Waiting({ label: 'recherche d\u2019adversaire' });
     // On enlève le fond de Waiting pour l'intégrer proprement.
@@ -116,6 +135,7 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
 
   /* ── Phase 2 : match live (4 avatars + score en direct) ─────────────────── */
   const renderLive = (m: MatchDetail) => {
+    setStatus('EN COURS', '#e89644');
     clear(stage);
     currentPhase = 'live';
     const teamA = m.participants.filter((p) => p.team === 'A').sort((a, b) => a.seat - b.seat);
@@ -162,15 +182,17 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
 
   /* ── Phase 3 : finished (vainqueur + rejouer) ──────────────────────────── */
   const renderFinished = (m: MatchDetail) => {
-    clear(stage);
-    currentPhase = 'finished';
-    if (poller) { clearInterval(poller); poller = null; }
     const meId = ctx.session.profile?.id;
     const myTeam = m.participants.find((p) => {
       const u = p.userId; const uid = typeof u === 'object' && u ? u._id : (u as string | null);
       return uid === meId;
     })?.team;
     const won = myTeam && myTeam === m.winnerTeam;
+    setStatus(won ? 'VICTOIRE' : m.winnerTeam ? 'DÉFAITE' : 'MATCH NUL',
+      won ? 'var(--c-success)' : m.winnerTeam ? 'var(--c-danger)' : 'var(--c-text-mute)');
+    clear(stage);
+    currentPhase = 'finished';
+    if (poller) { clearInterval(poller); poller = null; }
 
     stage.append(
       h('div', { style: { textAlign: 'center', padding: '30px 20px' } },
@@ -189,14 +211,20 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
   };
 
   /* ── Poller : cherche le dernier match du joueur ────────────────────────── */
+  const enteredAt = Date.now();
   const poll = async () => {
     try {
       const { match } = await api.getMyMatch();
       const m = match as MatchDetail | null;
       if (!m) return; // toujours en file
-      // Ne réagit qu'aux matchs récents (pertinents pour la session en cours).
-      const createdAt = new Date(m.createdAt).getTime();
-      if (Date.now() - createdAt > 10 * 60_000) return;
+      // On ignore les matchs FINISHED qui datent d'avant notre entrée dans
+      // l'écran (résultats de la session précédente). Les PAIRING/RUNNING
+      // sont toujours considérés (une file lente peut prendre plusieurs
+      // minutes à trouver un adversaire).
+      if (m.status === 'finished') {
+        const finishedAt = m.finishedAt ? new Date(m.finishedAt).getTime() : 0;
+        if (finishedAt < enteredAt - 5_000) return;   // vieux résultat
+      }
 
       if (m.status === 'finished') {
         lastMatchId = m._id;
@@ -213,7 +241,10 @@ export function MatchmakingScreen(ctx: AppContext): HTMLElement {
           if (poller) { clearInterval(poller); poller = null; }
           try {
             const { tableId } = await api.provisionMatchLiveTable(m._id);
-            router.go(`table?id=${tableId}`);
+            // La bonne query est ?online=<tableId> pour que TableScreen
+            // saute le dialogue d'entraînement et se connecte à la table
+            // en ligne existante.
+            router.go(`table?online=${tableId}`);
           } catch (e) {
             // Fallback : on affiche au moins la vue LIVE avec les 4 avatars
             // le temps que la table soit prête.
