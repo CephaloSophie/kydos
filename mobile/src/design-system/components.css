@@ -394,15 +394,81 @@
 }
 
 /* =========================================================================
- * HOME v14.8 — Responsive tweaks
- * L'accueil utilise déjà grid/auto-fit dans HomeScreen.ts. Ces media queries
- * gèrent l'éventail permanent (nav-fan) sur écrans étroits et l'effet de
- * survol sur les feature-cards.
+ * HOME v14.9 — Tiles-cartes responsive, priorité mobile.
+ * Chaque tile du menu bas ressemble à une petite carte à jouer avec :
+ *   • le glyphe d'enseigne en haut à gauche (grande taille, couleur pleine),
+ *   • le titre + description en dessous, tronqués proprement (ellipsis).
+ * La bordure et le veil de fond prennent la couleur de l'enseigne.
  * ====================================================================== */
-.home-menu-tile:hover { transform: translateY(-1px); border-color: rgba(240,196,106,.35); }
-.feature-card { cursor: pointer; }
 
-/* Éventail : cartes plus petites sur mobile pour tenir dans 92vw. */
+/* --- FEATURE CARDS (haut) : compactes sur mobile, jamais de wrap --------- */
+.home-feature { min-height: 148px; padding: 14px; }
+.home-feature .feature-card__title { font-size: clamp(13px, 1.6vw, 18px); line-height: 1.2; }
+.home-feature .feature-card__desc  { font-size: clamp(10px, 1.1vw, 12px); }
+.home-feature .feature-card__kicker { font-size: clamp(8px, 0.85vw, 10px); }
+.home-feature .feature-card__glyph  { font-size: clamp(80px, 12vw, 140px); }
+@media (max-width: 620px) {
+  .home-feature { min-height: 118px; padding: 10px; }
+  .home-feature .feature-card__desc { display: none; }  /* trop étroit */
+}
+@media (max-width: 380px) {
+  .home-feature { min-height: 96px; padding: 8px; }
+  .home-feature .feature-card__kicker { display: none; }
+}
+
+/* --- MENU GRID (bas) : 4/3/2 col selon largeur --------------------------- */
+.home-menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 900px) { .home-menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .home-menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* --- MENU TILE : mini carte à jouer -------------------------------------- */
+.home-menu-tile {
+  /* CSS custom prop --tile-color renseigné en JS depuis MenuTile.color */
+  --tile-color: #e6c46a;
+  position: relative;
+  padding: 10px 10px 10px 42px;   /* espace à gauche pour le glyphe */
+  min-height: 60px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
+    var(--c-veil-04);
+  border: 1px solid var(--c-line);
+  border-left: 3px solid var(--tile-color);
+  overflow: hidden;
+  transition: transform var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+  display: block;
+}
+.home-menu-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--tile-color);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+}
+.home-menu-tile__glyph {
+  position: absolute; top: 8px; left: 10px;
+  font-size: 22px; font-weight: 900; line-height: 1;
+  color: var(--tile-color);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 30%, transparent);
+}
+.home-menu-tile__body {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0;   /* essentiel pour que ellipsis marche */
+}
+.home-menu-tile__title {
+  font-family: var(--f-heading, var(--f-serif, serif));
+  font-size: 12px; font-weight: 700;
+  color: var(--c-text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.home-menu-tile__desc {
+  font-family: var(--f-mono);
+  font-size: 9px;
+  color: var(--c-text-mute);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Éventail footer : rétrécit sur mobile ------------------------------- */
 @media (max-width: 620px) {
   .home-fan .nav-fan__card { width: 48px; height: 66px; }
   .home-fan .nav-fan__glyph { font-size: 15px; }
