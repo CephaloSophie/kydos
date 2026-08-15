@@ -392,3 +392,24 @@
   border-radius: 50%; box-shadow: 0 0 6px rgba(240,196,106,.7);
   z-index: 2;
 }
+
+/* =========================================================================
+ * HOME v14.8 — Responsive tweaks
+ * L'accueil utilise déjà grid/auto-fit dans HomeScreen.ts. Ces media queries
+ * gèrent l'éventail permanent (nav-fan) sur écrans étroits et l'effet de
+ * survol sur les feature-cards.
+ * ====================================================================== */
+.home-menu-tile:hover { transform: translateY(-1px); border-color: rgba(240,196,106,.35); }
+.feature-card { cursor: pointer; }
+
+/* Éventail : cartes plus petites sur mobile pour tenir dans 92vw. */
+@media (max-width: 620px) {
+  .home-fan .nav-fan__card { width: 48px; height: 66px; }
+  .home-fan .nav-fan__glyph { font-size: 15px; }
+  .home-fan .nav-fan__label { font-size: 6px; }
+  .home-fan { height: 66px !important; }
+}
+@media (max-width: 420px) {
+  .home-fan .nav-fan__card { width: 40px; height: 56px; }
+  .home-fan { height: 56px !important; }
+}

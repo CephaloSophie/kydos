@@ -1,46 +1,66 @@
 /* =============================================================================
- * PRESENTATION · screens/HomeScreen.ts
- * Accueil : grandes cartes-fonctionnalités + éventail permanent des écrans
- * (menu de navigation), FIDÈLE au design system. Barre supérieure avec
- * déblocage des jetons quotidiens.
+ * PRESENTATION · screens/HomeScreen.ts (v14.8)
+ * -----------------------------------------------------------------------------
+ * Accueil refondu :
+ *   • 3 cartes-fonctionnalités en haut, chacune avec sa propre enseigne
+ *     (♥ Jouer avec mes robots, ♠ Jouer avec mes coéquipiers, ♦ Compétitions).
+ *   • Les entrées « Mes robots » et « Créer un robot » descendent dans le
+ *     menu du bas (avec leurs symboles ♣/♦).
+ *   • Grid CSS responsive : les cartes s'empilent sur mobile étroit, les
+ *     menus passent de 4 → 3 → 2 colonnes selon la largeur.
+ *   • Éventail du bas remonté (bottom: 8px au lieu de -40px).
  * ========================================================================== */
 import { h } from '../../core/dom';
 import { TopBar } from '../components/TopBar';
 import type { AppContext } from '../context';
 
-/** Cartes-fonctionnalités mises en avant sur l'accueil (enseignes du DS). */
+/* ---------------------------------------------------------------------------
+ * FEATURES — 3 grandes cartes en haut. Chaque carte = 1 enseigne + 1 couleur
+ * distincte du design system. Toutes cliquables, gradient DS.
+ * ------------------------------------------------------------------------ */
 const FEATURES = [
-  { route: 'table', kicker: 'LE JEU', title: 'Jouer', desc: 'Lancer une partie avec vos robots.', glyph: '♥', grad: 'var(--g-heart)' },
-  { route: 'robots', kicker: 'ROBOTS', title: 'Mes robots', desc: 'Gérer & entraîner votre écurie.', glyph: '♠', grad: 'var(--g-spade)' },
-  { route: 'create', kicker: 'ÉDITEUR', title: 'Créer un robot', desc: 'Concevez votre IA de belote.', glyph: '♦', grad: 'var(--g-diamond)' },
+  { route: 'table',  kicker: 'LE JEU',       title: 'Jouer avec mes robots',       desc: 'Lancer une partie locale avec votre \u00e9curie.', glyph: '\u2665', grad: 'var(--g-heart)' },
+  { route: 'online', kicker: 'MULTIJOUEUR',  title: 'Jouer avec mes co\u00e9quipiers', desc: 'Rejoindre ou cr\u00e9er une table en ligne.',       glyph: '\u2660', grad: 'var(--g-spade)' },
+  { route: 'compet', kicker: 'COMP\u00c9TITIONS', title: 'Comp\u00e9titions',           desc: 'Matchs rapides, tournois, cassements.',            glyph: '\u2666', grad: 'var(--g-diamond)' },
 ];
 
-/**
- * Menus secondaires de l'accueil (KB-100) — toutes les sections du produit
- * atteignables en un geste : gestion d'équipe, invitations, jeu en ligne,
- * compétitions, jetons, archives et classements.
- */
-const MENUS = [
-  { route: 'online',  glyph: '♠', label: 'Jouer en ligne', desc: 'Rejoindre ou créer une table' },
-  { route: 'team',    glyph: '♣', label: 'Mon équipe',     desc: 'Membres, rôles, exclusions' },
-  { route: 'invitations', glyph: '✉', label: 'Invitations', desc: 'Envoyer, accepter, refuser', badge: true },
-  { route: 'teams',   glyph: '♣', label: 'Équipes',        desc: 'Rejoindre une équipe publique' },
-  { route: 'compet',  glyph: '★', label: 'Compétitions',   desc: 'Tournois entre robots' },
-  { route: 'wallet',  glyph: '◆', label: 'Porte-monnaie',  desc: 'Jetons et récompenses' },
-  { route: 'ranking', glyph: '◆', label: 'Classements',    desc: 'Saison en cours' },
-  { route: 'history', glyph: '◆', label: 'Historique',     desc: 'Rejouer vos parties' },
-  { route: 'about',   glyph: '✦', label: 'À propos',       desc: 'Cephalo Sophie' },
+/* ---------------------------------------------------------------------------
+ * MENUS — sections secondaires. « Mes robots » et « Créer un robot » figurent
+ * ici (descendus depuis le haut). Chaque tile a son propre glyphe + couleur
+ * (via un dégradé DS appliqué au glyphe) pour aider à distinguer d'un coup
+ * d'œil.
+ * ------------------------------------------------------------------------ */
+interface MenuTile {
+  route: string;
+  glyph: string;
+  label: string;
+  desc: string;
+  grad: string;   // gradient CSS (var ou linear-gradient)
+  badge?: boolean;
+}
+const MENUS: MenuTile[] = [
+  { route: 'robots',      glyph: '\u2663', label: 'Mes robots',      desc: 'G\u00e9rer & entra\u00eener votre \u00e9curie', grad: 'var(--g-club)' },
+  { route: 'create',      glyph: '\u2666', label: 'Cr\u00e9er un robot', desc: 'Concevez votre IA de belote',            grad: 'var(--g-diamond)' },
+  { route: 'team',        glyph: '\u2663', label: 'Mon \u00e9quipe',      desc: 'Membres, r\u00f4les, exclusions',       grad: 'var(--g-club)' },
+  { route: 'invitations', glyph: '\u2709', label: 'Invitations',       desc: 'Envoyer, accepter, refuser',           grad: 'var(--g-gold)', badge: true },
+  { route: 'teams',       glyph: '\u2663', label: '\u00c9quipes',       desc: 'Rejoindre une \u00e9quipe publique',    grad: 'var(--g-club)' },
+  { route: 'wallet',      glyph: '\u25c6', label: 'Porte-monnaie',     desc: 'Jetons et r\u00e9compenses',            grad: 'var(--g-gold)' },
+  { route: 'ranking',     glyph: '\u2605', label: 'Classements',       desc: 'Saison en cours',                       grad: 'var(--g-gold)' },
+  { route: 'history',     glyph: '\u2660', label: 'Historique',        desc: 'Rejouer vos parties',                   grad: 'var(--g-spade)' },
+  { route: 'about',       glyph: '\u2726', label: '\u00c0 propos',      desc: 'Cephalo Sophie',                        grad: 'var(--g-heart)' },
 ];
 
-/** Routes présentes dans l'éventail de navigation permanent. */
+/** Routes présentes dans l'éventail de navigation permanent (bas de l'écran). */
 const FAN_ROUTES = ['table', 'online', 'robots', 'create', 'wallet', 'teams', 'ranking', 'compet', 'history', 'about'];
 
 export function HomeScreen(ctx: AppContext): HTMLElement {
   const { router, api } = ctx;
 
-
+  /* ── Grande carte-fonctionnalité (haut) ────────────────────────────────── */
   const featureCard = (f: typeof FEATURES[number]) => h('div', {
-    class: 'feature-card fill', style: { height: '150px', '--card-grad': f.grad }, onClick: () => router.go(f.route),
+    class: 'feature-card',
+    style: { '--card-grad': f.grad, minHeight: '148px' },
+    onClick: () => router.go(f.route),
   },
     h('div', { class: 'feature-card__glyph' }, f.glyph),
     h('div', { class: 'feature-card__body' },
@@ -49,15 +69,63 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
       h('div', { class: 'feature-card__desc' }, f.desc)),
   );
 
-  // Éventail = toutes les routes connues, éventaillées, ancrées en bas.
-  const fan = h('div', { class: 'nav-fan', style: { width: '520px', margin: '0 auto', position: 'absolute', bottom: '-40px', left: '50%', transform: 'translateX(-50%)' } });
+  /* ── Menu tile (bas) — glyphe coloré via gradient sur le texte ─────────── */
+  const menuTile = (m: MenuTile) => {
+    // Pastille de notification (invitations reçues), masquée si zéro.
+    const notif = h('span', { class: 'mono', style: {
+      display: 'none', marginLeft: 'auto', flexShrink: '0', minWidth: '18px', height: '18px', padding: '0 5px',
+      borderRadius: '999px', background: 'var(--c-danger)', color: '#fff', fontSize: '10px', fontWeight: '700',
+      alignItems: 'center', justifyContent: 'center', lineHeight: '18px', textAlign: 'center',
+    } }, '');
+    if (m.badge) {
+      api.countInvitations().then(({ count }) => { if (count > 0) { notif.textContent = String(count); notif.style.display = 'inline-flex'; } }).catch(() => {});
+    }
+    // Glyphe coloré : le dégradé DS est appliqué au texte du glyphe via
+    // background-clip. Chaque menu apparaît donc avec sa couleur d'enseigne.
+    const glyphStyle: Partial<CSSStyleDeclaration> = {
+      fontSize: '18px', flexShrink: '0', fontWeight: '900',
+      background: m.grad,
+      // Compat WebKit + standard : le fallback color (or) s'applique si le
+      // navigateur ne supporte pas background-clip: text (rare aujourd'hui).
+      backgroundClip: 'text', color: 'transparent',
+    };
+    (glyphStyle as any).webkitBackgroundClip = 'text';
+    return h('div', {
+      class: 'row gap-2 home-menu-tile',
+      style: {
+        padding: '10px 12px', borderRadius: 'var(--r-lg)', cursor: 'pointer', minWidth: '0', alignItems: 'center',
+        background: 'var(--c-veil-04)', border: '1px solid var(--c-line)', transition: 'var(--t-fast)',
+      },
+      onClick: () => router.go(m.route),
+    },
+      h('span', { style: glyphStyle }, m.glyph),
+      h('div', { class: 'col', style: { gap: '1px', minWidth: '0', flex: '1' } },
+        h('span', { class: 'title', style: { fontSize: '12px', whiteSpace: 'nowrap' } }, m.label),
+        h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, m.desc)),
+      notif);
+  };
+
+  /* ── Éventail permanent en bas ─────────────────────────────────────────── */
+  const fan = h('div', {
+    class: 'nav-fan home-fan',
+    style: {
+      width: 'min(520px, 92vw)', margin: '0 auto', position: 'absolute',
+      // v14.8 : relevé (au lieu de -40px) pour être bien visible.
+      bottom: '8px', left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto',
+    },
+  });
   const n = FAN_ROUTES.length;
+  // Espacement adaptatif : sur mobile étroit, on réduit le décalage entre
+  // cartes pour ne pas dépasser la largeur.
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const spacing = vw < 420 ? 18 : vw < 620 ? 22 : 30;
+  const angle = vw < 420 ? 6 : vw < 620 ? 7 : 8;
   FAN_ROUTES.forEach((route, idx) => {
     const meta = router.meta(route);
     const i = idx - (n - 1) / 2;
-    const base = `translateX(-50%) rotate(${i * 8}deg) translateX(${i * 30}px) translateY(${Math.abs(i) * 3}px)`;
+    const base = `translateX(-50%) rotate(${i * angle}deg) translateX(${i * spacing}px) translateY(${Math.abs(i) * 3}px)`;
     const card = h('div', { class: 'nav-fan__card', style: { '--card-grad': meta.grad, transform: base }, onClick: () => router.go(route) },
-      h('span', { class: 'nav-fan__glyph' }, meta.glyph || '◆'),
+      h('span', { class: 'nav-fan__glyph' }, meta.glyph || '\u25c6'),
       h('span', { class: 'nav-fan__label' }, (meta.fanLabel || meta.title || route).toUpperCase()),
     );
     card.addEventListener('mouseenter', () => { card.style.transform = base + ' translateY(-16px)'; card.style.zIndex = '5'; });
@@ -65,35 +133,7 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     fan.append(card);
   });
 
-  const menuTile = (m: typeof MENUS[number]) => {
-    // Pastille de notification (invitations reçues), masquée si zéro.
-    const notif = h('span', { class: 'mono', style: {
-      display: 'none', marginLeft: 'auto', flexShrink: '0', minWidth: '18px', height: '18px', padding: '0 5px',
-      borderRadius: '999px', background: 'var(--c-danger)', color: '#fff', fontSize: '10px', fontWeight: '700',
-      alignItems: 'center', justifyContent: 'center', lineHeight: '18px', textAlign: 'center',
-    } }, '');
-    if ((m as { badge?: boolean }).badge) {
-      api.countInvitations().then(({ count }) => { if (count > 0) { notif.textContent = String(count); notif.style.display = 'inline-flex'; } }).catch(() => {});
-    }
-    return h('div', {
-      class: 'row gap-2', style: {
-        padding: '8px 11px', borderRadius: 'var(--r-lg)', cursor: 'pointer', minWidth: '0', alignItems: 'center',
-        background: 'var(--c-veil-04)', border: '1px solid var(--c-line)', transition: 'var(--t-fast)',
-      },
-      onClick: () => router.go(m.route),
-    },
-      h('span', { style: { fontSize: '15px', color: 'var(--c-gold)', flexShrink: '0' } }, m.glyph),
-      h('div', { class: 'col', style: { gap: '1px', minWidth: '0' } },
-        h('span', { class: 'title', style: { fontSize: '12px', whiteSpace: 'nowrap' } }, m.label),
-        h('span', { class: 'mono', style: { fontSize: '8.5px', color: 'var(--c-text-mute)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, m.desc)),
-      notif);
-  };
-
-  const menuRow = h('div', {
-    style: { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '8px' },
-  }, ...MENUS.map(menuTile));
-
-  // ── Bannière COMPÉTITION en cours / récente (v14.5) ───────────────────
+  /* ── Bannière COMPÉTITION en cours / récente ───────────────────────────── */
   // Poll léger toutes les 5s sur /matches/mine. Affiche :
   //   • LIVE orange + score + bouton Reprendre si status running.
   //   • FINISHED + emoji victoire/défaite pendant ~2 min après la fin.
@@ -108,7 +148,6 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     const showLive = status === 'running' || status === 'pairing';
     if (!showFinished && !showLive) { competBanner.style.display = 'none'; competBanner.innerHTML = ''; return; }
     const isHeadless = format === 'duo_steel';
-    // Détection victoire (côté humain) : sauf DUO_STEEL où c'est le propriétaire d'équipe.
     const meId = ctx.session.profile?.id;
     const myTeam = m.participants?.find((p: any) => {
       const u = p.userId; const uid = typeof u === 'object' && u ? u._id : u;
@@ -119,7 +158,6 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     const labelFormat = format === 'duo_steel' ? 'Duo d\u2019acier' : format === 'hybrid_alliance' ? 'Alliance hybride' : 'Carr\u00e9e royale';
     competBanner.style.display = 'block';
     competBanner.innerHTML = '';
-    // Couleur : orange pour compétition (distinct du rouge des tables libres).
     const accent = showLive ? '#e89644' : (won ? 'var(--c-success)' : nul ? 'var(--c-text-mute)' : 'var(--c-danger)');
     const dot = showLive ? h('span', { style: {
       width: '8px', height: '8px', borderRadius: '50%', background: accent,
@@ -133,7 +171,6 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     const button = showLive
       ? h('button', { class: 'btn btn--sm', style: { background: accent, color: '#1a0f00', fontWeight: '600' },
           onClick: async () => {
-            // DUO_STEEL : pas de table à rejoindre — retour à l'écran matchmaking.
             if (isHeadless) { router.go(`matchmaking?format=${format}`); return; }
             try {
               const { tableId } = await api.provisionMatchLiveTable(m._id);
@@ -170,17 +207,56 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
   competPoller = setInterval(() => void pollCompet(), 5000);
   void pollCompet();
 
-  const root = h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', background: 'linear-gradient(160deg,#070c17,#05070f)' } }) as HTMLElement & { _cleanup?: () => void };
+  /* ── Layout responsive complet ─────────────────────────────────────────── */
+  // Racine en flex column pour que TOUT s'adapte à la hauteur/largeur.
+  // Padding-left 60px pour laisser la place à la barre verticale desktop
+  // (dispositif fixe en dehors de HomeScreen). Sur mobile étroit, la marge
+  // gauche reste — la barre latérale n'est pas visible sur mobile mais le
+  // padding reste homogène.
+  const root = h('div', {
+    class: 'anim-screen home-root',
+    style: {
+      position: 'absolute', inset: '0',
+      background: 'linear-gradient(160deg,#070c17,#05070f)',
+      display: 'flex', flexDirection: 'column',
+      // Grille intérieure : la topbar est ancrée en haut, tout le reste
+      // défile si besoin (paysage étroit → petits écrans).
+      overflow: 'auto',
+    },
+  }) as HTMLElement & { _cleanup?: () => void };
   const topbar = TopBar(ctx.session, ctx.bus) as HTMLElement & { _cleanup?: () => void };
-  root.append(
-    topbar,
-    h('div', { class: 'row gap-3', style: { position: 'absolute', top: '64px', left: '60px', right: '26px' } }, ...FEATURES.map(featureCard)),
-    h('div', { style: { position: 'absolute', top: '224px', left: '60px', right: '26px' } }, competBanner),
-    h('div', { style: { position: 'absolute', top: '278px', left: '60px', right: '26px' } }, menuRow),
-    fan,
+
+  // Container principal — padding responsive (moins de marge sur mobile).
+  const main = h('div', {
+    class: 'home-main',
+    style: {
+      // Padding : left 60 pour barre latérale desktop, réduit à 14 sous 720px
+      // via CSS. Bottom 220 pour laisser respirer au-dessus de l'éventail.
+      padding: '14px clamp(14px, 3vw, 26px) 220px clamp(14px, 4vw, 60px)',
+      display: 'flex', flexDirection: 'column', gap: 'clamp(14px, 2vw, 20px)',
+      minHeight: '0',
+    },
+  },
+    // Grille 3 cartes — auto-fit sur mobile pour empiler naturellement.
+    h('div', {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))',
+        gap: 'clamp(10px, 1.6vw, 16px)',
+      },
+    }, ...FEATURES.map(featureCard)),
+    competBanner,
+    // Grille menus — auto-fill à minmax(180px,1fr) → 4/3/2 col selon largeur.
+    h('div', {
+      style: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(190px, 100%), 1fr))',
+        gap: '8px',
+      },
+    }, ...MENUS.map(menuTile)),
   );
-  // Le router (main.tsx) appellera ce cleanup avant de remplacer l'écran :
-  // on propage celui du TopBar → les listeners globaux ne fuient pas.
+
+  root.append(topbar, main, fan);
   root._cleanup = () => { topbar._cleanup?.(); if (competPoller) clearInterval(competPoller); };
   return root;
 }
