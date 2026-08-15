@@ -78,5 +78,13 @@ export function registerTableSocketHandlers(server: Server) {
 
     socket.on('table:bid', ({ tableId, bid }: any) => liveGameService.submitBid(server, socket.data.userId, tableId, bid));
     socket.on('table:play', ({ tableId, card }: any) => liveGameService.playCard(server, socket.data.userId, tableId, card));
+
+    // v14.7 — Le joueur reprend la main : retire son siège de substituteSeats
+    // (le prochain tour lui rendra le contrôle). Différent de subscribe qui
+    // rejoint aussi la room ; ici on est déjà connecté.
+    socket.on('table:reclaim', ({ tableId }: any) => {
+      if (!tableId) return;
+      liveGameService.resumeSeat(server, tableId, socket.data.userId);
+    });
   });
 }

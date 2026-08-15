@@ -73,9 +73,9 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     isHeadless: boolean;
   }
   const FORMATS: FormatCard[] = [
-    { id: 'duo_steel', label: 'Duo d\u2019acier', glyph: '\u2666', tag: '2 ROBOTS \u00d7 2', accent: 'linear-gradient(160deg,#c99c3f 0%,#8b6a1e 100%)',
+    { id: 'duo_steel', label: 'Duo d\u2019acier', glyph: '\u2666', tag: '2 ROBOTS \u00d7 2', accent: 'linear-gradient(160deg,#3f6ea1 0%,#1b3a63 100%)',
       subtitle: 'Un affrontement 100 % en coulisses.', buyIn: 200, prize: 150, robotsPerPlayer: 2, isHeadless: true },
-    { id: 'hybrid_alliance', label: 'Alliance hybride', glyph: '\u2660', tag: 'HUMAIN + ROBOT', accent: 'linear-gradient(160deg,#3f8f5e 0%,#1a4a2f 100%)',
+    { id: 'hybrid_alliance', label: 'Alliance hybride', glyph: '\u2660', tag: 'HUMAIN + ROBOT', accent: 'linear-gradient(160deg,#c99c3f 0%,#7a5c1c 100%)',
       subtitle: 'Vous + votre robot, tous ensemble.', buyIn: 150, prize: 225, robotsPerPlayer: 1, isHeadless: false },
     { id: 'royal_square', label: 'Carr\u00e9e royale', glyph: '\u2665', tag: '4 HUMAINS', accent: 'linear-gradient(160deg,#b0384a 0%,#5f1f2a 100%)',
       subtitle: 'Quatre humains, deux \u00e9quipes, une couronne.', buyIn: 100, prize: 150, robotsPerPlayer: 0, isHeadless: false },
@@ -88,8 +88,18 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
 
   const enqueue = async (f: FormatCard) => {
     if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
-    // Redirection vers l'écran de sélection des robots. C'est là que
-    // l'utilisateur choisit ses co-équipiers et son remplaçant.
+    // Si déjà en file ou match en cours pour ce format, aller directement
+    // en waiting au lieu de refaire une sélection de robots.
+    try {
+      const { match } = await api.getMyMatch();
+      const m = match as { format?: string; status?: string } | null;
+      if (m && m.format === f.id && (m.status === 'pairing' || m.status === 'running')) {
+        router.go(`matchmaking?format=${f.id}`); return;
+      }
+      const { sizes } = await api.matchQueues();
+      // On ne connaît pas l'user_id en file côté client ; on tente l'enqueue :
+      // si le serveur détecte "déjà en file", il renvoie queued (idempotent v14.7).
+    } catch { /* pas grave */ }
     router.go(`enroll?format=${f.id}`);
   };
 
@@ -288,6 +298,26 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
       filterRow),
     tournamentsMsg,
     tournamentsList,
+
+    // v14.7 — Accès dédié aux parties publiques en cours (spectateur).
+    h('div', {
+      style: {
+        marginTop: '18px', padding: '12px 16px', borderRadius: 'var(--r-md)',
+        background: 'rgba(126,203,152,.06)', border: '1px solid rgba(126,203,152,.20)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px',
+        transition: 'transform .15s ease, background .15s ease',
+      },
+      onClick: () => router.go('public-games'),
+      onmouseover: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(3px)'; },
+      onmouseout: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(0)'; },
+    },
+      h('span', { class: 'live-chip__dot' }),
+      h('div', { style: { flex: '1' } },
+        h('div', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: 'var(--c-success)' } }, 'SPECTATEUR'),
+        h('div', { class: 'title', style: { fontSize: '13px', marginTop: '3px' } }, 'Parties publiques en cours'),
+        h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', marginTop: '2px' } }, 'Regardez d\u2019autres tables jouer en direct')),
+      h('span', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-soft)' } }, '\u25b6'),
+    ),
 
     // Note de bas
     h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-faint)', marginTop: '20px', textAlign: 'center' } },

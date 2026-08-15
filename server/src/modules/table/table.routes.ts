@@ -6,6 +6,7 @@ import { tableController } from './table.controller.js';
 export const tableRouter = Router();
 tableRouter.post('/tables', requireAuthentication, asyncHandler((req, res) => tableController.create(req, res)));
 tableRouter.get('/tables', requireAuthentication, asyncHandler((req, res) => tableController.list(req, res)));
+tableRouter.get('/tables/public-live', requireAuthentication, asyncHandler((req, res) => tableController.listPublicLive(req, res)));
 tableRouter.get('/tables/:id', requireAuthentication, asyncHandler((req, res) => tableController.getById(req, res)));
 tableRouter.post('/tables/:id/seat', requireAuthentication, asyncHandler((req, res) => tableController.changeSeat(req, res)));
 tableRouter.post('/tables/:id/cancel', requireAuthentication, asyncHandler((req, res) => tableController.cancel(req, res)));

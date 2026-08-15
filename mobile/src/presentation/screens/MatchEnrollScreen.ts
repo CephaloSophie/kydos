@@ -35,17 +35,17 @@ interface FormatInfo {
 }
 const FORMATS: Record<string, FormatInfo> = {
   duo_steel: {
-    id: 'duo_steel', label: 'Duo d\u2019acier', buyIn: 200, prize: 150, accent: '#c99c3f',
+    id: 'duo_steel', label: 'Duo d\u2019acier', buyIn: 200, prize: 150, accent: '#3f6ea1',
     teammates: 2, hasSubstitute: false,
     helper: 'Choisissez les 2 robots de votre \u00e9quipe. Ils joueront ensemble.',
   },
   hybrid_alliance: {
-    id: 'hybrid_alliance', label: 'Alliance hybride', buyIn: 150, prize: 225, accent: '#7ecb98',
+    id: 'hybrid_alliance', label: 'Alliance hybride', buyIn: 150, prize: 225, accent: '#c99c3f',
     teammates: 1, hasSubstitute: true,
     helper: 'Choisissez votre co\u00e9quipier (joue avec vous) et un rempla\u00e7ant (prend la main si vous vous absentez).',
   },
   royal_square: {
-    id: 'royal_square', label: 'Carr\u00e9e royale', buyIn: 100, prize: 150, accent: '#e85d70',
+    id: 'royal_square', label: 'Carr\u00e9e royale', buyIn: 100, prize: 150, accent: '#b0384a',
     teammates: 0, hasSubstitute: true,
     helper: 'Choisissez un robot rempla\u00e7ant. Il prendra la main si vous quittez la table.',
   },

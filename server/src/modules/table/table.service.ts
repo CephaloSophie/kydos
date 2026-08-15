@@ -182,6 +182,25 @@ export class TableService {
     };
   }
 
+  /**
+   * v14.7 — Liste paginée des parties PUBLIQUES actuellement en cours
+   * (status: 'playing'). Utilisée par l'écran « Parties publiques » du
+   * mobile. Pageination stricte : max 5 par page pour ne pas surcharger.
+   * Les tables issues d'un match compétition sont privées → exclues.
+   */
+  async listPublicLive(options: { page?: number } = {}) {
+    const PAGE_SIZE = 5;
+    const page = Math.max(1, options.page ?? 1);
+    const filter = { visibility: 'public', status: 'playing' } as const;
+    const total = await TableModel.countDocuments(filter);
+    const tableDocuments = await TableModel.find(filter)
+      .sort('-lastActivityAt').skip((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).lean();
+    return {
+      tables: tableDocuments.map(serializeTable),
+      page, pageSize: PAGE_SIZE, total, totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+    };
+  }
+
   async getTableById(tableId: string, userId: string) {
     const tableDocument = await TableModel.findById(tableId);
     if (!tableDocument || tableDocument.status === 'draft') throw notFound();

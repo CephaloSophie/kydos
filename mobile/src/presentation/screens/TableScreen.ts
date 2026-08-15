@@ -366,6 +366,9 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       // Les émotes passent par le MENU DE GAUCHE (pas le dock HUD) : on ne passe
       // pas onEmote à PixiTable pour éviter deux listes de smileys.
       emoteSignal,
+      // v14.7 — Thème visuel de la table calé sur son kind : hybride (jaune),
+      // acier (bleu), royal (rouge), le reste tombe sur 'local' (vert).
+      theme: melodyKind,
       opponentCards: 'back', showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: () => { onlineSocket.disconnect(); reactRoot?.unmount(); router.go('online'); },
     }));
@@ -384,6 +387,24 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       Button('← Retour au lobby', { variant: 'secondary', size: 'sm', onClick: () => { onlineSocket.disconnect(); router.go('online'); } }));
     felt.append(waiting);
 
+    // v14.7 — Bouton « Reprendre la main » visible seulement quand ce
+    // joueur est en mode substitute (son robot joue à sa place). Positionné
+    // en overlay sous le HUD pour être toujours accessible.
+    const reclaimBtn = h('button', {
+      class: 'btn',
+      style: {
+        display: 'none', position: 'absolute', top: '12px', left: '50%',
+        transform: 'translateX(-50%)', zIndex: '10',
+        background: 'linear-gradient(135deg,#e89644,#c96f1e)', color: '#1a0f00',
+        fontWeight: '600', boxShadow: '0 4px 16px rgba(232,150,68,.4)',
+        padding: '8px 16px',
+      },
+      onClick: () => { onlineSocket.reclaim(); },
+    }, '↺ Reprendre la main') as HTMLButtonElement;
+    felt.append(reclaimBtn);
+    let myInSubstitute = false;
+    const updateReclaimBtn = () => { reclaimBtn.style.display = myInSubstitute ? 'inline-flex' : 'none'; };
+
     onlineSocket.connect(onlineId, {
       // La mélodie suit le TYPE de la table (hybride/acier/royal), reçu du lobby.
       onLobby: (lobby) => { melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind); },
@@ -393,6 +414,14 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       onFinished: (info) => { showOnlineEnd(info); void ads.afterGame(); },
       onSpectatorFull: (info) => toast(`Table pleine (${info.max} spectateurs max)`, 'error'),
       onConnectError: (msg) => toast(`Connexion impossible : ${msg}`),
+      onSubstitute: (info) => {
+        const mySeat = lastOnlineState?.mySeat;
+        if (mySeat != null && info.seat === mySeat) { myInSubstitute = true; updateReclaimBtn(); }
+      },
+      onReclaimed: (info) => {
+        const mySeat = lastOnlineState?.mySeat;
+        if (mySeat != null && info.seat === mySeat) { myInSubstitute = false; updateReclaimBtn(); }
+      },
     });
     // Si rien n'arrive au bout de 6 s, on informe sans bloquer (table pas lancée).
     return root;

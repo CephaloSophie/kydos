@@ -63,8 +63,12 @@ export class MatchmakingService {
     const queue = getMatchmakingQueue();
     const already = await queue.size(req.format);
     const existing = await queue.peek(req.format);
-    if (existing.some((t) => t.userId === req.userId)) {
-      throw badRequest('Vous êtes déjà en file pour ce format.');
+    const alreadyIndex = existing.findIndex((t) => t.userId === req.userId);
+    if (alreadyIndex >= 0) {
+      // Idempotence : ne pas re-débiter, ne pas ré-inscrire, mais renvoyer
+      // le même contrat que si tout venait de se faire. Le client sait alors
+      // qu'il est en file et bascule sur l'écran waiting sans erreur.
+      return { status: 'queued', queuePosition: alreadyIndex + 1 };
     }
 
     // Débit du buy-in (tout ou rien).

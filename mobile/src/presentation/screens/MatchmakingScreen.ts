@@ -24,8 +24,8 @@ export enum MatchFormatClient {
 }
 
 const FORMAT_META: Record<string, { label: string; accent: string; robotsPerPlayer: number }> = {
-  duo_steel: { label: 'Duo d\u2019acier', accent: 'linear-gradient(135deg,#c99c3f,#7a5f1f)', robotsPerPlayer: 2 },
-  hybrid_alliance: { label: 'Alliance hybride', accent: 'linear-gradient(135deg,#3f8f5e,#1f5a3a)', robotsPerPlayer: 1 },
+  duo_steel: { label: 'Duo d\u2019acier', accent: 'linear-gradient(135deg,#3f6ea1,#1b3a63)', robotsPerPlayer: 2 },
+  hybrid_alliance: { label: 'Alliance hybride', accent: 'linear-gradient(135deg,#c99c3f,#7a5c1c)', robotsPerPlayer: 1 },
   royal_square: { label: 'Carr\u00e9e royale', accent: 'linear-gradient(135deg,#a13a4c,#5c1f2b)', robotsPerPlayer: 0 },
 };
 

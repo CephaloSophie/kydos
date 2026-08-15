@@ -19,6 +19,12 @@ export class TableController {
     response.json(await tableService.listOpenTables(request.userId!, { scope, page }));
   }
 
+  /** v14.7 — Endpoint dédié parties publiques en cours (5/page). */
+  async listPublicLive(request: AuthenticatedRequest, response: Response) {
+    const page = Number(request.query.page ?? 1) || 1;
+    response.json(await tableService.listPublicLive({ page }));
+  }
+
   async getById(request: AuthenticatedRequest, response: Response) {
     response.json({ table: await tableService.getTableById(request.params.id, request.userId!) });
   }

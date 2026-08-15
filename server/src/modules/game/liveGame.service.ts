@@ -20,6 +20,12 @@ const MANCHE_BREAK_MS = 5200;
 const COLLECT_DELAY_MS = 1600;
 const DONNE_BREAK_MS = 2500;
 const MIN_PLAY_DELAY_MS = 300;
+/**
+ * v14.7 — Délai réduit entre les coups d'un siège humain déjà en mode
+ * substitution. Évite que les autres joueurs attendent le turnTimeoutMs
+ * entier (15s) à chaque tour d'un joueur absent.
+ */
+const SUBSTITUTE_TURN_DELAY_MS = 500;
 
 interface LiveGame {
   engine: GameEngine;
@@ -220,6 +226,8 @@ export class LiveGameService {
     if (liveGame.substituteSeats.has(seat)) {
       liveGame.substituteSeats.delete(seat);
       liveGame.logs.push({ t: Date.now(), robotId: 'system', phase: 'live', level: 'info', msg: `Le joueur du siège ${seat} a repris la main.` } as LogEntry);
+      // Notifie les clients (le joueur concerné cache le bouton « Reprendre »).
+      server.to(`table:${tableId}`).emit('table:reclaimed', { seat });
       void this.broadcastState(server, tableId);
     }
   }
@@ -320,20 +328,32 @@ export class LiveGameService {
       return;
     }
 
-    // Tour d'un humain : robot de secours après turnTimeoutMs. Le remplaçant
-    // spécifique au siège (v14.5 — configuré via un Match compétition) est
-    // utilisé s'il existe, sinon fallback sur le remplaçant générique.
+    // Tour d'un humain. v14.7 : si le siège est DÉJÀ en substitution (le
+    // robot joue à sa place depuis un tour précédent), on ne fait pas
+    // attendre les autres joueurs le turnTimeoutMs entier — délai réduit à
+    // 500 ms. Le joueur humain peut à tout moment cliquer « Reprendre la
+    // main » côté client, qui appelle resumeSeat via table:reclaim.
+    const alreadyInSubstitute = liveGame.substituteSeats.has(currentSeat);
+    const delay = alreadyInSubstitute ? SUBSTITUTE_TURN_DELAY_MS : liveGame.turnTimeoutMs;
+
     liveGame.turnTimer = setTimeout(() => {
       const current = this.games.get(tableId);
       if (!current || current.engine.turn !== currentSeat) return;
-      current.substituteSeats.add(currentSeat);
-      server.to(`table:${tableId}`).emit('table:substitute', { seat: currentSeat });
+      // Le joueur a peut-être repris la main pendant l'attente : dans ce cas
+      // resumeSeat a vidé substituteSeats. On respecte sa reprise.
+      if (!current.substituteSeats.has(currentSeat)) {
+        // Première fois qu'on active la substitution → on notifie et on
+        // marque le siège. Les tours suivants passeront direct par la
+        // branche « alreadyInSubstitute ».
+        current.substituteSeats.add(currentSeat);
+        server.to(`table:${tableId}`).emit('table:substitute', { seat: currentSeat });
+      }
       const brain = current.substituteBrainBySeat.get(currentSeat) ?? current.substituteBrain;
       const action = robotAct(current.engine, currentSeat, brain);
       if (action.kind === 'bid') { const result = current.engine.submitBid(currentSeat, action.bid); if (!result.ok) current.engine.submitBid(currentSeat, { action: 'pass' }); }
       else current.engine.playCard(currentSeat, action.card);
       this.advance(server, tableId);
-    }, liveGame.turnTimeoutMs);
+    }, delay);
   }
 
   submitBid(server: Server, userId: string, tableId: string, bid: any) {

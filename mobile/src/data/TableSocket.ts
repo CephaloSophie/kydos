@@ -51,6 +51,10 @@ export interface TableSocketHandlers {
   onSpectators?: (count: number) => void;
   onFinished?: (info: { winner: 'A' | 'B' | null; gameId?: string }) => void;
   onSignal?: (info: { seat: Seat; kind: string; data: unknown }) => void;
+  /** v14.7 — Un siège humain vient d'être basculé en mode substitute (robot joue). */
+  onSubstitute?: (info: { seat: Seat }) => void;
+  /** v14.7 — Un joueur a repris la main (le robot arrête). */
+  onReclaimed?: (info: { seat: Seat }) => void;
   onConnectError?: (message: string) => void;
 }
 
@@ -86,6 +90,8 @@ export class TableSocket {
     socket.on('table:spectators', (info: { count: number }) => this.#handlers.onSpectators?.(info.count));
     socket.on('table:finished', (info: { winner: 'A' | 'B' | null; gameId?: string }) => this.#handlers.onFinished?.(info));
     socket.on('table:signal', (info: { seat: Seat; kind: string; data: unknown }) => this.#handlers.onSignal?.(info));
+    socket.on('table:substitute', (info: { seat: Seat }) => this.#handlers.onSubstitute?.(info));
+    socket.on('table:reclaimed', (info: { seat: Seat }) => this.#handlers.onReclaimed?.(info));
   }
 
   /** Émet une enchère du joueur. */
@@ -101,6 +107,15 @@ export class TableSocket {
   /** Émet un signal (smiley, réflexion). */
   signal(kind: string, data: unknown): void {
     if (this.#socket && this.#tableId) this.#socket.emit('table:signal', { tableId: this.#tableId, kind, data });
+  }
+
+  /**
+   * v14.7 — Reprendre la main : le joueur informe le serveur qu'il souhaite
+   * quitter le mode substitute (le robot arrête de jouer à sa place au
+   * prochain tour).
+   */
+  reclaim(): void {
+    if (this.#socket && this.#tableId) this.#socket.emit('table:reclaim', { tableId: this.#tableId });
   }
 
   /** Se désabonne et ferme proprement. */

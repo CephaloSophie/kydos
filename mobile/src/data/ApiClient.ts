@@ -152,6 +152,10 @@ export class ApiClient {
     const params = new URLSearchParams({ scope: opts.scope ?? 'all', page: String(opts.page ?? 1) });
     return this.call<{ tables: ServerTable[]; page: number; pageSize: number; total: number; totalPages: number }>(`/tables?${params.toString()}`);
   }
+  /** v14.7 — Parties publiques actuellement en cours (max 5/page). */
+  listPublicLive(page = 1) {
+    return this.call<{ tables: ServerTable[]; page: number; pageSize: number; total: number; totalPages: number }>(`/tables/public-live?page=${page}`);
+  }
   createTable(opts: { visibility?: 'public' | 'private'; kind?: TableKind; robotIds?: string[]; forTeam?: boolean } = {}) {
     return this.call<{ table: ServerTable }>('/tables', { method: 'POST', body: JSON.stringify({ visibility: opts.visibility ?? 'public', kind: opts.kind ?? 'hybride', robotIds: opts.robotIds ?? [], forTeam: !!opts.forTeam }) });
   }

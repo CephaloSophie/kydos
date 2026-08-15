@@ -115,17 +115,16 @@ export class FeltLayer extends Container {
 
   update(trump: EngineView['trump'], rect: Rect) {
     const show = !!trump;
-    this.center.visible = show;
+    // v14.7 — Le grand symbole central au milieu du tapis est retiré (demande
+    // ergonomie : la table doit rester propre). Les 4 corners discrets sont
+    // conservés pour rappeler subtilement l'atout choisi.
+    this.center.visible = false;
     this.corners.forEach((c) => (c.visible = show));
     if (!show) return;
     const sym = SUIT_SYMBOL[trump!];
     const red = isRedSuit(trump!);
     const color = red ? 0xc41e3a : 0xffffff;
     const alpha = red ? 0.10 : 0.06;
-    this.center.text = sym;
-    this.center.style.fill = color; this.center.alpha = alpha;
-    this.center.style.fontSize = Math.min(240, Math.round(rect.h * 0.42));
-    this.center.position.set(rect.x + rect.w / 2, rect.y + rect.h / 2);
     const inset = 16 + 21;
     const pos = [
       { x: rect.x + inset, y: rect.y + inset }, { x: rect.x + rect.w - inset, y: rect.y + inset },

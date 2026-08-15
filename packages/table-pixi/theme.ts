@@ -68,8 +68,51 @@ export const competitionTheme: PixiTableTheme = {
   surface: 0x0e1e30, surface2: 0x16304c,
 };
 
+/* -------------------------------------------------------------------------
+ * v14.7 — 3 thèmes dédiés aux formats de match compétition (kind Table) :
+ *   • acier    → BLEU (Duo d'acier)
+ *   • hybride  → JAUNE (Alliance hybride)
+ *   • royal    → ROUGE (Carrée royale)
+ * Les couleurs sont accordées avec les cartes du menu Compétitions.
+ * ------------------------------------------------------------------------ */
+
+/** Table « acier » (Duo d'acier) — feutre bleu acier, rail argenté. */
+export const acierTheme: PixiTableTheme = {
+  name: 'acier', ...BASE,
+  felt1: 0x1b3a63, felt2: 0x0a1c34,
+  rail: 0x2f3a4a, railHi: 0x556274, railLo: 0x121824, railInner: 0x080c14,
+  accent: 0xa8c5e8, accent2: 0xd8e6f6,
+  watermarkRed: 'rgba(196,30,58,0.10)', watermarkNeutral: 'rgba(200,220,240,0.06)',
+  text: 0xf0f6ff, textDim: 0xb8c8dc,
+  surface: 0x0e2440, surface2: 0x1a3454,
+};
+
+/** Table « hybride » (Alliance hybride) — feutre or profond, rail bronze. */
+export const hybrideTheme: PixiTableTheme = {
+  name: 'hybride', ...BASE,
+  felt1: 0x6b5518, felt2: 0x3a2c08,
+  rail: 0x4a3618, railHi: 0x6f4f22, railLo: 0x1a1204, railInner: 0x0e0802,
+  accent: 0xf0c46a, accent2: 0xffe28a,
+  watermarkRed: 'rgba(196,30,58,0.10)', watermarkNeutral: 'rgba(240,196,106,0.08)',
+  text: 0xfff6dc, textDim: 0xd8c890,
+  surface: 0x1a1408, surface2: 0x2a2010,
+};
+
+/** Table « royal » (Carrée royale) — feutre bordeaux, rail noir profond. */
+export const royalTheme: PixiTableTheme = {
+  name: 'royal', ...BASE,
+  felt1: 0x5c1c2b, felt2: 0x2a0812,
+  rail: 0x2a1418, railHi: 0x502028, railLo: 0x100608, railInner: 0x080204,
+  accent: 0xe28aa4, accent2: 0xf6bccd,
+  watermarkRed: 'rgba(196,30,58,0.14)', watermarkNeutral: 'rgba(255,255,255,0.05)',
+  text: 0xfff0f4, textDim: 0xdcb8c4,
+  surface: 0x1a0810, surface2: 0x2a1420,
+};
+
 const REGISTRY = new Map<string, PixiTableTheme>([
   ['local', localTheme], ['vip', vipTheme], ['competition', competitionTheme],
+  // v14.7 — thèmes dédiés aux 3 formats compétition (mêmes clés que Table.kind).
+  ['acier', acierTheme], ['hybride', hybrideTheme], ['royal', royalTheme],
 ]);
 
 export function registerTheme(t: PixiTableTheme) { REGISTRY.set(t.name, t); }

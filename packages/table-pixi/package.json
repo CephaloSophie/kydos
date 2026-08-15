@@ -1,6 +1,6 @@
 {
   "name": "@kydos/table-pixi",
-  "version": "14.6.0",
+  "version": "14.7.0",
   "private": true,
   "type": "module",
   "description": "Table de belote PixiJS — composant préconfigurable, PARTAGÉ par l'application web et l'application mobile. Aucune des deux applications ne dépend de l'autre.",
