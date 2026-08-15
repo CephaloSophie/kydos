@@ -1,25 +1,25 @@
 /* =============================================================================
- * PRESENTATION · screens/HomeScreen.ts (v14.9)
+ * PRESENTATION · screens/HomeScreen.ts (v14.10)
  * -----------------------------------------------------------------------------
- * Refonte accueil, PRIORITÉ MOBILE :
+ * Accueil, priorité mobile, PAS DE SCROLL VERTICAL :
  *
- *  1. Les 3 CARTES DU HAUT restent toujours sur UNE seule ligne (grid fixe
- *     3 colonnes), même sur mobile. Chaque carte a SA propre couleur —
- *     cœur/vert, pique/bleu, carreau/violet — appliquée via
- *     `setProperty('--card-grad', …)` car `Object.assign(style, {…})` ignore
- *     silencieusement les CSS custom properties (bug v14.8).
+ *  • Racine `overflow: hidden` — la page ne défile jamais.
+ *  • 3 zones indépendantes empilées, chacune peut être un carrousel
+ *    horizontal (flèches ← →, drag souris, swipe tactile) :
+ *       1. HAUT   — cartes-fonctionnalités (3 aujourd'hui, N demain)
+ *       2. MENU   — tiles secondaires (Mes robots, Créer, Équipes…)
+ *       3. FOOTER — cartes de navigation, exposées à 20% en bas de l'écran,
+ *                    remontent à 30% au survol/toucher.
  *
- *  2. Les BOUTONS DU BAS (Mes robots, Créer un robot, Mon équipe,
- *     Invitations, Équipes, Porte-monnaie, Classements, Historique, À propos)
- *     sont redessinés comme de petites CARTES À JOUER : glyphe d'enseigne
- *     coloré en haut à gauche, titre + description en bas, texte tronqué
- *     proprement (ellipsis). Chaque carte a sa propre enseigne.
+ *  • Cartes footer : glyphe d'enseigne EN HAUT À GAUCHE, titre EN HAUT
+ *    À DROITE. Pas d'éventail circulaire — cartes rectangulaires alignées.
  *
- *  3. Le FOOTER (éventail nav-fan) : chaque carte prend la couleur de sa
- *     route, corrigée du même bug custom-prop.
+ *  • CSS custom props (--card-grad, --tile-color) posées via setProperty
+ *    car Object.assign(style, {…}) ignore les CSS variables.
  * ========================================================================== */
 import { h } from '../../core/dom';
 import { TopBar } from '../components/TopBar';
+import { Carousel } from '../components/Carousel';
 import type { AppContext } from '../context';
 
 const FEATURES = [
@@ -29,13 +29,8 @@ const FEATURES = [
 ];
 
 interface MenuTile {
-  route: string;
-  glyph: string;
-  label: string;
-  desc: string;
-  grad: string;
-  color: string;
-  badge?: boolean;
+  route: string; glyph: string; label: string; desc: string;
+  grad: string; color: string; badge?: boolean;
 }
 const MENUS: MenuTile[] = [
   { route: 'robots',      glyph: '\u2663', label: 'Mes robots',      desc: 'G\u00e9rer votre \u00e9curie',      grad: 'var(--g-club)',    color: '#e85d70' },
@@ -49,11 +44,26 @@ const MENUS: MenuTile[] = [
   { route: 'about',       glyph: '\u2726', label: '\u00c0 propos',      desc: 'Cephalo Sophie',                 grad: 'var(--g-heart)',   color: '#7ecb98' },
 ];
 
-const FAN_ROUTES = ['table', 'online', 'robots', 'create', 'wallet', 'teams', 'ranking', 'compet', 'history', 'about'];
+interface FooterCard {
+  route: string; glyph: string; label: string; color: string;
+}
+const FOOTER_CARDS: FooterCard[] = [
+  { route: 'table',       glyph: '\u2665', label: 'LE JEU',      color: '#7ecb98' },
+  { route: 'online',      glyph: '\u2660', label: 'EN LIGNE',    color: '#7ea8e0' },
+  { route: 'robots',      glyph: '\u2663', label: 'ROBOTS',      color: '#e85d70' },
+  { route: 'create',      glyph: '\u2666', label: '\u00c9DITEUR', color: '#a685d1' },
+  { route: 'wallet',      glyph: '\u25c6', label: 'JETONS',      color: '#e6c46a' },
+  { route: 'teams',       glyph: '\u2663', label: '\u00c9QUIPES', color: '#e85d70' },
+  { route: 'ranking',     glyph: '\u2605', label: 'CLASSEMENTS', color: '#e6c46a' },
+  { route: 'compet',      glyph: '\u2666', label: 'COMP\u00c9TITIONS', color: '#a685d1' },
+  { route: 'history',     glyph: '\u2660', label: 'HISTORIQUE',  color: '#7ea8e0' },
+  { route: 'about',       glyph: '\u2726', label: 'INFOS',       color: '#7ecb98' },
+];
 
 export function HomeScreen(ctx: AppContext): HTMLElement {
   const { router, api } = ctx;
 
+  /* ── Grande carte-fonctionnalité (haut) ────────────────────────────── */
   const featureCard = (f: typeof FEATURES[number]) => {
     const el = h('div', {
       class: 'feature-card home-feature',
@@ -65,12 +75,11 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
         h('div', { class: 'feature-card__title' }, f.title),
         h('div', { class: 'feature-card__desc' }, f.desc)),
     ) as HTMLElement;
-    // FIX v14.9 : Object.assign(style, {…}) ignore les CSS custom props ;
-    // setProperty les applique correctement.
     el.style.setProperty('--card-grad', f.grad);
     return el;
   };
 
+  /* ── Menu tile (bas milieu) ─────────────────────────────────────── */
   const menuTile = (m: MenuTile) => {
     const notif = h('span', { class: 'mono', style: {
       display: 'none', position: 'absolute', top: '6px', right: '6px',
@@ -96,32 +105,22 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     return tile;
   };
 
-  const fan = h('div', {
-    class: 'nav-fan home-fan',
-    style: {
-      width: 'min(520px, 96vw)', margin: '0 auto', position: 'absolute',
-      bottom: '8px', left: '50%', transform: 'translateX(-50%)',
+  /* ── Footer card (bandeau qui monte au hover) ───────────────────── */
+  const footerCard = (f: FooterCard) => {
+    const el = h('div', {
+      class: 'home-footer-card',
+      onClick: () => router.go(f.route),
     },
-  });
-  const n = FAN_ROUTES.length;
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  const spacing = vw < 420 ? 16 : vw < 620 ? 22 : 30;
-  const angle = vw < 420 ? 6 : vw < 620 ? 7 : 8;
-  FAN_ROUTES.forEach((route, idx) => {
-    const meta = router.meta(route);
-    const i = idx - (n - 1) / 2;
-    const base = `translateX(-50%) rotate(${i * angle}deg) translateX(${i * spacing}px) translateY(${Math.abs(i) * 3}px)`;
-    const card = h('div', { class: 'nav-fan__card', style: { transform: base }, onClick: () => router.go(route) },
-      h('span', { class: 'nav-fan__glyph' }, meta.glyph || '\u25c6'),
-      h('span', { class: 'nav-fan__label' }, (meta.fanLabel || meta.title || route).toUpperCase()),
+      // Glyphe en haut À GAUCHE
+      h('span', { class: 'home-footer-card__glyph' }, f.glyph),
+      // Titre en haut À DROITE
+      h('span', { class: 'home-footer-card__label' }, f.label),
     ) as HTMLElement;
-    // Fix v14.9 : setProperty pour la custom prop --card-grad.
-    if (meta.grad) card.style.setProperty('--card-grad', meta.grad);
-    card.addEventListener('mouseenter', () => { card.style.transform = base + ' translateY(-16px)'; card.style.zIndex = '5'; });
-    card.addEventListener('mouseleave', () => { card.style.transform = base; card.style.zIndex = ''; });
-    fan.append(card);
-  });
+    el.style.setProperty('--card-color', f.color);
+    return el;
+  };
 
+  /* ── Bannière COMPÉTITION en cours / récente (compacte) ─────────── */
   const competBanner = h('div', { style: { display: 'none' } });
   let competPoller: ReturnType<typeof setInterval> | null = null;
   const renderCompetBanner = (m: any | null) => {
@@ -169,7 +168,7 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     competBanner.append(h('div', {
       class: 'row gap-3',
       style: {
-        padding: '10px 14px', borderRadius: 'var(--r-md)', alignItems: 'center',
+        padding: '8px 12px', borderRadius: 'var(--r-md)', alignItems: 'center',
         background: showLive ? 'rgba(232,150,68,.10)' : 'rgba(255,255,255,.03)',
         border: `1px solid ${showLive ? 'rgba(232,150,68,.35)' : 'rgba(255,255,255,.08)'}`,
       },
@@ -179,58 +178,75 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
         h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
           h('span', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: accent } }, `COMP\u00c9TITION \u00b7 ${statusLabel}`),
           h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)' } }, labelFormat)),
-        h('div', { class: 'row gap-3', style: { marginTop: '4px', alignItems: 'center' } }, score)),
+        h('div', { class: 'row gap-3', style: { marginTop: '3px', alignItems: 'center' } }, score)),
       button,
     ));
   };
   const pollCompet = async () => {
-    try {
-      const { match } = await api.getMyMatch();
-      renderCompetBanner(match);
-    } catch { /* transient */ }
+    try { const { match } = await api.getMyMatch(); renderCompetBanner(match); }
+    catch { /* transient */ }
   };
   competPoller = setInterval(() => void pollCompet(), 5000);
   void pollCompet();
 
+  /* ── Layout : NO-SCROLL, 3 zones empilées + footer bandeau ─────── */
   const root = h('div', {
     class: 'anim-screen home-root',
     style: {
       position: 'absolute', inset: '0',
       background: 'linear-gradient(160deg,#070c17,#05070f)',
       display: 'flex', flexDirection: 'column',
-      overflow: 'auto',
+      overflow: 'hidden',   // NO-SCROLL GLOBAL
     },
   }) as HTMLElement & { _cleanup?: () => void };
+
   const topbar = TopBar(ctx.session, ctx.bus) as HTMLElement & { _cleanup?: () => void };
 
+  // Zone principale : padding gauche pour barre latérale desktop, padding
+  // bas pour laisser la place au footer bandeau qui expose 20% en bas.
   const main = h('div', {
     class: 'home-main',
     style: {
-      padding: '12px clamp(10px, 3vw, 26px) 220px clamp(10px, 4vw, 60px)',
-      display: 'flex', flexDirection: 'column', gap: 'clamp(12px, 2vw, 20px)',
-      minHeight: '0',
+      flex: '1', minHeight: '0',
+      padding: '10px clamp(10px, 3vw, 26px) 0 clamp(10px, 4vw, 60px)',
+      display: 'flex', flexDirection: 'column', gap: 'clamp(8px, 1.4vw, 14px)',
     },
-  },
-    h('div', {
-      class: 'home-feature-row',
-      style: {
-        display: 'grid',
-        // FIXE 3 colonnes : jamais de wrap sur mobile.
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        gap: 'clamp(6px, 1.4vw, 14px)',
-      },
-    }, ...FEATURES.map(featureCard)),
-    competBanner,
-    h('div', {
-      class: 'home-menu-grid',
-      style: {
-        display: 'grid',
-        gap: 'clamp(6px, 1.2vw, 10px)',
-      },
-    }, ...MENUS.map(menuTile)),
-  );
+  });
 
-  root.append(topbar, main, fan);
-  root._cleanup = () => { topbar._cleanup?.(); if (competPoller) clearInterval(competPoller); };
+  // 1) Carrousel des features (haut).
+  const featuresCar = Carousel(FEATURES.map(featureCard), { itemGap: 12, className: 'home-features-car' });
+  // 2) Bannière compétition (visible uniquement si match en cours/récent).
+  // 3) Carrousel du menu tiles (milieu bas).
+  const menusCar = Carousel(MENUS.map(menuTile), { itemGap: 8, className: 'home-menus-car' });
+
+  main.append(featuresCar, competBanner, menusCar);
+
+  // 4) Footer : bandeau qui expose 20% (default) → 30% (hover/touch).
+  //    Contient un carrousel horizontal des routes principales.
+  const footer = h('div', {
+    class: 'home-footer',
+    onmouseenter: () => footer.classList.add('home-footer--expanded'),
+    onmouseleave: () => footer.classList.remove('home-footer--expanded'),
+    ontouchstart: () => footer.classList.add('home-footer--expanded'),
+  }) as HTMLElement;
+  // Sur touch, on maintient l'état "expanded" pendant 3s après touchend.
+  let footerTimer: ReturnType<typeof setTimeout> | null = null;
+  footer.addEventListener('touchend', () => {
+    if (footerTimer) clearTimeout(footerTimer);
+    footerTimer = setTimeout(() => footer.classList.remove('home-footer--expanded'), 3000);
+  });
+
+  const footerCar = Carousel(FOOTER_CARDS.map(footerCard), { itemGap: 10, chromeInset: 16, className: 'home-footer-car' });
+  footer.append(footerCar);
+
+  root.append(topbar, main, footer);
+  root._cleanup = () => {
+    topbar._cleanup?.();
+    if (competPoller) clearInterval(competPoller);
+    if (footerTimer) clearTimeout(footerTimer);
+    (featuresCar as any)._cleanup?.();
+    (menusCar as any)._cleanup?.();
+    (footerCar as any)._cleanup?.();
+  };
   return root;
 }
