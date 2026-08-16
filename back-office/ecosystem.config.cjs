@@ -8,7 +8,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         ADMIN_PORT: 3001,
-        MONGO_URI: 'mongodb://localhost:27017/beloteKydosV14',
+        MONGO_URI: 'mongodb://root:toor@127.0.0.1:27017/belote15?authSource=admin',
+        REDIS_URL: 'redis://root:toor@127.0.0.1:6379',
         JWT_SECRET: 'CHANGE-ME-IN-PRODUCTION',
       },
       instances: 1,

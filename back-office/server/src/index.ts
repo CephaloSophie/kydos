@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -21,7 +22,7 @@ import promoRoutes from './routes/promos.js';
 import monitorRoutes from './routes/monitor.js';
 import auditRoutes from './routes/audit.js';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/beloteKydosV14';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:toor@127.0.0.1:27017/belote15?authSource=admin';
 const PORT = parseInt(process.env.ADMIN_PORT || '3001');
 
 const app = express();
