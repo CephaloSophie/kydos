@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const router = Router();
 
@@ -92,6 +93,9 @@ router.post('/:id/credit', async (req: AdminRequest, res) => {
       user.wallet.transactions = user.wallet.transactions.slice(-200);
     }
     await user.save();
+    await logAudit(req.adminId!, 'user.credit', req.params.id, {
+      after: { amount, reason, newBalance: user.wallet.tokens },
+    });
     res.json({ newBalance: user.wallet.tokens });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -109,6 +113,9 @@ router.post('/:id/ban', async (req: AdminRequest, res) => {
       res.status(404).json({ error: 'Utilisateur non trouvé' });
       return;
     }
+    await logAudit(req.adminId!, 'user.ban', req.params.id, {
+      after: { role: 'banned' },
+    });
     res.json({ banned: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

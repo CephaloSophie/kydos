@@ -117,7 +117,7 @@ import type { Tournament, TournamentStatus } from '../../models';
         }
       </div>
 
-      @if (tournament.bracketTree?.rounds?.length) {
+      @if (tournament.bracketTree && tournament.bracketTree.rounds.length) {
         <div class="card" style="margin-top: 24px">
           <div class="card-header"><h3>Bracket</h3></div>
           <div class="bracket-container">
@@ -127,11 +127,11 @@ import type { Tournament, TournamentStatus } from '../../models';
                 @for (match of round.matches; track match.matchIndex) {
                   <div class="bracket-match" [class.finished]="match.winner">
                     <div class="bracket-slot" [class.winner]="match.winner === 'A'">
-                      <span>{{ match.slotA?.displayName || 'TBD' }}</span>
+                      <span>{{ match.slotA.displayName || 'TBD' }}</span>
                       <span class="bracket-score">{{ match.scoreA ?? '' }}</span>
                     </div>
                     <div class="bracket-slot" [class.winner]="match.winner === 'B'">
-                      <span>{{ match.slotB?.displayName || 'TBD' }}</span>
+                      <span>{{ match.slotB.displayName || 'TBD' }}</span>
                       <span class="bracket-score">{{ match.scoreB ?? '' }}</span>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export class TournamentDetailComponent implements OnInit {
   }
 
   statusLabel(s: TournamentStatus): string {
-    return { draft: 'Brouillon', upcoming: 'A venir', live: 'En cours', finished: 'Terminé' }[s] || s;
+    return { draft: 'Brouillon', upcoming: 'A venir', live: 'En cours', finished: 'Terminé', cancelled: 'Annulé' }[s] || s;
   }
 
   formatLabel(f: string): string {

@@ -180,6 +180,7 @@ table {
   &.upcoming { background: var(--info); color: white; }
   &.live { background: var(--success); color: var(--bg-primary); }
   &.finished { background: var(--border); color: var(--text-secondary); }
+  &.cancelled { background: var(--danger); color: white; }
   &.active { background: var(--success); color: var(--bg-primary); }
   &.inactive { background: var(--danger); color: white; }
 }

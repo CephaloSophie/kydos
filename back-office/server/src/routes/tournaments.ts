@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
+import { logAudit } from '../middleware/auditLog.js';
 
 const TOURNAMENT_CAPACITIES = [4, 8, 16, 32, 64, 128];
 const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
-const VALID_STATUSES = ['draft', 'upcoming', 'live', 'finished'];
+const VALID_STATUSES = ['draft', 'upcoming', 'live', 'finished', 'cancelled'];
 
 function occupantsAtPosition(capacity: number, position: number): number {
   if (position === 1 || position === 2) return 1;
@@ -117,6 +118,9 @@ router.post('/', async (req: AdminRequest, res) => {
       status: publishImmediately ? 'upcoming' : 'draft',
       createdBy: req.adminId,
     });
+    await logAudit(req.adminId!, 'tournament.create', tournament._id.toString(), {
+      after: { name, format, capacity, entryFee, status: publishImmediately ? 'upcoming' : 'draft' },
+    });
     res.json({ tournamentId: tournament._id });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -131,24 +135,39 @@ router.put('/:id', async (req: AdminRequest, res) => {
       res.status(404).json({ error: 'Tournoi non trouvé' });
       return;
     }
-    if (tournament.status !== 'draft') {
-      res.status(400).json({ error: 'Seuls les tournois en brouillon peuvent être modifiés' });
+    const before = { name: tournament.name, format: tournament.format, capacity: tournament.capacity, entryFee: tournament.entryFee };
+
+    if (tournament.status === 'finished') {
+      const { name } = req.body;
+      if (name !== undefined) tournament.name = name;
+      const otherFields = Object.keys(req.body).filter(k => k !== 'name');
+      if (otherFields.length) {
+        res.status(400).json({ error: 'Seul le nom peut être modifié pour un tournoi terminé' });
+        return;
+      }
+    } else if (tournament.status === 'draft') {
+      const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds } = req.body;
+      if (name !== undefined) tournament.name = name;
+      if (format !== undefined) tournament.format = format;
+      if (capacity !== undefined) tournament.capacity = capacity;
+      if (entryFee !== undefined) tournament.entryFee = entryFee;
+      if (minLevel !== undefined) tournament.minLevel = minLevel;
+      if (maxLevel !== undefined) tournament.maxLevel = maxLevel;
+      if (startAt !== undefined) tournament.startAt = new Date(startAt);
+      if (description !== undefined) tournament.description = description;
+      if (color !== undefined) tournament.color = color;
+      if (icon !== undefined) tournament.icon = icon;
+      if (prizesByPosition !== undefined) tournament.prizesByPosition = prizesByPosition;
+      if (rounds !== undefined) tournament.rounds = rounds;
+    } else {
+      res.status(400).json({ error: 'Ce tournoi ne peut pas être modifié dans son état actuel' });
       return;
     }
-    const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds } = req.body;
-    if (name !== undefined) tournament.name = name;
-    if (format !== undefined) tournament.format = format;
-    if (capacity !== undefined) tournament.capacity = capacity;
-    if (entryFee !== undefined) tournament.entryFee = entryFee;
-    if (minLevel !== undefined) tournament.minLevel = minLevel;
-    if (maxLevel !== undefined) tournament.maxLevel = maxLevel;
-    if (startAt !== undefined) tournament.startAt = new Date(startAt);
-    if (description !== undefined) tournament.description = description;
-    if (color !== undefined) tournament.color = color;
-    if (icon !== undefined) tournament.icon = icon;
-    if (prizesByPosition !== undefined) tournament.prizesByPosition = prizesByPosition;
-    if (rounds !== undefined) tournament.rounds = rounds;
     await tournament.save();
+    await logAudit(req.adminId!, 'tournament.update', req.params.id, {
+      before,
+      after: { name: tournament.name, format: tournament.format, capacity: tournament.capacity, entryFee: tournament.entryFee },
+    });
     res.json({ tournament });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -173,6 +192,10 @@ router.post('/:id/publish', async (req: AdminRequest, res) => {
     }
     tournament.status = 'upcoming';
     await tournament.save();
+    await logAudit(req.adminId!, 'tournament.publish', req.params.id, {
+      before: { status: 'draft' },
+      after: { status: 'upcoming' },
+    });
     res.json({ published: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -214,8 +237,13 @@ router.post('/:id/cancel', async (req: AdminRequest, res) => {
         note: 'Remboursement annulation tournoi',
       });
     }
-    tournament.status = 'draft';
+    tournament.status = 'cancelled';
     await tournament.save();
+    await logAudit(req.adminId!, 'tournament.cancel', req.params.id, {
+      before: { status: 'upcoming' },
+      after: { status: 'cancelled' },
+      meta: { refundedCount: tournament.participants.length, entryFee: tournament.entryFee },
+    });
     res.json({ cancelled: true, refundedCount: tournament.participants.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -235,6 +263,9 @@ router.delete('/:id', async (req: AdminRequest, res) => {
       return;
     }
     await TournamentModel.deleteOne({ _id: tournament._id });
+    await logAudit(req.adminId!, 'tournament.delete', req.params.id, {
+      before: { name: tournament.name, format: tournament.format, capacity: tournament.capacity },
+    });
     res.json({ deleted: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

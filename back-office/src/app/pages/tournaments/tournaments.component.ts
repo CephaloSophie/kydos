@@ -21,6 +21,7 @@ import type { Tournament, TournamentStatus } from '../../models';
         <option value="upcoming">A venir</option>
         <option value="live">En cours</option>
         <option value="finished">Terminé</option>
+        <option value="cancelled">Annulé</option>
       </select>
     </div>
 
@@ -94,7 +95,7 @@ export class TournamentsComponent implements OnInit {
   }
 
   statusLabel(s: TournamentStatus): string {
-    return { draft: 'Brouillon', upcoming: 'A venir', live: 'En cours', finished: 'Terminé' }[s] || s;
+    return { draft: 'Brouillon', upcoming: 'A venir', live: 'En cours', finished: 'Terminé', cancelled: 'Annulé' }[s] || s;
   }
 
   publish(t: Tournament) {

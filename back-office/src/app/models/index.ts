@@ -86,7 +86,7 @@ export interface PositionPrize {
   prize: number;
 }
 
-export type TournamentStatus = 'draft' | 'upcoming' | 'live' | 'finished';
+export type TournamentStatus = 'draft' | 'upcoming' | 'live' | 'finished' | 'cancelled';
 export type TournamentCapacity = 4 | 8 | 16 | 32 | 64 | 128;
 export type MatchFormat = 'duo_steel' | 'hybrid_alliance' | 'royal_square';
 

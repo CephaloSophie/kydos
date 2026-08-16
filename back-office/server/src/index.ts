@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
+import rateLimit from 'express-rate-limit';
 
 import '../../server/src/modules/user/user.model.js';
 import '../../server/src/modules/robot/robot.model.js';
@@ -9,6 +10,7 @@ import '../../server/src/modules/matches/match.model.js';
 import '../../server/src/modules/tournaments/tournament.model.js';
 import '../../server/src/modules/houseAccounting/houseTransaction.model.js';
 import '../../server/src/modules/promo/promo.model.js';
+import './middleware/auditLog.js';
 
 import { requireAdmin } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
@@ -17,6 +19,7 @@ import userRoutes from './routes/users.js';
 import accountingRoutes from './routes/accounting.js';
 import promoRoutes from './routes/promos.js';
 import monitorRoutes from './routes/monitor.js';
+import auditRoutes from './routes/audit.js';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/beloteKydosV14';
 const PORT = parseInt(process.env.ADMIN_PORT || '3001');
@@ -25,12 +28,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const adminLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Réessayez dans une minute.' },
+});
+app.use('/admin', adminLimiter);
+
 app.use('/admin/auth', authRoutes);
 app.use('/admin/tournaments', requireAdmin, tournamentRoutes);
 app.use('/admin/users', requireAdmin, userRoutes);
 app.use('/admin/accounting', requireAdmin, accountingRoutes);
 app.use('/admin/promos', requireAdmin, promoRoutes);
 app.use('/admin/monitor', requireAdmin, monitorRoutes);
+app.use('/admin/audit', requireAdmin, auditRoutes);
 
 app.get('/admin/health', (_req, res) => {
   res.json({ status: 'ok', mongo: mongoose.connection.readyState === 1 });
