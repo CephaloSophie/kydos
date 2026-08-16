@@ -7,7 +7,8 @@ export class GameController {
   async list(request: AuthenticatedRequest, response: Response) {
     const page = Number(request.query.page ?? 1) || 1;
     const kind = request.query.kind ? String(request.query.kind) : undefined;
-    response.json(await gameQueryService.listForUser(request.userId!, String(request.query.scope ?? 'mine'), { page, kind }));
+    const mode = request.query.mode ? String(request.query.mode) : undefined;
+    response.json(await gameQueryService.listForUser(request.userId!, String(request.query.scope ?? 'mine'), { page, kind, mode }));
   }
   async listPublic(request: AuthenticatedRequest, response: Response) {
     response.json({ games: await gameQueryService.listPublicByName(String(request.query.q ?? '')) });

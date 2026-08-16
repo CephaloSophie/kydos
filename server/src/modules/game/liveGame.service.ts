@@ -48,6 +48,8 @@ interface LiveGame {
   teamId: string | null;
   visibility: 'public' | 'private';
   kind: 'hybride' | 'acier' | 'royal';
+  /** v14.11 — Origine de la table (user/match/tournament) pour marquer la Game persistée. */
+  origin: 'user' | 'match' | 'tournament';
   sessionId: string;
   persisted: boolean;
   /** Piste enrichie (smileys, réflexions, notes) — persistée en fin de partie. */
@@ -151,6 +153,8 @@ export class LiveGameService {
       teamId: tableDocument.team ? String(tableDocument.team) : null,
       visibility: tableDocument.visibility === 'public' ? 'public' : 'private',
       kind: ['hybride', 'acier', 'royal'].includes(tableDocument.kind) ? tableDocument.kind : 'hybride',
+      // v14.11 — Propager l'origine (user/match/tournament) pour mode Game.
+      origin: ['user', 'match', 'tournament'].includes((tableDocument as any).origin) ? (tableDocument as any).origin : 'user',
       sessionId: String(sessionDocument._id),
       persisted: false,
     });
@@ -426,6 +430,9 @@ export class LiveGameService {
       teamId: liveGame.teamId,
       visibility: liveGame.visibility,
       kind: liveGame.kind,
+      // v14.11 — Tables issues d'un match ou d'un tournoi → mode competition,
+      // sinon online (partie libre). Utilisé par l'historique pour filtrer.
+      mode: (liveGame.origin === 'match' || liveGame.origin === 'tournament') ? 'competition' : 'online',
       participants: liveGame.participants,
       logs: liveGame.logs.slice(-500),
       substituteSeats: liveGame.substituteSeats,

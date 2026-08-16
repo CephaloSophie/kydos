@@ -6,6 +6,7 @@
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
 import { Button } from '../components/ui';
+import { Carousel } from '../components/Carousel';
 import type { AppContext } from '../context';
 
 interface RankRow { rank: number; name: string; accent: string; winRate: number; elo: number; me?: boolean }
@@ -118,13 +119,16 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
    * typographique claire (tag → titre → sous-titre → économie → CTA).
    * Effet de survol subtil, ombre douce.
    */
-  const formatCard = (f: FormatCard) => h('div', {
+  const formatCard = (f: FormatCard) => {
+    const card = h('div', {
     class: 'compet-card',
     style: {
       position: 'relative', padding: '18px 16px', borderRadius: 'var(--r-lg)',
       background: f.accent, color: '#fff', overflow: 'hidden',
       boxShadow: '0 10px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.15)',
       cursor: 'default', minHeight: '210px',
+      // v14.11 : largeurs fixes pour carrousel horizontal.
+      minWidth: '260px', maxWidth: '320px',
       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
     },
   },
@@ -166,6 +170,8 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
       ),
     ),
   );
+    return card;
+  };
 
   // ── Section Tournois (v14.1) ─────────────────────────────────────────────
   interface TournamentRow {
@@ -174,52 +180,70 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     participants?: unknown[];
   }
   let currentTournamentFilter: 'upcoming' | 'live' | 'finished' = 'upcoming';
-  const tournamentsList = h('div', { class: 'col gap-2', style: { marginTop: '10px' } });
+  // Host container : sera rempli par un Carousel à chaque loadTournaments.
+  const tournamentsHost = h('div', { style: { marginTop: '10px' } });
   const tournamentsMsg = h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', padding: '6px 0' } }, 'Chargement des tournois…');
 
-  const STATUS_COLORS: Record<string, { bg: string; border: string; label: string; color: string }> = {
-    upcoming: { bg: 'rgba(230,196,106,.10)', border: 'rgba(230,196,106,.35)', label: '\u00c0 VENIR', color: 'var(--c-gold)' },
-    live: { bg: 'rgba(126,203,152,.10)', border: 'rgba(126,203,152,.35)', label: 'EN COURS', color: 'var(--c-success)' },
-    finished: { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.08)', label: 'TERMIN\u00c9', color: 'var(--c-text-mute)' },
+  const STATUS_COLORS: Record<string, { bg: string; border: string; label: string; color: string; dotAnim?: boolean }> = {
+    upcoming: { bg: 'rgba(230,196,106,.10)', border: 'rgba(230,196,106,.35)', label: '\u00c0 VENIR', color: '#e6c46a' },
+    live: { bg: 'rgba(232,150,68,.14)', border: 'rgba(232,150,68,.50)', label: 'EN COURS', color: '#e89644', dotAnim: true },
+    finished: { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.10)', label: 'TERMIN\u00c9', color: 'var(--c-text-mute)' },
     draft: { bg: 'rgba(255,255,255,.03)', border: 'rgba(255,255,255,.08)', label: 'DRAFT', color: 'var(--c-text-mute)' },
   };
 
-  const renderTournamentRow = (t: TournamentRow) => {
-    const startDate = new Date(t.startAt);
-    const startLabel = startDate.toLocaleString();
+  /** Icône par défaut selon format (fallback si tournoi n'a pas de icon custom, v14.11). */
+  const iconByFormat: Record<string, string> = {
+    duo_steel: '\u2666', hybrid_alliance: '\u2660', royal_square: '\u2665',
+  };
+  /** Couleur par défaut selon format. */
+  const colorByFormat: Record<string, string> = {
+    duo_steel: '#3f6ea1', hybrid_alliance: '#c99c3f', royal_square: '#b0384a',
+  };
+
+  const renderTournamentCard = (t: TournamentRow) => {
     const participantCount = (t.participants ?? []).length;
     const canJoin = t.status === 'upcoming';
     const rules = FORMATS.find((f) => f.id === t.format);
     const style = STATUS_COLORS[t.status] ?? STATUS_COLORS.finished;
-    // Ligne CLIQUABLE (sauf le bouton) → ouvre la vue détail tournoi.
-    return h('div', {
-      style: {
-        padding: '14px 16px', borderRadius: 'var(--r-md)', cursor: 'pointer',
-        background: style.bg, border: `1px solid ${style.border}`,
-        transition: 'transform .15s ease, background .15s ease',
-      },
+    // v14.11 : color/icon du modèle si présents (arrive en v14.12), sinon fallback format.
+    const cardColor = (t as any).color || colorByFormat[t.format] || '#e6c46a';
+    const cardIcon = (t as any).icon || iconByFormat[t.format] || '\u2666';
+    const startShort = new Date(t.startAt).toLocaleDateString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    const card = h('div', {
+      class: 'compet-tournament-card',
       onClick: () => router.go(`tournament?id=${t._id}`),
-      onmouseover: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(3px)'; },
-      onmouseout: (e: MouseEvent) => { (e.currentTarget as HTMLElement).style.transform = 'translateX(0)'; },
     },
-      h('div', { class: 'between' },
-        h('div', { style: { flex: '1' } },
-          h('div', { class: 'row gap-2', style: { alignItems: 'center', marginBottom: '4px' } },
-            h('span', { class: 'mono', style: {
-              fontSize: '9px', padding: '2px 8px', borderRadius: 'var(--r-pill)',
-              background: 'rgba(0,0,0,.3)', color: style.color, letterSpacing: '.06em',
-            } }, style.label),
-            h('div', { class: 'title', style: { fontSize: '13px', color: 'var(--c-text)' } }, t.name),
-          ),
-          h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', marginTop: '3px' } },
-            `${rules?.label ?? t.format} \u00b7 ${participantCount}/${t.capacity} \u00b7 ${t.entryFee} \u25c6 \u00b7 ${startLabel}`)),
-        canJoin
-          ? h('button', {
-              class: 'btn btn--sm',
-              onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); },
-            }, 'S\u2019inscrire')
-          : h('span', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, '\u203a'),
-      ));
+      // Bandeau haut : icône couleur + statut chip
+      h('div', { class: 'compet-tournament-card__head' },
+        h('span', { class: 'compet-tournament-card__icon' }, cardIcon),
+        h('span', { class: 'mono compet-tournament-card__status', style: {
+          background: `${style.color}22`, color: style.color, borderColor: `${style.color}55`,
+        } },
+          style.dotAnim ? h('span', { class: 'compet-tournament-card__livedot' }) : null as any,
+          style.label,
+        )),
+      // Titre
+      h('div', { class: 'compet-tournament-card__title' }, t.name),
+      // Format & date
+      h('div', { class: 'mono compet-tournament-card__meta' },
+        rules?.label ?? t.format),
+      h('div', { class: 'mono compet-tournament-card__meta compet-tournament-card__meta--dim' },
+        startShort),
+      // Statistiques (participants, buy-in)
+      h('div', { class: 'compet-tournament-card__stats' },
+        h('span', { class: 'mono compet-tournament-card__stat' }, `${participantCount}/${t.capacity}`),
+        h('span', { class: 'mono compet-tournament-card__stat compet-tournament-card__stat--fee' }, `${t.entryFee} \u25c6`)),
+      // Bouton (inscription si upcoming, sinon liseré discret)
+      canJoin
+        ? h('button', {
+            class: 'btn btn--sm compet-tournament-card__join',
+            onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); },
+          }, 'S\u2019inscrire')
+        : h('div', { class: 'mono compet-tournament-card__cta' }, 'Voir \u203a'),
+    ) as HTMLElement;
+    card.style.setProperty('--card-color', cardColor);
+    return card;
   };
 
   const joinTournament = async (t: TournamentRow, robotsRequired: number) => {
@@ -243,12 +267,14 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     try {
       const r = await api.listTournaments(currentTournamentFilter);
       const rows = (r.tournaments as TournamentRow[]) || [];
-      clear(tournamentsList);
+      clear(tournamentsHost);
       if (rows.length === 0) {
-        tournamentsList.append(h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', padding: '10px 0' } },
-          'Aucun tournoi dans cette cat\u00e9gorie.'));
+        tournamentsHost.append(h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)', padding: '16px', textAlign: 'center', background: 'rgba(255,255,255,.02)', borderRadius: 'var(--r-md)', border: '1px dashed rgba(255,255,255,.08)' } },
+          'Aucun tournoi dans cette cat\u00e9gorie pour le moment.'));
       } else {
-        rows.forEach((t) => tournamentsList.append(renderTournamentRow(t)));
+        // v14.11 : dynamique — 0, 3, 15 tournois : tous en carrousel horizontal.
+        const cards = rows.map(renderTournamentCard);
+        tournamentsHost.append(Carousel(cards, { itemGap: 12, className: 'compet-tournaments-car' }));
       }
       tournamentsMsg.textContent = '';
     } catch (e) {
@@ -281,10 +307,9 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
         h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '4px', letterSpacing: '.01em' } }, 'Compétitions')),
       Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
 
-    // Section 1 : Match rapide
-    h('div', { class: 'eyebrow', style: { marginBottom: '10px', color: 'var(--c-text-mute)' } }, 'MATCH RAPIDE — 3 FORMATS'),
-    h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' } },
-      ...FORMATS.map(formatCard)),
+    // Section 1 : Match rapide — carrousel scrollable (extensible si on ajoute des formats).
+    h('div', { class: 'eyebrow', style: { marginBottom: '10px', color: 'var(--c-text-mute)' } }, 'MATCH RAPIDE'),
+    Carousel(FORMATS.map(formatCard), { itemGap: 12, className: 'compet-formats-car' }),
     statusEl,
 
     // Séparateur
@@ -297,7 +322,7 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
         h('h3', { class: 'title', style: { fontSize: '16px', marginTop: '4px' } }, 'Bracket \u00e0 \u00e9limination directe')),
       filterRow),
     tournamentsMsg,
-    tournamentsList,
+    tournamentsHost,
 
     // v14.7 — Accès dédié aux parties publiques en cours (spectateur).
     h('div', {

@@ -96,6 +96,7 @@ export class MatchLiveService {
     const table = await TableModel.create({
       status: 'lobby',
       kind: FORMAT_TO_KIND[format],
+      origin: 'match',              // v14.11 : marque comme éphémère match
       ownerType: 'user',
       owner,
       visibility: 'private',
@@ -103,7 +104,7 @@ export class MatchLiveService {
       config: {
         manches: 2,
         maxPlayers: 4,
-        allowSpectators: true,     // 10 max géré par table.socket
+        allowSpectators: true,
         turnTimeoutMs: 15_000,
       },
       startsAt: new Date(),

@@ -131,9 +131,10 @@ export class ApiClient {
   }
 
   // --- Games / replays ----------------------------------------------------
-  listGames(scope: HistoryScope = 'mine', opts: { page?: number; kind?: string } = {}) {
+  listGames(scope: HistoryScope = 'mine', opts: { page?: number; kind?: string; mode?: string } = {}) {
     const params = new URLSearchParams({ scope, page: String(opts.page ?? 1) });
     if (opts.kind && opts.kind !== 'all') params.set('kind', opts.kind);
+    if (opts.mode && opts.mode !== 'all') params.set('mode', opts.mode);
     return this.call<GamesPage>(`/games?${params.toString()}`);
   }
   /** Lance une partie 100% robots sur le serveur (archivée dans l'historique). */

@@ -16,6 +16,7 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
   type Scope = 'mine' | 'myrobots' | 'team' | 'public';
   let scope: Scope = 'mine';
   let kindFilter: 'all' | 'hybride' | 'acier' | 'royal' | 'local' = 'all';
+  let modeFilter: 'all' | 'local' | 'online' | 'competition' = 'all';
   let page = 1;
   let totalPages = 1;
   let total = 0;
@@ -72,7 +73,7 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
 
   const load = () => {
     clear(list); list.append(h('div', { class: 'text-mute', style: { fontSize: '12px' } }, 'Chargement…'));
-    api.listGames(scope, { page, kind: kindFilter })
+    api.listGames(scope, { page, kind: kindFilter, mode: modeFilter })
       .then((res) => {
         totalPages = res.totalPages; total = res.total; page = res.page;
         clear(list);
@@ -107,7 +108,23 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
   const renderKinds = () => { clear(kindRow); kindRow.append(
     kindTab('all', 'Toutes'), kindTab('hybride', 'Alliance Hybride'), kindTab('acier', "Duo d'Acier"), kindTab('royal', 'Carré Royal'), kindTab('local', 'Entraînement')); };
 
-  renderScope(); renderKinds();
+  // v14.11 — Filtre par MODE de partie (croisé avec le kind).
+  const modeTab = (value: typeof modeFilter, label: string, color = '#e6c46a') => h('span', {
+    class: 'mono', style: { cursor: 'pointer', padding: '5px 11px', borderRadius: 'var(--r-pill)', fontSize: '10px',
+      background: modeFilter === value ? `${color}22` : 'var(--c-veil-06)',
+      border: `1px solid ${modeFilter === value ? `${color}88` : 'var(--c-line-strong)'}`,
+      color: modeFilter === value ? color : 'var(--c-text-soft)' },
+    onClick: () => { modeFilter = value; page = 1; renderModes(); load(); },
+  }, label);
+  const modeRow = h('div', { class: 'row gap-2 wrap' });
+  const renderModes = () => { clear(modeRow); modeRow.append(
+    modeTab('all', 'Tous modes', '#7ecb98'),
+    modeTab('competition', 'Compétition', '#e89644'),
+    modeTab('online', 'Table en ligne', '#7ea8e0'),
+    modeTab('local', 'Entraînement', '#a685d1'),
+  ); };
+
+  renderScope(); renderKinds(); renderModes();
   load();
 
   return h('div', { class: 'anim-screen', style: { position: 'absolute', inset: '0', padding: '14px 24px 14px 60px', background: 'linear-gradient(160deg,#0a0f1c,#060a13)', overflow: 'auto' } },
@@ -115,7 +132,8 @@ export function HistoryScreen(ctx: AppContext): HTMLElement {
       h('div', {}, h('div', { class: 'eyebrow' }, 'ARCHIVES'), h('h2', { class: 'title', style: { fontSize: 'var(--fs-xl)', marginTop: '2px' } }, 'Historique des parties')),
       Button('← Accueil', { variant: 'secondary', size: 'sm', onClick: () => router.go('home') })),
     h('div', { class: 'row gap-3 wrap', style: { marginBottom: '8px' } }, scopeRow),
-    h('div', { style: { marginBottom: '12px' } }, kindRow),
+    h('div', { style: { marginBottom: '6px' } }, kindRow),
+    h('div', { style: { marginBottom: '12px' } }, modeRow),
     list,
     pager,
   );

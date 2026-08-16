@@ -58,6 +58,17 @@ const TableSchema = new Schema(
      *   'royal'   — Carré Royal : 4 joueurs humains.
      */
     kind: { type: String, enum: ['hybride', 'acier', 'royal'], default: 'hybride', index: true },
+    /**
+     * v14.11 — Origine de la table :
+     *   'user'       — créée par un utilisateur (partie libre).
+     *   'match'      — éphémère, créée par matchLiveService pour un match
+     *                  compétition (HYBRID/ROYAL non-headless).
+     *   'tournament' — éphémère, créée pour un match de tournoi.
+     * Utilisé pour marquer la Game archivée avec le bon mode (competition
+     * plutôt que online), et pour filtrer les tables publiques (les tables
+     * de match ne s'affichent pas dans les lobbies publiques).
+     */
+    origin: { type: String, enum: ['user', 'match', 'tournament'], default: 'user', index: true },
     ownerType: { type: String, enum: ['user', 'team'], required: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },

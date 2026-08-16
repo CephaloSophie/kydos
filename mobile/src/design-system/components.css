@@ -394,7 +394,8 @@
 }
 
 /* =========================================================================
- * HOME v14.10 — No-scroll global, 3 carrousels, footer bandeau
+ * HOME v14.11 — Features en 4 cartes plus hautes, tiles plus hautes,
+ * footer bandeau retiré, bannière compétition en haut.
  * ====================================================================== */
 
 /* --- Carrousel générique : cacher scrollbar (WebKit) --------------------- */
@@ -404,40 +405,40 @@
   border-color: rgba(240,196,106,.6) !important;
 }
 
-/* --- FEATURE CARDS (haut) : hauteur figée, ne wrappe pas ----------------- */
-.home-features-car .carousel__track { min-height: 128px; }
+/* --- FEATURE CARDS (haut) : + de hauteur --------------------------------- */
+.home-features-car .carousel__track { min-height: 168px; }
 .home-feature {
-  min-width: min(280px, 78vw);   /* jamais toute la largeur, laisse voir le suivant */
-  height: 128px;
-  padding: 12px 14px;
+  min-width: min(280px, 78vw);
+  height: 168px;                    /* +40px vs v14.10 */
+  padding: 16px 18px;
   display: flex; flex-direction: column; justify-content: flex-end;
   overflow: hidden; position: relative;
 }
-.home-feature .feature-card__title { font-size: clamp(13px, 1.6vw, 18px); line-height: 1.2; }
-.home-feature .feature-card__desc  { font-size: clamp(10px, 1.1vw, 12px); }
-.home-feature .feature-card__kicker { font-size: clamp(8px, 0.85vw, 10px); }
-.home-feature .feature-card__glyph  { font-size: clamp(70px, 10vw, 130px); }
+.home-feature .feature-card__title { font-size: clamp(14px, 1.8vw, 20px); line-height: 1.2; margin-top: 4px; }
+.home-feature .feature-card__desc  { font-size: clamp(11px, 1.2vw, 13px); margin-top: 3px; }
+.home-feature .feature-card__kicker { font-size: clamp(9px, 0.9vw, 11px); letter-spacing: .1em; }
+.home-feature .feature-card__glyph  { font-size: clamp(90px, 12vw, 150px); }
 @media (max-width: 620px) {
-  .home-feature { min-width: 76vw; height: 118px; padding: 10px; }
+  .home-feature { min-width: 76vw; height: 148px; padding: 12px; }
   .home-feature .feature-card__desc { display: none; }
 }
 @media (max-width: 380px) {
-  .home-feature { min-width: 82vw; height: 100px; padding: 8px; }
+  .home-feature { min-width: 82vw; height: 130px; padding: 10px; }
   .home-feature .feature-card__kicker { display: none; }
 }
 
-/* --- MENU TILES (milieu bas) : mini cartes à jouer ----------------------- */
-.home-menus-car .carousel__track { min-height: 62px; }
+/* --- MENU TILES (bas) : + de hauteur ------------------------------------- */
+.home-menus-car .carousel__track { min-height: 78px; }
 .home-menu-tile {
   --tile-color: #e6c46a;
   position: relative;
-  min-width: 180px; max-width: 220px;
-  padding: 10px 10px 10px 42px;
-  height: 56px;
+  min-width: 200px; max-width: 240px;
+  padding: 12px 12px 12px 46px;
+  height: 72px;                    /* +16px vs v14.10 */
   border-radius: var(--r-md);
   cursor: pointer;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
+    linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)),
     var(--c-veil-04);
   border: 1px solid var(--c-line);
   border-left: 3px solid var(--tile-color);
@@ -450,99 +451,131 @@
   border-color: var(--tile-color);
 }
 .home-menu-tile__glyph {
-  position: absolute; top: 8px; left: 10px;
-  font-size: 22px; font-weight: 900; line-height: 1;
+  position: absolute; top: 10px; left: 12px;
+  font-size: 26px; font-weight: 900; line-height: 1;
   color: var(--tile-color);
   text-shadow: 0 0 8px color-mix(in srgb, var(--tile-color) 30%, transparent);
 }
 .home-menu-tile__body {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; flex-direction: column; gap: 3px;
   min-width: 0;
 }
 .home-menu-tile__title {
   font-family: var(--f-heading, var(--f-serif, serif));
-  font-size: 12px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   color: var(--c-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .home-menu-tile__desc {
   font-family: var(--f-mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--c-text-mute);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 @media (max-width: 620px) {
-  .home-menu-tile { min-width: 160px; max-width: 190px; }
+  .home-menu-tile { min-width: 180px; max-width: 210px; }
 }
 
-/* --- FOOTER : bandeau qui expose 20%, monte à 30% au hover --------------- */
-.home-footer {
-  position: relative;
-  flex-shrink: 0;
-  /* Hauteur totale du bandeau : 30% max. Sur mobile, on prend plus (35%). */
-  height: 30vh;
-  /* En état normal, on cache 40% de sa propre hauteur en le décalant vers
-     le bas → 60% du bandeau visible = ~20% de l'écran (0.6 × 30vh = 18vh).
-     Au hover/touch, on remonte tout le bandeau → 30% de l'écran. */
-  margin-bottom: calc(-1 * 30vh * 0.4);
-  transition: margin-bottom var(--t-base) var(--e-out);
-  padding: 8px 0 4px;
-  background: linear-gradient(180deg, rgba(6,10,20,0) 0%, rgba(6,10,20,.7) 25%, rgba(6,10,20,.95) 100%);
-  border-top: 1px solid rgba(240,196,106,.15);
-  pointer-events: auto;
-}
-.home-footer.home-footer--expanded { margin-bottom: 0; }
-@media (max-width: 620px) {
-  .home-footer { height: 35vh; margin-bottom: calc(-1 * 35vh * 0.42); }
-}
+/* --- Bannière compétition EN HAUT --------------------------------------- */
+.home-compet-banner { flex-shrink: 0; }
 
-/* Le carousel du footer prend toute la place du bandeau. */
-.home-footer-car { height: 100%; padding-left: clamp(10px, 4vw, 60px); }
-.home-footer-car .carousel__track {
-  height: 100%; align-items: flex-start; padding-top: 4px; padding-bottom: 4px;
-}
-
-/* Cartes du footer : rectangulaires, glyphe haut-gauche + label haut-droite */
-.home-footer-card {
+/* =========================================================================
+ * COMPETITIONS v14.11 — Carte tournoi verticale pour carrousel
+ * Chaque carte a sa couleur (--card-color), icône d'enseigne, statut chip.
+ * ====================================================================== */
+.compet-tournament-card {
   --card-color: #e6c46a;
-  min-width: 130px; max-width: 160px;
-  height: 100%;
-  border-radius: var(--r-md);
+  position: relative;
+  min-width: 200px; max-width: 240px;
+  height: 200px;
+  padding: 14px;
+  border-radius: var(--r-lg);
   cursor: pointer;
-  position: relative; overflow: hidden;
-  padding: 8px 10px;
+  overflow: hidden;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--card-color) 22%, #0a0f1a) 0%,
-                            color-mix(in srgb, var(--card-color) 8%, #0a0f1a) 100%);
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--card-color) 22%, #0a0f1a) 0%,
+      color-mix(in srgb, var(--card-color) 6%, #0a0f1a) 100%);
   border: 1px solid color-mix(in srgb, var(--card-color) 40%, transparent);
-  box-shadow: 0 -4px 14px -4px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);
+  box-shadow: 0 8px 20px -8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
   transition: transform var(--t-base) var(--e-out), box-shadow var(--t-base);
-  display: flex; align-items: flex-start; justify-content: space-between;
+  display: flex; flex-direction: column; gap: 6px;
 }
-.home-footer-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 -8px 22px -6px color-mix(in srgb, var(--card-color) 50%, transparent),
-              inset 0 1px 0 rgba(255,255,255,.12);
+.compet-tournament-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px -10px color-mix(in srgb, var(--card-color) 40%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.10);
 }
-.home-footer-card__glyph {
+.compet-tournament-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 2px;
+}
+.compet-tournament-card__icon {
   font-size: 28px; font-weight: 900; line-height: 1;
   color: var(--card-color);
-  text-shadow: 0 0 10px color-mix(in srgb, var(--card-color) 40%, transparent);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--card-color) 50%, transparent);
 }
-.home-footer-card__label {
-  font-family: var(--f-mono);
-  font-size: 8px; letter-spacing: .12em; font-weight: 700;
-  color: #fff;
-  text-align: right;
-  max-width: 90px;
-  white-space: normal; word-break: break-word; line-height: 1.15;
+.compet-tournament-card__status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; letter-spacing: .08em; font-weight: 700;
+  padding: 3px 8px; border-radius: var(--r-pill);
+  border: 1px solid;
 }
+.compet-tournament-card__livedot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 6px currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+  display: inline-block;
+}
+.compet-tournament-card__title {
+  font-family: var(--f-heading, var(--f-serif, serif));
+  font-size: 14px; font-weight: 700; color: #fff;
+  line-height: 1.2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; text-overflow: ellipsis;
+  max-height: 2.4em;
+}
+.compet-tournament-card__meta {
+  font-size: 10px; color: var(--c-text-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.compet-tournament-card__meta--dim { color: var(--c-text-mute); }
+.compet-tournament-card__stats {
+  display: flex; gap: 10px; margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--card-color) 20%, transparent);
+}
+.compet-tournament-card__stat {
+  font-size: 10px; font-weight: 700; color: var(--c-text);
+}
+.compet-tournament-card__stat--fee {
+  margin-left: auto; color: var(--card-color);
+}
+.compet-tournament-card__join {
+  margin-top: 6px;
+  background: var(--card-color);
+  color: #0a0a0a; font-weight: 700;
+  border: none;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--card-color) 50%, transparent);
+}
+.compet-tournament-card__join:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+.compet-tournament-card__cta {
+  margin-top: 6px;
+  font-size: 11px; text-align: center;
+  color: var(--card-color); opacity: .8;
+  padding: 4px;
+}
+
+/* Carrousel format (Duo/Alliance/Carrée) : conservation min-height utile */
+.compet-formats-car .carousel__track,
+.compet-tournaments-car .carousel__track { min-height: 210px; }
+
 @media (max-width: 620px) {
-  .home-footer-card { min-width: 100px; max-width: 130px; padding: 6px 8px; }
-  .home-footer-card__glyph { font-size: 22px; }
-  .home-footer-card__label { font-size: 7px; max-width: 70px; }
-}
-@media (max-width: 380px) {
-  .home-footer-car { padding-left: 10px; }
-  .home-footer-card { min-width: 84px; }
+  .compet-tournament-card { min-width: 170px; max-width: 200px; height: 180px; padding: 12px; }
+  .compet-tournament-card__title { font-size: 13px; }
+  .compet-tournament-card__icon { font-size: 24px; }
 }

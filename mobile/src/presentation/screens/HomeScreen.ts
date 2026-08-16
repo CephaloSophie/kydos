@@ -1,21 +1,15 @@
 /* =============================================================================
- * PRESENTATION · screens/HomeScreen.ts (v14.10)
+ * PRESENTATION · screens/HomeScreen.ts (v14.11)
  * -----------------------------------------------------------------------------
- * Accueil, priorité mobile, PAS DE SCROLL VERTICAL :
+ * Accueil, priorité mobile, no-scroll global :
  *
- *  • Racine `overflow: hidden` — la page ne défile jamais.
- *  • 3 zones indépendantes empilées, chacune peut être un carrousel
- *    horizontal (flèches ← →, drag souris, swipe tactile) :
- *       1. HAUT   — cartes-fonctionnalités (3 aujourd'hui, N demain)
- *       2. MENU   — tiles secondaires (Mes robots, Créer, Équipes…)
- *       3. FOOTER — cartes de navigation, exposées à 20% en bas de l'écran,
- *                    remontent à 30% au survol/toucher.
- *
- *  • Cartes footer : glyphe d'enseigne EN HAUT À GAUCHE, titre EN HAUT
- *    À DROITE. Pas d'éventail circulaire — cartes rectangulaires alignées.
- *
- *  • CSS custom props (--card-grad, --tile-color) posées via setProperty
- *    car Object.assign(style, {…}) ignore les CSS variables.
+ *  1. Bannière COMPÉTITION en cours affichée EN HAUT (au-dessus des cartes).
+ *     Dot coloré selon le type de table (hybride/acier/royal). Bouton
+ *     « ▶ Rejoindre » (au lieu de « Reprendre »).
+ *  2. 4 cartes-fonctionnalités au lieu de 3 (ajout « À propos de kydos »),
+ *     hauteur augmentée pour plus de respiration.
+ *  3. Menu bas : tiles plus hautes (72 px au lieu de 56 px).
+ *  4. FOOTER MASQUÉ (nav-fan bandeau retiré).
  * ========================================================================== */
 import { h } from '../../core/dom';
 import { TopBar } from '../components/TopBar';
@@ -26,6 +20,7 @@ const FEATURES = [
   { route: 'table',  kicker: 'LE JEU',       title: 'Jouer avec mes robots',       desc: 'Partie locale avec votre \u00e9curie.', glyph: '\u2665', grad: 'var(--g-heart)' },
   { route: 'online', kicker: 'MULTIJOUEUR',  title: 'Jouer avec mes co\u00e9quipiers', desc: 'Table en ligne, en \u00e9quipe.',       glyph: '\u2660', grad: 'var(--g-spade)' },
   { route: 'compet', kicker: 'COMP\u00c9TITIONS', title: 'Comp\u00e9titions',           desc: 'Matchs, tournois, classements.',          glyph: '\u2666', grad: 'var(--g-diamond)' },
+  { route: 'about',  kicker: 'ABOUT',        title: '\u00c0 propos de kydos',       desc: 'L\u2019esprit du projet, Cephalo Sophie.', glyph: '\u2663', grad: 'var(--g-club)' },
 ];
 
 interface MenuTile {
@@ -41,29 +36,24 @@ const MENUS: MenuTile[] = [
   { route: 'wallet',      glyph: '\u25c6', label: 'Porte-monnaie',     desc: 'Jetons et r\u00e9compenses',      grad: 'var(--g-gold)',    color: '#e6c46a' },
   { route: 'ranking',     glyph: '\u2605', label: 'Classements',       desc: 'Saison en cours',                grad: 'var(--g-gold)',    color: '#e6c46a' },
   { route: 'history',     glyph: '\u2660', label: 'Historique',        desc: 'Rejouer vos parties',            grad: 'var(--g-spade)',   color: '#7ea8e0' },
-  { route: 'about',       glyph: '\u2726', label: '\u00c0 propos',      desc: 'Cephalo Sophie',                 grad: 'var(--g-heart)',   color: '#7ecb98' },
 ];
 
-interface FooterCard {
-  route: string; glyph: string; label: string; color: string;
+/** Couleur du dot LIVE selon le type de table du match compétition. */
+const KIND_COLOR: Record<string, string> = {
+  hybride: '#c99c3f',  // Alliance hybride → or
+  acier: '#3f6ea1',    // Duo d'acier → bleu
+  royal: '#b0384a',    // Carrée royale → rouge
+};
+function formatToKind(format: string): string {
+  if (format === 'hybrid_alliance') return 'hybride';
+  if (format === 'duo_steel') return 'acier';
+  if (format === 'royal_square') return 'royal';
+  return 'hybride';
 }
-const FOOTER_CARDS: FooterCard[] = [
-  { route: 'table',       glyph: '\u2665', label: 'LE JEU',      color: '#7ecb98' },
-  { route: 'online',      glyph: '\u2660', label: 'EN LIGNE',    color: '#7ea8e0' },
-  { route: 'robots',      glyph: '\u2663', label: 'ROBOTS',      color: '#e85d70' },
-  { route: 'create',      glyph: '\u2666', label: '\u00c9DITEUR', color: '#a685d1' },
-  { route: 'wallet',      glyph: '\u25c6', label: 'JETONS',      color: '#e6c46a' },
-  { route: 'teams',       glyph: '\u2663', label: '\u00c9QUIPES', color: '#e85d70' },
-  { route: 'ranking',     glyph: '\u2605', label: 'CLASSEMENTS', color: '#e6c46a' },
-  { route: 'compet',      glyph: '\u2666', label: 'COMP\u00c9TITIONS', color: '#a685d1' },
-  { route: 'history',     glyph: '\u2660', label: 'HISTORIQUE',  color: '#7ea8e0' },
-  { route: 'about',       glyph: '\u2726', label: 'INFOS',       color: '#7ecb98' },
-];
 
 export function HomeScreen(ctx: AppContext): HTMLElement {
   const { router, api } = ctx;
 
-  /* ── Grande carte-fonctionnalité (haut) ────────────────────────────── */
   const featureCard = (f: typeof FEATURES[number]) => {
     const el = h('div', {
       class: 'feature-card home-feature',
@@ -79,7 +69,6 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     return el;
   };
 
-  /* ── Menu tile (bas milieu) ─────────────────────────────────────── */
   const menuTile = (m: MenuTile) => {
     const notif = h('span', { class: 'mono', style: {
       display: 'none', position: 'absolute', top: '6px', right: '6px',
@@ -105,23 +94,8 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     return tile;
   };
 
-  /* ── Footer card (bandeau qui monte au hover) ───────────────────── */
-  const footerCard = (f: FooterCard) => {
-    const el = h('div', {
-      class: 'home-footer-card',
-      onClick: () => router.go(f.route),
-    },
-      // Glyphe en haut À GAUCHE
-      h('span', { class: 'home-footer-card__glyph' }, f.glyph),
-      // Titre en haut À DROITE
-      h('span', { class: 'home-footer-card__label' }, f.label),
-    ) as HTMLElement;
-    el.style.setProperty('--card-color', f.color);
-    return el;
-  };
-
-  /* ── Bannière COMPÉTITION en cours / récente (compacte) ─────────── */
-  const competBanner = h('div', { style: { display: 'none' } });
+  /* ── Bannière COMPÉTITION (EN HAUT, dot couleur du type) ─────────── */
+  const competBanner = h('div', { class: 'home-compet-banner', style: { display: 'none' } });
   let competPoller: ReturnType<typeof setInterval> | null = null;
   const renderCompetBanner = (m: any | null) => {
     if (!m) { competBanner.style.display = 'none'; competBanner.innerHTML = ''; return; }
@@ -132,6 +106,8 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     const showLive = status === 'running' || status === 'pairing';
     if (!showFinished && !showLive) { competBanner.style.display = 'none'; competBanner.innerHTML = ''; return; }
     const isHeadless = format === 'duo_steel';
+    const kind = formatToKind(format);
+    const kindColor = KIND_COLOR[kind] || '#e89644';
     const meId = ctx.session.profile?.id;
     const myTeam = m.participants?.find((p: any) => {
       const u = p.userId; const uid = typeof u === 'object' && u ? u._id : u;
@@ -142,18 +118,29 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
     const labelFormat = format === 'duo_steel' ? 'Duo d\u2019acier' : format === 'hybrid_alliance' ? 'Alliance hybride' : 'Carr\u00e9e royale';
     competBanner.style.display = 'block';
     competBanner.innerHTML = '';
-    const accent = showLive ? '#e89644' : (won ? 'var(--c-success)' : nul ? 'var(--c-text-mute)' : 'var(--c-danger)');
+
+    // Dot LIVE couleur du TYPE, ou emoji résultat si terminé.
     const dot = showLive ? h('span', { style: {
-      width: '8px', height: '8px', borderRadius: '50%', background: accent,
-      boxShadow: `0 0 10px ${accent}`, animation: 'pulse 1.4s ease-in-out infinite',
-    } }) : h('span', { style: { fontSize: '14px' } }, won ? '\ud83c\udfc6' : nul ? '\ud83e\udd1d' : '\ud83e\udd42');
+      width: '10px', height: '10px', borderRadius: '50%', background: kindColor,
+      boxShadow: `0 0 12px ${kindColor}, 0 0 4px ${kindColor}`,
+      animation: 'pulse 1.4s ease-in-out infinite',
+      flexShrink: '0',
+    } }) : h('span', { style: { fontSize: '16px' } }, won ? '\ud83c\udfc6' : nul ? '\ud83e\udd1d' : '\ud83e\udd42');
+
     const statusLabel = showLive
       ? (status === 'running' ? 'EN COURS' : 'D\u00c9MARRAGE')
       : (won ? 'VICTOIRE' : nul ? 'MATCH NUL' : 'D\u00c9FAITE');
+    const statusColor = showLive
+      ? kindColor
+      : (won ? 'var(--c-success)' : nul ? 'var(--c-text-mute)' : 'var(--c-danger)');
     const score = h('span', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-soft)' } },
       `NOUS ${m.scoreTeamA ?? 0}  \u00b7  EUX ${m.scoreTeamB ?? 0}`);
+    // Bouton REJOINDRE (au lieu de Reprendre).
     const button = showLive
-      ? h('button', { class: 'btn btn--sm', style: { background: accent, color: '#1a0f00', fontWeight: '600' },
+      ? h('button', { class: 'btn btn--sm', style: {
+          background: kindColor, color: '#1a0f00', fontWeight: '600', flexShrink: '0',
+          boxShadow: `0 3px 12px ${kindColor}66`,
+        },
           onClick: async () => {
             if (isHeadless) { router.go(`matchmaking?format=${format}`); return; }
             try {
@@ -161,24 +148,27 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
               router.go(`table?online=${tableId}`);
             } catch { router.go(`matchmaking?format=${format}`); }
           },
-        }, isHeadless ? 'Voir' : 'Reprendre')
+        }, isHeadless ? 'Voir' : '\u25b6 Rejoindre')
       : m.game
-        ? h('button', { class: 'btn btn--sm btn--ghost', onClick: () => router.go(`replay?id=${m.game}`) }, '\u25b6 Rejouer')
+        ? h('button', { class: 'btn btn--sm btn--ghost', style: { flexShrink: '0' }, onClick: () => router.go(`replay?id=${m.game}`) }, '\u25b6 Rejouer')
         : h('span', {}, '');
+
     competBanner.append(h('div', {
       class: 'row gap-3',
       style: {
-        padding: '8px 12px', borderRadius: 'var(--r-md)', alignItems: 'center',
-        background: showLive ? 'rgba(232,150,68,.10)' : 'rgba(255,255,255,.03)',
-        border: `1px solid ${showLive ? 'rgba(232,150,68,.35)' : 'rgba(255,255,255,.08)'}`,
+        padding: '10px 14px', borderRadius: 'var(--r-md)', alignItems: 'center',
+        background: showLive
+          ? `linear-gradient(90deg, ${kindColor}22 0%, ${kindColor}0a 100%)`
+          : 'rgba(255,255,255,.03)',
+        border: `1px solid ${showLive ? `${kindColor}55` : 'rgba(255,255,255,.08)'}`,
       },
     },
       dot,
-      h('div', { style: { flex: '1', minWidth: 0 } },
-        h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
-          h('span', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: accent } }, `COMP\u00c9TITION \u00b7 ${statusLabel}`),
+      h('div', { style: { flex: '1', minWidth: '0' } },
+        h('div', { class: 'row gap-2', style: { alignItems: 'center', flexWrap: 'wrap' } },
+          h('span', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: statusColor, fontWeight: '700' } }, `COMP\u00c9TITION \u00b7 ${statusLabel}`),
           h('span', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)' } }, labelFormat)),
-        h('div', { class: 'row gap-3', style: { marginTop: '3px', alignItems: 'center' } }, score)),
+        h('div', { class: 'row gap-3', style: { marginTop: '4px', alignItems: 'center' } }, score)),
       button,
     ));
   };
@@ -189,64 +179,42 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
   competPoller = setInterval(() => void pollCompet(), 5000);
   void pollCompet();
 
-  /* ── Layout : NO-SCROLL, 3 zones empilées + footer bandeau ─────── */
+  /* ── Layout : NO-SCROLL, sans footer bandeau ───────────────────── */
   const root = h('div', {
     class: 'anim-screen home-root',
     style: {
       position: 'absolute', inset: '0',
       background: 'linear-gradient(160deg,#070c17,#05070f)',
       display: 'flex', flexDirection: 'column',
-      overflow: 'hidden',   // NO-SCROLL GLOBAL
+      overflow: 'hidden',
     },
   }) as HTMLElement & { _cleanup?: () => void };
 
   const topbar = TopBar(ctx.session, ctx.bus) as HTMLElement & { _cleanup?: () => void };
 
-  // Zone principale : padding gauche pour barre latérale desktop, padding
-  // bas pour laisser la place au footer bandeau qui expose 20% en bas.
   const main = h('div', {
     class: 'home-main',
     style: {
       flex: '1', minHeight: '0',
-      padding: '10px clamp(10px, 3vw, 26px) 0 clamp(10px, 4vw, 60px)',
-      display: 'flex', flexDirection: 'column', gap: 'clamp(8px, 1.4vw, 14px)',
+      padding: '10px clamp(10px, 3vw, 26px) 14px clamp(10px, 4vw, 60px)',
+      display: 'flex', flexDirection: 'column', gap: 'clamp(10px, 1.6vw, 16px)',
+      overflow: 'hidden',
     },
   });
 
-  // 1) Carrousel des features (haut).
+  // 1) Bannière EN HAUT (visible seulement si match en cours/récent).
+  // 2) Carrousel des features (4 cartes maintenant).
   const featuresCar = Carousel(FEATURES.map(featureCard), { itemGap: 12, className: 'home-features-car' });
-  // 2) Bannière compétition (visible uniquement si match en cours/récent).
-  // 3) Carrousel du menu tiles (milieu bas).
+  // 3) Carrousel du menu tiles.
   const menusCar = Carousel(MENUS.map(menuTile), { itemGap: 8, className: 'home-menus-car' });
 
-  main.append(featuresCar, competBanner, menusCar);
-
-  // 4) Footer : bandeau qui expose 20% (default) → 30% (hover/touch).
-  //    Contient un carrousel horizontal des routes principales.
-  const footer = h('div', {
-    class: 'home-footer',
-    onmouseenter: () => footer.classList.add('home-footer--expanded'),
-    onmouseleave: () => footer.classList.remove('home-footer--expanded'),
-    ontouchstart: () => footer.classList.add('home-footer--expanded'),
-  }) as HTMLElement;
-  // Sur touch, on maintient l'état "expanded" pendant 3s après touchend.
-  let footerTimer: ReturnType<typeof setTimeout> | null = null;
-  footer.addEventListener('touchend', () => {
-    if (footerTimer) clearTimeout(footerTimer);
-    footerTimer = setTimeout(() => footer.classList.remove('home-footer--expanded'), 3000);
-  });
-
-  const footerCar = Carousel(FOOTER_CARDS.map(footerCard), { itemGap: 10, chromeInset: 16, className: 'home-footer-car' });
-  footer.append(footerCar);
-
-  root.append(topbar, main, footer);
+  main.append(competBanner, featuresCar, menusCar);
+  root.append(topbar, main);
   root._cleanup = () => {
     topbar._cleanup?.();
     if (competPoller) clearInterval(competPoller);
-    if (footerTimer) clearTimeout(footerTimer);
     (featuresCar as any)._cleanup?.();
     (menusCar as any)._cleanup?.();
-    (footerCar as any)._cleanup?.();
   };
   return root;
 }

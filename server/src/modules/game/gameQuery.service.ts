@@ -16,7 +16,7 @@ export class GameQueryService {
    * robot a joué), `team` (parties de mon équipe), `public`, `kind:<type>` en
    * filtre additionnel. Pagination : 15 par page (SPEC §3.10).
    */
-  async listForUser(userId: string, scope: string, options: { page?: number; kind?: string } = {}) {
+  async listForUser(userId: string, scope: string, options: { page?: number; kind?: string; mode?: string } = {}) {
     const PAGE_SIZE = 15;
     const page = Math.max(1, options.page ?? 1);
     const userDocument = await UserModel.findById(userId).select('team');
@@ -32,6 +32,8 @@ export class GameQueryService {
 
     // Filtre additionnel par type de partie.
     if (options.kind && ['hybride', 'acier', 'royal', 'local'].includes(options.kind)) filter = { $and: [filter, { kind: options.kind }] };
+    // v14.11 — Filtre additionnel par mode : local / online / competition.
+    if (options.mode && ['local', 'online', 'competition'].includes(options.mode)) filter = { $and: [filter, { mode: options.mode }] };
 
     const total = await GameModel.countDocuments(filter);
     const gameDocuments = await GameModel.find(filter)
