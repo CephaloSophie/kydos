@@ -267,6 +267,28 @@ export class MatchLiveService {
       log.warn('rake maison échoué', { matchId, error: (e as Error).message });
     }
 
+    // v14.12 — Si ce match fait partie d'un TOURNOI, on met à jour le
+    // bracket arbre et on propage au round suivant. Le service tournoi
+    // finalisera le tournoi si c'était la finale.
+    if ((match as any).tournament && info.winner) {
+      try {
+        const { tournamentService } = await import('../tournaments/tournament.service.js');
+        const winnerParticipant = match.participants.find((p: any) => p.team === info.winner && p.isHuman)
+          || match.participants.find((p: any) => p.team === info.winner);
+        if (winnerParticipant) {
+          await tournamentService.recordMatchResult({
+            tournamentId: String((match as any).tournament),
+            matchId: String(match._id),
+            winnerUserId: String(winnerParticipant.userId),
+            scoreA, scoreB,
+            gameId: info.gameId,
+          });
+        }
+      } catch (e) {
+        log.warn('bracket update échoué', { matchId, error: (e as Error).message });
+      }
+    }
+
     // Libération du cache local.
     this.#tableByMatch.delete(matchId);
     log.info('match temps-réel réglé', { matchId, tableId, winner: info.winner });

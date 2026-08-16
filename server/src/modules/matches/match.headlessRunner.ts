@@ -121,6 +121,24 @@ export class MatchHeadlessRunner {
     }
     await houseAccountingService.recordMatchRake(match._id, rules.houseRake, 'DUO_STEEL');
 
+    // v14.12 — Si ce match Duo d'Acier fait partie d'un tournoi, update bracket.
+    if ((match as any).tournament && winnerTeam) {
+      try {
+        const { tournamentService } = await import('../tournaments/tournament.service.js');
+        const winnerParticipant = match.participants.find((p: any) => p.team === winnerTeam);
+        if (winnerParticipant) {
+          await tournamentService.recordMatchResult({
+            tournamentId: String((match as any).tournament),
+            matchId: String(match._id),
+            winnerUserId: String(winnerParticipant.userId),
+            scoreA: finalManche.cumulative.A,
+            scoreB: finalManche.cumulative.B,
+            gameId,
+          });
+        }
+      } catch (e) { /* silencieux : le résultat existe déjà, le tournoi rattrapera */ }
+    }
+
     return { gameId, winnerTeam, scoreTeamA: finalManche.cumulative.A, scoreTeamB: finalManche.cumulative.B };
   }
 }

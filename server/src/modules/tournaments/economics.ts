@@ -66,3 +66,72 @@ export function tournamentEconomics(input: EconomicsInput): EconomicsResult {
     breakdown,
   };
 }
+
+/* ── v14.12 — Variante « prix par POSITION finale » (avec ex æquo) ────────── */
+
+export interface PositionPrize {
+  position: number;   // rang final (1, 2, 3, 5, 9, …)
+  prize: number;      // prix versé à CHAQUE occupant du rang
+}
+
+export interface EconomicsByPositionInput {
+  capacity: number;
+  entryFee: number;
+  prizesByPosition: PositionPrize[];
+}
+
+export interface EconomicsByPositionRow {
+  position: number;
+  occupants: number;          // combien de personnes à ce rang (ex æquo)
+  prizePerOccupant: number;
+  totalPaidAtThisPosition: number;
+}
+
+export interface EconomicsByPositionResult {
+  totalCollected: number;
+  totalPaid: number;
+  houseNet: number;
+  breakdown: EconomicsByPositionRow[];
+}
+
+/**
+ * Nombre d'occupants à un rang final donné dans un bracket élimination
+ * directe. Renvoie 0 si le rang n'existe pas pour cette capacité.
+ *
+ * Rangs valides : 1, 2, 3, 5, 9, 17, 33, 65, … chacun avec 1, 1, 2, 4, 8,
+ * 16, 32, 64 occupants respectivement.
+ */
+export function occupantsAtPosition(capacity: number, position: number): number {
+  if (position === 1 || position === 2) return 1;
+  let rank = 3;
+  let losers = 2;
+  while (losers <= capacity / 2) {
+    if (rank === position) return losers;
+    rank += losers;
+    losers *= 2;
+  }
+  return 0;
+}
+
+/**
+ * Économie basée sur prizes-by-position (v14.12). Chaque prize est versé à
+ * chaque occupant du rang. Si l'utilisateur définit un prix pour un rang qui
+ * n'existe pas dans la capacity, `occupants=0` → contribution nulle.
+ */
+export function tournamentEconomicsByPosition(input: EconomicsByPositionInput): EconomicsByPositionResult {
+  const totalCollected = input.capacity * input.entryFee;
+  const breakdown: EconomicsByPositionRow[] = [];
+  let totalPaid = 0;
+  for (const pp of input.prizesByPosition) {
+    const occupants = occupantsAtPosition(input.capacity, pp.position);
+    const totalPaidAtThisPosition = occupants * pp.prize;
+    totalPaid += totalPaidAtThisPosition;
+    breakdown.push({ position: pp.position, occupants, prizePerOccupant: pp.prize, totalPaidAtThisPosition });
+  }
+  return {
+    totalCollected,
+    totalPaid,
+    houseNet: totalCollected - totalPaid,
+    breakdown,
+  };
+}

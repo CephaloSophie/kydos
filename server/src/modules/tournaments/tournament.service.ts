@@ -12,17 +12,27 @@
  * ========================================================================== */
 import { Types } from 'mongoose';
 import { TournamentModel, TournamentStatus, TournamentRobotDayLockModel, dayKeyUTC } from './tournament.model.js';
-import { getMatchFormatRules, type MatchFormat } from '../matches/matchFormat.js';
+import { getMatchFormatRules, MatchFormat } from '../matches/matchFormat.js';
 import { walletService } from '../wallet/wallet.service.js';
 import { RobotModel } from '../robot/robot.model.js';
 import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
+import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions } from './bracket.js';
 
 export class TournamentService {
-  /** Liste des tournois visibles pour un joueur (jamais draft). */
-  async listVisible(status?: TournamentStatus | 'all'): Promise<any[]> {
+  /**
+   * Liste des tournois visibles pour un joueur (jamais draft).
+   * v14.12 — Filtre par LEVEL du joueur : on n'affiche que les tournois où
+   * le level du joueur est compris entre [minLevel, maxLevel]. Si aucun
+   * userLevel fourni, on renvoie tous les non-draft (mode admin/preview).
+   */
+  async listVisible(status?: TournamentStatus | 'all', userLevel?: number): Promise<any[]> {
     const query: any = { status: { $ne: TournamentStatus.DRAFT } };
     if (status && status !== 'all') query.status = status;
+    if (typeof userLevel === 'number') {
+      query.minLevel = { $lte: userLevel };
+      query.$or = [{ maxLevel: null }, { maxLevel: { $gte: userLevel } }];
+    }
     return TournamentModel.find(query).sort({ startAt: 1 }).lean();
   }
 
@@ -35,7 +45,97 @@ export class TournamentService {
     return doc;
   }
 
-  /** Inscription d'un joueur avec ses robots (nombre selon format). */
+  /**
+   * v14.12 — Renvoie l'arbre bracket enrichi pour affichage « coupe du
+   * monde ». Retourne 404 si le tournoi n'est pas encore démarré (upcoming
+   * → pas de bracket à voir, on affiche juste les seedings).
+   */
+  async getBracket(tournamentId: string, requesterId: string): Promise<any> {
+    const doc: any = await TournamentModel.findById(tournamentId).lean();
+    if (!doc) throw notFound('Tournoi introuvable.');
+    if (doc.status === TournamentStatus.DRAFT && String(doc.createdBy) !== String(requesterId)) throw notFound('Tournoi introuvable.');
+    if (doc.status === TournamentStatus.UPCOMING) throw badRequest('Le tournoi n\u2019a pas encore commenc\u00e9.');
+    return {
+      tournamentId: String(doc._id),
+      name: doc.name, format: doc.format, capacity: doc.capacity,
+      status: doc.status, color: doc.color, icon: doc.icon,
+      bracket: doc.bracketTree || { rounds: [], lastCompletedRound: 0 },
+      participants: doc.participants,
+      winners: doc.winners,
+    };
+  }
+
+  /**
+   * v14.12 — Création d'un tournoi (par un utilisateur authentifié pour
+   * l'instant ; le back office prendra le relais avec un middleware admin).
+   * Le tournoi est créé en DRAFT et invisible aux autres joueurs jusqu'à
+   * ce que son créateur le passe en UPCOMING (endpoint publish).
+   */
+  async create(userId: string, input: {
+    name: string;
+    format: MatchFormat;
+    capacity: number;
+    entryFee: number;
+    startAt: Date;
+    description?: string;
+    color?: string;
+    icon?: string;
+    minLevel?: number;
+    maxLevel?: number | null;
+    prizesByPosition?: { position: number; prize: number }[];
+    rounds?: { round: number; prize: number }[];
+    publishImmediately?: boolean;
+  }): Promise<{ tournamentId: string }> {
+    if (!input.name || input.name.length < 3) throw badRequest('Nom trop court.');
+    if (![4, 8, 16, 32, 64, 128].includes(input.capacity)) throw badRequest('Capacit\u00e9 invalide.');
+    if (input.entryFee < 0) throw badRequest('Buy-in n\u00e9gatif interdit.');
+    if (!input.startAt || input.startAt.getTime() < Date.now() - 60_000) throw badRequest('Date de d\u00e9but dans le pass\u00e9.');
+    if (!getMatchFormatRules(input.format)) throw badRequest('Format inconnu.');
+    // v14.12 — ROYAL_SQUARE (4 humains simultanés) n'est pas encore intégré
+    // à l'arbre bracket. Prévu en v14.13. On refuse proprement à la création.
+    if (input.format === MatchFormat.ROYAL_SQUARE) {
+      throw badRequest('Le format Carr\u00e9e royale n\u2019est pas encore support\u00e9 en tournoi (arriv\u00e9e en v14.13).');
+    }
+    if (input.minLevel != null && input.minLevel < 0) throw badRequest('minLevel < 0');
+    if (input.maxLevel != null && input.minLevel != null && input.maxLevel < input.minLevel) {
+      throw badRequest('maxLevel doit \u00eatre \u2265 minLevel.');
+    }
+    const doc = await TournamentModel.create({
+      name: input.name.trim(),
+      format: input.format,
+      capacity: input.capacity,
+      entryFee: input.entryFee,
+      startAt: input.startAt,
+      createdBy: new Types.ObjectId(userId),
+      description: input.description ?? '',
+      color: input.color ?? '#e6c46a',
+      icon: input.icon ?? '\u2666',
+      minLevel: input.minLevel ?? 0,
+      maxLevel: input.maxLevel ?? null,
+      prizesByPosition: input.prizesByPosition ?? [],
+      rounds: input.rounds ?? [],
+      status: input.publishImmediately ? TournamentStatus.UPCOMING : TournamentStatus.DRAFT,
+    });
+    return { tournamentId: String(doc._id) };
+  }
+
+  /** Passe un DRAFT → UPCOMING (visible aux joueurs, inscriptions ouvertes). */
+  async publish(tournamentId: string, userId: string): Promise<{ published: true }> {
+    const t = await TournamentModel.findById(tournamentId);
+    if (!t) throw notFound('Tournoi introuvable.');
+    if (String((t as any).createdBy) !== String(userId)) throw forbidden('Seul le cr\u00e9ateur peut publier.');
+    if (t.status !== TournamentStatus.DRAFT) throw badRequest('Le tournoi n\u2019est pas en brouillon.');
+    t.status = TournamentStatus.UPCOMING;
+    await t.save();
+    return { published: true };
+  }
+
+  /**
+   * Inscription d'un joueur avec ses robots (nombre selon format).
+   * v14.12 — Le format `robotIds` respecte la convention v14.5 :
+   *   [coéquipier(s)…, remplaçant?] où le dernier élément est le remplaçant
+   *   ssi format.requiresSubstitute (HYBRID_ALLIANCE, ROYAL_SQUARE).
+   */
   async join(tournamentId: string, userId: string, robotIds: string[]): Promise<{ joined: true }> {
     const t = await TournamentModel.findById(tournamentId);
     if (!t) throw notFound('Tournoi introuvable.');
@@ -43,13 +143,24 @@ export class TournamentService {
     if (t.participants.length >= t.capacity) throw badRequest('Tournoi complet.');
 
     const rules = getMatchFormatRules(t.format as MatchFormat);
-    if (robotIds.length !== rules.robotsPerPlayer) {
-      throw badRequest(`Ce format exige ${rules.robotsPerPlayer} robot(s) par joueur.`);
+    const expected = rules.robotsPerPlayer + (rules.requiresSubstitute ? 1 : 0);
+    if (robotIds.length !== expected) {
+      throw badRequest(rules.requiresSubstitute
+        ? `Ce format exige ${rules.robotsPerPlayer} co\u00e9quipier(s) + 1 rempla\u00e7ant.`
+        : `Ce format exige ${rules.robotsPerPlayer} robot(s) par joueur.`);
     }
     const uniqueRobots = new Set(robotIds);
     if (uniqueRobots.size !== robotIds.length) throw badRequest('Les robots doivent \u00eatre distincts.');
 
-    // Robots appartiennent-ils au joueur ?
+    // Extraction du substitute (dernier élément si format le requiert).
+    let teammates = robotIds;
+    let substituteRobotId: string | null = null;
+    if (rules.requiresSubstitute) {
+      substituteRobotId = robotIds[robotIds.length - 1];
+      teammates = robotIds.slice(0, -1);
+    }
+
+    // Robots appartiennent-ils au joueur ? (Tous : coéquipiers + substitute)
     if (robotIds.length > 0) {
       const owned = await RobotModel.countDocuments({ _id: { $in: robotIds }, owner: userId });
       if (owned !== robotIds.length) throw badRequest('Un robot au moins ne vous appartient pas.');
@@ -60,7 +171,8 @@ export class TournamentService {
       throw badRequest('Vous \u00eates d\u00e9j\u00e0 inscrit \u00e0 ce tournoi.');
     }
 
-    // Contrainte 1 tournoi/robot/jour : on tente d'insérer les locks.
+    // Contrainte 1 tournoi/robot/jour : on tente d'insérer les locks (pour
+    // TOUS les robots impliqués — coéquipiers ET substitute).
     const dayKey = dayKeyUTC(t.startAt);
     const locks = robotIds.map((robotId) => ({
       robotId: new Types.ObjectId(robotId), dayKey, tournamentId: t._id, userId: new Types.ObjectId(userId),
@@ -68,7 +180,6 @@ export class TournamentService {
     try {
       if (locks.length > 0) await TournamentRobotDayLockModel.insertMany(locks, { ordered: true });
     } catch (e: any) {
-      // Duplicate key = un robot est déjà engagé ce jour-là.
       if (e?.code === 11000) throw badRequest('Un de vos robots est d\u00e9j\u00e0 engag\u00e9 dans un tournoi ce jour-l\u00e0.');
       throw e;
     }
@@ -77,20 +188,20 @@ export class TournamentService {
     try {
       await walletService.stake(userId, t.entryFee);
     } catch (e) {
-      // Rollback des locks si le débit échoue.
       await TournamentRobotDayLockModel.deleteMany({ robotId: { $in: robotIds }, dayKey, tournamentId: t._id });
       throw e;
     }
 
-    // Enregistre le buy-in côté comptabilité kydos.
     await houseAccountingService.recordTournamentEntry(t._id, userId, t.entryFee);
 
-    // Enregistre la participation.
     t.participants.push({
       userId: new Types.ObjectId(userId),
-      robotIds: robotIds.map((r) => new Types.ObjectId(r)),
+      robotIds: teammates.map((r) => new Types.ObjectId(r)),
+      substituteRobotId: substituteRobotId ? new Types.ObjectId(substituteRobotId) : null,
       seedIndex: null,
       eliminatedAtRound: null,
+      finalPosition: null,
+      prizeAwarded: 0,
       joinedAt: new Date(),
     } as any);
     await t.save();
@@ -129,23 +240,143 @@ export class TournamentService {
 
   /**
    * Passe un tournoi en LIVE : verrouille les inscriptions, seed FIFO
-   * (ordre joinedAt), initialise le bracket vide. Le worker de démarrage
-   * (T13) appellera cette méthode à startAt.
+   * (ordre joinedAt), initialise le bracket vide ET l'arbre bracketTree
+   * (v14.12). Le worker de démarrage (T13) appellera cette méthode à startAt.
    */
   async startNow(tournamentId: string, admin: { id: string }): Promise<void> {
-    const t = await TournamentModel.findById(tournamentId);
+    const t = await TournamentModel.findById(tournamentId).populate('participants.userId', 'username');
     if (!t) throw notFound('Tournoi introuvable.');
     if (String((t as any).createdBy) !== String(admin.id)) throw forbidden('Seul le cr\u00e9ateur peut d\u00e9marrer un tournoi.');
     if (t.status !== TournamentStatus.UPCOMING) throw badRequest('Le tournoi n\u2019est pas en attente.');
+    if (t.participants.length !== t.capacity) {
+      throw badRequest(`Effectif incomplet : ${t.participants.length}/${t.capacity} inscrits.`);
+    }
 
     // Seed FIFO : ordre d'inscription.
     t.participants.sort((a: any, b: any) => a.joinedAt.getTime() - b.joinedAt.getTime());
     t.participants.forEach((p: any, i: number) => { p.seedIndex = i; });
 
+    // v14.12 — Construction de l'arbre bracket. Seeds = participants ordonnés,
+    // displayName renseigné pour affichage direct (dénormalisation).
+    const seeds = t.participants.map((p: any) => ({
+      userId: String((typeof p.userId === 'object' && p.userId) ? p.userId._id : p.userId),
+      displayName: (typeof p.userId === 'object' && p.userId?.username) ? p.userId.username : 'Joueur',
+    }));
+    const tree = buildInitialBracket(t.capacity as any, seeds);
+    (t as any).bracketTree = tree;
+
     t.status = TournamentStatus.LIVE;
     t.startedAt = new Date();
     t.bracket = [];
     await t.save();
+  }
+
+  /**
+   * v14.12 — Hook appelé à la fin d'un match d'un tournoi. Met à jour
+   * l'arbre bracketTree, propage le gagnant au round suivant. Si la finale
+   * est jouée, marque le tournoi FINISHED, calcule les positions finales et
+   * verse les gains selon `prizesByPosition` (ou fallback `rounds` legacy).
+   */
+  async recordMatchResult(input: {
+    tournamentId: string;
+    matchId: string;
+    winnerUserId: string;         // pour retrouver quel slot est gagnant
+    scoreA: number;
+    scoreB: number;
+    gameId: string | null;
+  }): Promise<void> {
+    const t = await TournamentModel.findById(input.tournamentId);
+    if (!t) return;                          // silencieux : match d'un autre contexte
+    if (t.status !== TournamentStatus.LIVE) return;
+    const tree = (t as any).bracketTree as ReturnType<typeof buildInitialBracket>;
+    if (!tree || !tree.rounds || tree.rounds.length === 0) return;
+
+    const found = findBracketMatchByMatchId(tree as any, input.matchId);
+    if (!found) return;                      // match pas dans ce bracket
+    const round = tree.rounds[found.roundIndex - 1];
+    const bm = round.matches[found.matchIndex];
+    // Déterminer quel slot est le gagnant.
+    const winner: 'A' | 'B' = String(bm.slotA.userId) === String(input.winnerUserId) ? 'A' : 'B';
+
+    const result = advanceBracket(tree as any, {
+      roundIndex: found.roundIndex,
+      matchIndex: found.matchIndex,
+      winner,
+      scoreA: input.scoreA,
+      scoreB: input.scoreB,
+      gameId: input.gameId,
+      matchId: input.matchId,
+      finishedAt: new Date(),
+    });
+
+    // Marquer l'éliminé dans participants (utile pour affichage rapide et
+    // pour la logique 1-tournoi-jour dans les stats).
+    const loserSlot = winner === 'A' ? bm.slotB : bm.slotA;
+    if (loserSlot.userId) {
+      const p = t.participants.find((pp: any) => String(pp.userId) === String(loserSlot.userId));
+      if (p && !p.eliminatedAtRound) p.eliminatedAtRound = found.roundIndex;
+    }
+
+    // Si tournoi fini, calculer positions & verser les gains.
+    if (result.tournamentDone) {
+      await this.#finalizeTournament(t, tree as any);
+    }
+    await t.save();
+  }
+
+  /**
+   * Finalisation du tournoi : calcule les positions finales, verse les gains
+   * (selon prizesByPosition ou fallback rounds legacy), enregistre les
+   * `houseAccountingService` par prix versé, remplit `winners` (top 3).
+   */
+  async #finalizeTournament(t: any, tree: any): Promise<void> {
+    const capacity = t.capacity as number;
+    const positions = computeFinalPositions(tree, capacity);
+
+    // Distribuer les prix : soit prizesByPosition (v14.12), soit rounds (legacy).
+    const useByPosition = Array.isArray(t.prizesByPosition) && t.prizesByPosition.length > 0;
+    const prizeMap: Record<number, number> = {};   // rang → prix par occupant
+    if (useByPosition) {
+      for (const pp of t.prizesByPosition) prizeMap[pp.position] = pp.prize;
+    } else {
+      // Legacy : convertit rounds vers positions équivalentes.
+      // Round R (perdants) → rang capacity/2^R + 1. Vainqueur (finale gagnée) → rang 1.
+      const totalRounds = Math.log2(capacity);
+      for (const rp of (t.rounds || [])) {
+        // rp.round est le round survécu par le gagnant → il reçoit rp.prize.
+        // On convertit : les survivants au round R (avant élimination) sont
+        // ceux qui ont survécu à R-1 rounds. Pour simplicité, on garde le
+        // mapping : rp.round == totalRounds+1 → rang 1 (vainqueur), sinon
+        // le round R correspond aux perdants du round R eux-mêmes.
+        // Rétrocompat simple : le round final donne le rang 1.
+        if (rp.round === totalRounds) prizeMap[1] = rp.prize;  // vainqueur finale
+      }
+    }
+
+    // Attribuer positions + verser gains.
+    for (const p of t.participants) {
+      const uid = String(p.userId?._id ?? p.userId);
+      const finalPos = positions.get(uid);
+      if (finalPos == null) continue;      // n'a pas joué (rare, ne devrait pas arriver)
+      p.finalPosition = finalPos;
+      const prize = prizeMap[finalPos] ?? 0;
+      p.prizeAwarded = prize;
+      if (prize > 0) {
+        try { await walletService.credit(uid, prize, undefined, 'game_win'); }
+        catch (e) { /* on continue, l'important est de ne pas bloquer */ }
+        try { await houseAccountingService.recordTournamentPrize(t._id, uid, 0, prize); }
+        catch { /* pareil */ }
+      }
+    }
+
+    // Top 3 pour affichage rapide (winners[]).
+    const sorted = [...t.participants]
+      .filter((p: any) => p.finalPosition)
+      .sort((a: any, b: any) => a.finalPosition - b.finalPosition);
+    t.winners = sorted.slice(0, 3).map((p: any) => new Types.ObjectId(String(p.userId?._id ?? p.userId)));
+
+    t.status = TournamentStatus.FINISHED;
+    t.finishedAt = new Date();
   }
 
   /** Passe un tournoi en FINISHED (appelé par l'orchestrateur quand tous les rounds sont joués). */

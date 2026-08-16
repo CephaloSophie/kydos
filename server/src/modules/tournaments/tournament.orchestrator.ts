@@ -1,185 +1,165 @@
 /* =============================================================================
- * TOURNAMENTS · tournament.orchestrator.ts — Progression du bracket.
+ * TOURNAMENTS · tournament.orchestrator.ts — Progression du bracket (v14.12).
  * -----------------------------------------------------------------------------
- * Fait avancer un tournoi LIVE round par round jusqu'à la fin. Chaque round :
- *   1. Détermine les survivants (participants non éliminés).
- *   2. Les apparie 2 par 2 (DUO/HYBRID) ou 4 par 4 (ROYAL).
- *   3. Crée un Match par appariement, le lance (headless pour DUO_STEEL,
- *      temps-réel pour les autres).
- *   4. À la fin d'un match : marque les perdants comme éliminés à ce round,
- *      crédite le gain du round aux survivants (rounds[round].prize).
- *   5. Passe au round suivant ou marque le tournoi FINISHED.
+ * Nouvelle architecture v14.12 : l'orchestrateur ne gère plus lui-même la
+ * distribution des gains ni la fin du tournoi (délégué à
+ * `tournamentService.recordMatchResult()`, appelé automatiquement à chaque
+ * fin de match via les runners). Son rôle est réduit à :
  *
- * Séparé du service pour garder tournament.service focalisé sur l'inscription.
- * L'orchestrateur consomme le service pour la finalisation.
+ *   1. Lire le `bracketTree` persistant.
+ *   2. Trouver les BracketMatch prêts à jouer (slotA + slotB alimentés,
+ *      pas encore de matchId).
+ *   3. Créer le Match Mongo correspondant.
+ *   4. Lancer immédiatement le matchHeadlessRunner pour DUO_STEEL.
+ *      Pour HYBRID_ALLIANCE et ROYAL_SQUARE, provisionner une table live
+ *      via matchLiveService (les joueurs recevront une notif « Rejoindre »).
+ *   5. Persister l'arbre mis à jour (matchId + startedAt).
+ *
+ * La suite (avancement des slots, éliminés, gains, fin du tournoi) est prise
+ * en charge automatiquement par `recordMatchResult()` déclenché par le hook
+ * fin-de-match des runners.
+ *
+ * IDEMPOTENT : peut être rappelé par le worker, ne relance pas les matchs
+ * déjà créés/terminés. Chaque BracketMatch a une progression claire :
+ *   matchId=null           → à créer et à lancer
+ *   matchId, winner=null   → en cours ou en attente de joueurs (skip)
+ *   matchId, winner=A|B    → terminé (skip, déjà géré par recordMatchResult)
+ *
+ * Simplification volontaire v14.12 : ROYAL_SQUARE (4 humains) n'est pas
+ * supporté dans les tournois bracket pour le moment. La création d'un
+ * tournoi ROYAL_SQUARE est rejetée en amont (voir tournamentService.create).
  * ========================================================================== */
 import { Types } from 'mongoose';
 import { TournamentModel, TournamentStatus } from './tournament.model.js';
-import { tournamentService } from './tournament.service.js';
 import { MatchModel, MatchStatus } from '../matches/match.model.js';
 import { MatchFormat, getMatchFormatRules } from '../matches/matchFormat.js';
 import { matchHeadlessRunner } from '../matches/match.headlessRunner.js';
-import { walletService } from '../wallet/wallet.service.js';
-import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
-import { pairForRound, survivorsAtStartOfRound, roundCount, type BracketSlot } from './bracket.js';
-
-const PLAYERS_PER_MATCH: Record<MatchFormat, 2 | 4> = {
-  [MatchFormat.DUO_STEEL]: 2,
-  [MatchFormat.HYBRID_ALLIANCE]: 2,
-  [MatchFormat.ROYAL_SQUARE]: 4,
-};
+import { matchLiveService } from '../matches/match.liveRunner.js';
 
 export class TournamentOrchestrator {
   /**
-   * Fait tourner un tournoi LIVE jusqu'à sa fin. Idempotent : peut être
-   * rappelé si un round a été interrompu — reprend là où il s'est arrêté.
+   * Fait progresser un tournoi LIVE : crée et lance les matchs du round
+   * courant. Idempotent — sans effet si tous les matchs du round sont déjà
+   * créés/en cours. À rappeler périodiquement par le worker.
    */
-  async run(tournamentId: string): Promise<{ finished: boolean }> {
-    const t = await TournamentModel.findById(tournamentId);
+  async run(tournamentId: string): Promise<{ finished: boolean; roundsScheduled: number; matchesLaunched: number }> {
+    const t: any = await TournamentModel.findById(tournamentId);
     if (!t) throw new Error(`Tournoi introuvable : ${tournamentId}`);
-    if (t.status !== TournamentStatus.LIVE) return { finished: t.status === TournamentStatus.FINISHED };
+    if (t.status === TournamentStatus.FINISHED) return { finished: true, roundsScheduled: 0, matchesLaunched: 0 };
+    if (t.status !== TournamentStatus.LIVE) return { finished: false, roundsScheduled: 0, matchesLaunched: 0 };
 
     const format = t.format as MatchFormat;
-    const playersPerMatch = PLAYERS_PER_MATCH[format];
-    const totalRounds = roundCount(t.capacity);
+    const rules = getMatchFormatRules(format);
+    const tree = t.bracketTree;
+    if (!tree || !tree.rounds || tree.rounds.length === 0) {
+      return { finished: false, roundsScheduled: 0, matchesLaunched: 0 };
+    }
 
-    // Reconstruction de l'état bracket depuis les participants + matchs déjà joués.
-    const slots: BracketSlot[] = t.participants.map((p: any) => ({
-      seedIndex: p.seedIndex ?? 0,
-      userId: String(p.userId),
-      robotIds: (p.robotIds || []).map((r: any) => String(r)),
-      eliminatedAtRound: p.eliminatedAtRound ?? null,
-    })).sort((a: BracketSlot, b: BracketSlot) => a.seedIndex - b.seedIndex);
+    // Round courant = premier round non entièrement fini.
+    const currentRoundIndex = (tree.lastCompletedRound ?? 0) + 1;
+    const round = tree.rounds.find((r: any) => r.roundIndex === currentRoundIndex);
+    if (!round) return { finished: false, roundsScheduled: 0, matchesLaunched: 0 };
 
-    // Trouver le prochain round à jouer.
-    let round = 1;
-    while (round <= totalRounds) {
-      const survivors = survivorsAtStartOfRound(slots, round);
-      if (survivors.length < playersPerMatch) break;
+    // Index participants par userId pour retrouver robotIds / substituteRobotId.
+    const participantsByUser = new Map<string, any>();
+    for (const p of t.participants) {
+      participantsByUser.set(String(p.userId?._id ?? p.userId), p);
+    }
 
-      const pairs = pairForRound(survivors, playersPerMatch);
-      if (pairs.length === 0) break;
+    let matchesLaunched = 0;
+    let dirty = false;
 
-      // Créer un Match par paire s'il n'existe pas déjà à ce round.
-      const existing = await MatchModel.find({ tournament: t._id, tournamentRound: round }).lean();
-      const existingCount = existing.length;
+    for (const bm of round.matches) {
+      // Slot pas encore alimenté : gagnants du round précédent pas encore
+      // déterminés → on ne peut pas lancer ce match, on attend.
+      if (!bm.slotA?.userId || !bm.slotB?.userId) continue;
+      // Déjà créé et en cours ou fini → skip.
+      if (bm.matchId) continue;
 
-      if (existingCount < pairs.length) {
-        // Créer les matchs manquants.
-        for (let i = existingCount; i < pairs.length; i++) {
-          const group = pairs[i];
-          const participants = this.#buildParticipants(format, group);
-          await MatchModel.create({
-            format,
-            status: MatchStatus.PAIRING,
-            participants,
-            tournament: t._id,
-            tournamentRound: round,
-            queuedAt: new Date(),
-          });
-        }
-      }
+      const participants = this.#buildParticipants(format, bm, participantsByUser);
+      if (!participants) continue;   // config incomplète (ne devrait pas arriver)
 
-      // Lancer tous les matchs pending de ce round.
-      const roundMatches = await MatchModel.find({ tournament: t._id, tournamentRound: round });
-      for (const m of roundMatches) {
-        if (m.status === MatchStatus.PAIRING || m.status === MatchStatus.RUNNING) {
-          if (format === MatchFormat.DUO_STEEL) {
-            // Headless : joue en synchrone.
-            try { await matchHeadlessRunner.run(String(m._id), { manches: 2 }); }
-            catch { /* déjà terminé possiblement */ }
-          } else {
-            // Temps-réel : on marque RUNNING, le socket runner prendra la suite.
-            // Pour v14.1 back-only, on simule une résolution rapide : les
-            // matchs HYBRID/ROYAL restent RUNNING jusqu'à ce que le socket
-            // les termine (v14.2). En attendant l'orchestrateur ne peut que
-            // les enregistrer — la progression du round attendra.
-            if (m.status === MatchStatus.PAIRING) {
-              m.status = MatchStatus.RUNNING;
-              m.startedAt = new Date();
-              await m.save();
-            }
-          }
-        }
-      }
-
-      // Recharger les matchs pour vérifier leur statut final.
-      const finishedMatches = await MatchModel.find({
-        tournament: t._id, tournamentRound: round, status: MatchStatus.FINISHED,
+      const created: any = await MatchModel.create({
+        format,
+        status: MatchStatus.PAIRING,
+        participants,
+        tournament: t._id,
+        tournamentRound: currentRoundIndex,
+        queuedAt: new Date(),
       });
+      bm.matchId = created._id;
+      bm.startedAt = new Date();
+      dirty = true;
+      matchesLaunched++;
 
-      if (finishedMatches.length < pairs.length) {
-        // Certains matchs ne sont pas encore terminés (formats temps-réel) :
-        // on stoppe la progression, l'orchestrateur sera rappelé plus tard.
-        return { finished: false };
+      // Lancer le match selon son format.
+      if (format === MatchFormat.DUO_STEEL) {
+        // Headless : joue immédiatement en background. Le hook
+        // recordMatchResult sera appelé en fin de match.
+        void matchHeadlessRunner.run(String(created._id), { manches: 2 }).catch(() => {});
+      } else if (format === MatchFormat.HYBRID_ALLIANCE) {
+        // Provisionne une table live que les humains rejoindront.
+        try {
+          await matchLiveService.provision(String(created._id));
+        } catch { /* si provision échoue, la table sera créée à la demande */ }
       }
-
-      // Marquer les perdants comme éliminés et distribuer les gains.
-      const roundPrize = t.rounds.find((r: any) => r.round === round)?.prize ?? 0;
-      for (const m of finishedMatches) {
-        const winnerTeam = m.winnerTeam as 'A' | 'B' | null;
-        for (const p of m.participants as any[]) {
-          const userId = String(p.userId);
-          const slot = slots.find((s) => s.userId === userId);
-          if (!slot) continue;
-          if (winnerTeam && p.team !== winnerTeam) {
-            slot.eliminatedAtRound = round;
-          } else if (winnerTeam && p.team === winnerTeam && roundPrize > 0) {
-            // Crédite le gain de round (une seule fois par joueur — dédupliqué
-            // par seat 0 uniquement pour éviter double crédit sur match d'équipe).
-            if (p.seat === 0 || p.seat === 1) {
-              await walletService.credit(userId, roundPrize, String(m._id), 'game_win');
-              await houseAccountingService.recordTournamentPrize(t._id, userId, round, roundPrize);
-            }
-          }
-        }
-      }
-
-      // Persiste l'état des participants (eliminatedAtRound).
-      for (const slot of slots) {
-        const p = t.participants.find((pp: any) => String(pp.userId) === slot.userId);
-        if (p) p.eliminatedAtRound = slot.eliminatedAtRound;
-      }
-      t.bracket = t.bracket || [];
-      t.bracket[round - 1] = finishedMatches.map((m: any) => m._id);
-      await t.save();
-
-      round++;
+      // ROYAL_SQUARE : non supporté en tournoi v14.12 (rejeté à la création).
     }
 
-    // Si un seul survivant reste → tournoi terminé.
-    const alive = slots.filter((s) => s.eliminatedAtRound === null);
-    if (alive.length <= (playersPerMatch === 4 ? 2 : 1)) {
-      await tournamentService.markFinished(String(t._id), alive.map((s) => s.userId));
-      return { finished: true };
-    }
-    return { finished: false };
+    if (dirty) await t.save();
+
+    // Le tournoi est-il fini ? recordMatchResult finalise déjà via status
+    // = FINISHED — on relit juste.
+    const fresh: any = await TournamentModel.findById(tournamentId).select('status').lean();
+    return {
+      finished: fresh?.status === TournamentStatus.FINISHED,
+      roundsScheduled: 1,
+      matchesLaunched,
+    };
   }
 
-  /** Distribue les slots gagnants sur les 4 sièges d'un Match. */
-  #buildParticipants(format: MatchFormat, group: BracketSlot[]) {
+  /**
+   * Construit les 4 participants d'un Match à partir d'un BracketMatch.
+   * Retrouve les robots depuis le tournoi.participants (dénormalisé sur le
+   * bracket, on ne stocke que userId + displayName pour l'affichage).
+   *
+   * Layout des sièges :
+   *   • DUO_STEEL : slotA = équipe A (sièges 0/2, 2 robots du joueur),
+   *                 slotB = équipe B (sièges 1/3).
+   *   • HYBRID_ALLIANCE : slotA = humain siège 0 + son 1er coéquipier
+   *                       robot siège 2, slotB = même chose pour l'équipe B.
+   */
+  #buildParticipants(format: MatchFormat, bm: any, participantsByUser: Map<string, any>): any[] | null {
     const asId = (id: string) => new Types.ObjectId(id);
-    const rules = getMatchFormatRules(format);
-    const p: Array<{ seat: number; userId: Types.ObjectId | null; robotId: Types.ObjectId | null; team: 'A' | 'B'; isHuman: boolean }> = [];
+    const pA = participantsByUser.get(String(bm.slotA.userId));
+    const pB = participantsByUser.get(String(bm.slotB.userId));
+    if (!pA || !pB) return null;
+
+    const robotsA = (pA.robotIds || []).map((r: any) => String(r));
+    const robotsB = (pB.robotIds || []).map((r: any) => String(r));
 
     if (format === MatchFormat.DUO_STEEL) {
-      // group[0] → A (sièges 0,2), group[1] → B (sièges 1,3)
-      p.push({ seat: 0, userId: asId(group[0].userId), robotId: asId(group[0].robotIds[0]), team: 'A', isHuman: false });
-      p.push({ seat: 2, userId: asId(group[0].userId), robotId: asId(group[0].robotIds[1]), team: 'A', isHuman: false });
-      p.push({ seat: 1, userId: asId(group[1].userId), robotId: asId(group[1].robotIds[0]), team: 'B', isHuman: false });
-      p.push({ seat: 3, userId: asId(group[1].userId), robotId: asId(group[1].robotIds[1]), team: 'B', isHuman: false });
-    } else if (format === MatchFormat.HYBRID_ALLIANCE) {
-      p.push({ seat: 0, userId: asId(group[0].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 2, userId: asId(group[0].userId), robotId: asId(group[0].robotIds[0]), team: 'A', isHuman: false });
-      p.push({ seat: 1, userId: asId(group[1].userId), robotId: null, team: 'B', isHuman: true });
-      p.push({ seat: 3, userId: asId(group[1].userId), robotId: asId(group[1].robotIds[0]), team: 'B', isHuman: false });
-    } else {
-      p.push({ seat: 0, userId: asId(group[0].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 1, userId: asId(group[1].userId), robotId: null, team: 'B', isHuman: true });
-      p.push({ seat: 2, userId: asId(group[2].userId), robotId: null, team: 'A', isHuman: true });
-      p.push({ seat: 3, userId: asId(group[3].userId), robotId: null, team: 'B', isHuman: true });
+      // Exige 2 robots par joueur (validé à l'inscription).
+      if (robotsA.length < 2 || robotsB.length < 2) return null;
+      return [
+        { seat: 0, userId: asId(String(pA.userId)), robotId: asId(robotsA[0]), team: 'A', isHuman: false },
+        { seat: 2, userId: asId(String(pA.userId)), robotId: asId(robotsA[1]), team: 'A', isHuman: false },
+        { seat: 1, userId: asId(String(pB.userId)), robotId: asId(robotsB[0]), team: 'B', isHuman: false },
+        { seat: 3, userId: asId(String(pB.userId)), robotId: asId(robotsB[1]), team: 'B', isHuman: false },
+      ];
     }
-    return p;
+    if (format === MatchFormat.HYBRID_ALLIANCE) {
+      // Humain siège 0/1, robot coéquipier siège 2/3.
+      if (robotsA.length < 1 || robotsB.length < 1) return null;
+      return [
+        { seat: 0, userId: asId(String(pA.userId)), robotId: null, team: 'A', isHuman: true },
+        { seat: 2, userId: asId(String(pA.userId)), robotId: asId(robotsA[0]), team: 'A', isHuman: false },
+        { seat: 1, userId: asId(String(pB.userId)), robotId: null, team: 'B', isHuman: true },
+        { seat: 3, userId: asId(String(pB.userId)), robotId: asId(robotsB[0]), team: 'B', isHuman: false },
+      ];
+    }
+    // ROYAL_SQUARE non supporté en tournoi v14.12.
+    return null;
   }
 }
 
