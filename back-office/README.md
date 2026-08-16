@@ -1,59 +1,122 @@
-# BackOffice
+# Kydos Back-Office
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.27.
+Panel d'administration pour la plateforme Kydos Belote. Angular 19 (frontend) + Express (API), connecté à la même base MongoDB que le serveur de jeu.
 
-## Development server
+## Prérequis
 
-To start a local development server, run:
+- **Node.js** >= 18
+- **MongoDB** en cours d'exécution (même instance que le serveur de jeu)
+- **npm** >= 9
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Installation rapide
 
 ```bash
-ng generate component component-name
+# 1. Installer les dépendances frontend
+cd back-office
+npm install
+
+# 2. Installer les dépendances backend
+cd server
+npm install
+cd ..
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+## Variables d'environnement
+
+| Variable      | Défaut                                      | Description                        |
+|---------------|---------------------------------------------|------------------------------------|
+| `MONGO_URI`   | `mongodb://localhost:27017/beloteKydosV14`   | URI de connexion MongoDB           |
+| `ADMIN_PORT`  | `3001`                                       | Port de l'API back-office          |
+| `JWT_SECRET`  | `admin-secret-change-me`                     | Secret JWT (changer en production) |
+
+## Lancement en développement
 
 ```bash
-ng generate --help
+# Terminal 1 — API backend
+cd back-office/server
+npm run dev
+# → http://localhost:3001
+
+# Terminal 2 — Frontend Angular
+cd back-office
+npx ng serve --proxy-config proxy.conf.json
+# → http://localhost:4200
 ```
 
-## Building
+Le proxy Angular redirige `/api/*` vers `http://localhost:3001` (le préfixe `/api` est retiré).
 
-To build the project run:
+## Build de production
 
 ```bash
-ng build
+cd back-office
+npx ng build
+# Artifacts dans dist/back-office/
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Les fichiers statiques générés peuvent être servis par nginx, Apache ou tout serveur HTTP.
 
-## Running unit tests
+## Créer un compte admin
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+Il n'y a pas de formulaire d'inscription admin. Définir le rôle manuellement dans MongoDB :
+
+```js
+db.users.updateOne(
+  { username: "votre_username" },
+  { $set: { role: "admin" } }
+)
+```
+
+Puis se connecter via l'interface `/login` avec les identifiants habituels.
+
+## PM2 (production)
+
+Un fichier `ecosystem.config.cjs` est fourni à la racine de `back-office/` :
 
 ```bash
-ng test
+cd back-office
+pm2 start ecosystem.config.cjs
+pm2 save
 ```
 
-## Running end-to-end tests
+Voir `docs/backoffice/technique.md` pour la configuration PM2 complète.
 
-For end-to-end (e2e) testing, run:
+## Structure
 
-```bash
-ng e2e
+```
+back-office/
+├── server/                  # API Express
+│   ├── src/
+│   │   ├── index.ts         # Point d'entrée, montage des routes
+│   │   ├── middleware/
+│   │   │   ├── auth.ts      # JWT + requireAdmin
+│   │   │   └── auditLog.ts  # Modèle + helper logAudit()
+│   │   └── routes/
+│   │       ├── auth.ts      # POST /admin/auth/login
+│   │       ├── tournaments.ts
+│   │       ├── users.ts
+│   │       ├── accounting.ts
+│   │       ├── promos.ts
+│   │       ├── monitor.ts
+│   │       └── audit.ts
+│   ├── package.json
+│   └── tsconfig.json
+├── src/                     # Frontend Angular
+│   ├── app/
+│   │   ├── components/      # sidebar, header
+│   │   ├── guards/          # auth.guard
+│   │   ├── interceptors/    # auth.interceptor (JWT + 401)
+│   │   ├── models/          # interfaces TypeScript
+│   │   ├── pages/           # composants de pages
+│   │   └── services/        # services HTTP
+│   ├── styles.scss          # thème global (dark)
+│   └── main.ts
+├── proxy.conf.json          # proxy dev /api → :3001
+├── ecosystem.config.cjs     # config PM2
+└── angular.json
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## Documentation
 
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- `docs/backoffice/technique.md` — Manuel technique (architecture, API, sécurité)
+- `docs/backoffice/fonctionnel.md` — Manuel fonctionnel (guide utilisateur)
+- `docs/backoffice/ai-changelog.md` — Journal AI des modifications par commit
