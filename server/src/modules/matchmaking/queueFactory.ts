@@ -14,7 +14,7 @@
 import { environment } from '../../core/environment.js';
 import { createLogger } from '../../core/logger.js';
 import { InMemoryQueue, RedisQueue, type MatchmakingQueue, type RedisClient } from './queue.js';
-
+import IORedis from 'ioredis';
 const log = createLogger('queue');
 
 let cached: MatchmakingQueue | null = null;
@@ -25,17 +25,14 @@ export function getMatchmakingQueue(): MatchmakingQueue {
   if (cached) return cached;
   if (environment.redisUrl) {
     try {
-      // Chargement dynamique d'ioredis pour ne pas exiger la dépendance en tests.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const IORedis = require('ioredis');
-      const RedisCtor = IORedis.Redis ?? IORedis.default ?? IORedis;
-      redisClient = new RedisCtor(environment.redisUrl, {
-        // Robustesse en production :
+      redisClient = new IORedis(environment.redisUrl, {
         maxRetriesPerRequest: 3,
         retryStrategy: (times: number) => Math.min(times * 200, 3000),
         enableReadyCheck: true,
         lazyConnect: false,
       });
+
+
       // Log discret sur les événements de connexion — évite les crashs
       // silencieux et facilite le diagnostic.
       redisClient.on('ready', () => log.info('[queue] Redis prêt', { url: safeUrl(environment.redisUrl!) }));
