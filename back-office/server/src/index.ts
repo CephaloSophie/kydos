@@ -4,13 +4,13 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
 
-import '../../server/src/modules/user/user.model.js';
-import '../../server/src/modules/robot/robot.model.js';
-import '../../server/src/modules/game/game.model.js';
-import '../../server/src/modules/matches/match.model.js';
-import '../../server/src/modules/tournaments/tournament.model.js';
-import '../../server/src/modules/houseAccounting/houseTransaction.model.js';
-import '../../server/src/modules/promo/promo.model.js';
+import '../../../server/src/modules/user/user.model.js';
+import '../../../server/src/modules/robot/robot.model.js';
+import '../../../server/src/modules/game/game.model.js';
+import '../../../server/src/modules/matches/match.model.js';
+import '../../../server/src/modules/tournaments/tournament.model.js';
+import '../../../server/src/modules/houseAccounting/houseTransaction.model.js';
+import '../../../server/src/modules/promo/promo.model.js';
 import './middleware/auditLog.js';
 
 import { requireAdmin } from './middleware/auth.js';
