@@ -24,6 +24,7 @@ const UserSchema = new Schema(
     username: { type: String, required: true, unique: true, index: true },
     email: { type: String, default: null, index: true, sparse: true },
     passwordHash: { type: String, required: true },
+    role: { type: String, enum: ['user', 'admin', 'banned'], default: 'user', index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
     settings: {
       responseTimeMs: { type: Number, default: 1000 },
