@@ -569,3 +569,34 @@ curl -X POST http://217.160.186.250:8882/api/tournaments/preview-economics \
   -H "Content-Type: application/json" \
   -d '{"capacity":16,"entryFee":1000,"rounds":[{"round":5,"prize":1500}]}'
 ```
+
+---
+
+## v14.11 → v14.14 — Nouveaux endpoints
+
+### Tournois enrichis (v14.12/13)
+
+| Méthode | Route | Description |
+|---|---|---|
+| POST | `/tournaments` | Créer un tournoi (draft ou publication immédiate) |
+| POST | `/tournaments/:id/publish` | DRAFT → UPCOMING |
+| GET | `/tournaments/:id/bracket` | Arbre bracket coupe du monde (rounds/matchs/slots) |
+| GET | `/tournaments?all=1` | Bypass du filtre par level utilisateur |
+
+`POST /tournaments/preview-economics` accepte désormais `prizesByPosition[]`
+(nouveau standard) en plus de `rounds[]` (legacy).
+
+### Historique (v14.11)
+
+`GET /games` accepte un nouveau paramètre `mode` :
+- `mode=competition` — matchs de tournoi + matchs rapides
+- `mode=online` — parties libres en ligne
+- `mode=local` — entraînement / IA
+- `mode=all` (défaut)
+
+Croisable avec le paramètre `kind` existant (hybride/acier/royal/local).
+
+### Table publique (v14.7)
+
+`GET /tables/public-live?page=N` — 5 tables publiques `status:'playing'` par
+page, triées par activité récente. Utilisé par l'écran « Parties publiques ».

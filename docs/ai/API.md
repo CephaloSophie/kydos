@@ -347,3 +347,48 @@ Statuts d'invitation : `pending` | `accepted` | `declined` | `cancelled`.
 - Socket : le nombre de spectateurs (`table:spectators`) est recompté et
   rediffusé sur subscribe / unsubscribe / disconnect. À l'abonnement, si la
   partie est terminée, le serveur émet `table:finished` au client.
+
+---
+
+## v14.11 → v14.14 — Nouveaux endpoints
+
+### Tournois (v14.12/13)
+
+**Créer un tournoi**
+```
+POST /tournaments  {name, format, capacity, entryFee, startAt,
+                    description?, color?, icon?, minLevel?, maxLevel?,
+                    prizesByPosition?, publishImmediately?}
+→ {tournamentId}
+```
+
+**Publier DRAFT → UPCOMING**
+```
+POST /tournaments/:id/publish → {published: true}
+```
+
+**Bracket coupe du monde**
+```
+GET /tournaments/:id/bracket
+→ {tournamentId, name, format, capacity, status, color, icon,
+   bracket: {rounds: [{roundIndex, label, matches: [{matchIndex, matchId,
+              gameId, slotA, slotB, winner, scoreA, scoreB, ...}]}], ...},
+   participants, winners}
+```
+Refuse UPCOMING (400) ou DRAFT non-créateur (404).
+
+**Preview économies** — accepte `prizesByPosition` (nouveau v14.12) ou `rounds` (legacy).
+
+### Games — filtre mode
+
+```
+GET /games?scope=mine&mode=competition&kind=hybride
+```
+`mode` ∈ {local, online, competition, all}.
+
+### Tables publiques live
+
+```
+GET /tables/public-live?page=1
+→ {tables[], page, pageSize:5, total, totalPages}
+```

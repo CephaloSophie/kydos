@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "K\u00fddos Belote \u2014 API mobile",
+    "name": "Kýdos Belote — API mobile",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Endpoints consomm\u00e9s par l'application mobile K\u00fddos Belote."
+    "description": "Endpoints consommés par l'application mobile Kýdos Belote. | v14.14 update: added tournaments (create/publish/bracket/prizesByPosition), history mode filter, public tables live."
   },
   "variable": [
     {
@@ -16,7 +16,7 @@
   ],
   "item": [
     {
-      "name": "Auth \u2014 Register",
+      "name": "Auth — Register",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/auth/register",
@@ -33,7 +33,7 @@
       }
     },
     {
-      "name": "Auth \u2014 Login",
+      "name": "Auth — Login",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/auth/login",
@@ -50,7 +50,7 @@
       }
     },
     {
-      "name": "Auth \u2014 Me",
+      "name": "Auth — Me",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/auth/me",
@@ -63,7 +63,7 @@
       }
     },
     {
-      "name": "Robots \u2014 List",
+      "name": "Robots — List",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/robots",
@@ -76,7 +76,7 @@
       }
     },
     {
-      "name": "Robots \u2014 Create (mobile)",
+      "name": "Robots — Create (mobile)",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/robots",
@@ -92,12 +92,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"name\":\"Atn\u00e9\",\"personality\":{\"aggressiveness\":6,\"concentration\":8,\"velocity\":4},\"mobile\":{\"avatarId\":\"atne\",\"strategy\":{\"aggro\":62,\"risk\":38,\"bluff\":45,\"memoire\":78}}}"
+          "raw": "{\"name\":\"Atné\",\"personality\":{\"aggressiveness\":6,\"concentration\":8,\"velocity\":4},\"mobile\":{\"avatarId\":\"atne\",\"strategy\":{\"aggro\":62,\"risk\":38,\"bluff\":45,\"memoire\":78}}}"
         }
       }
     },
     {
-      "name": "Robots \u2014 Delete",
+      "name": "Robots — Delete",
       "request": {
         "method": "DELETE",
         "url": "{{baseUrl}}/robots/:id",
@@ -110,7 +110,7 @@
       }
     },
     {
-      "name": "Games \u2014 List",
+      "name": "Games — List",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/games",
@@ -123,7 +123,7 @@
       }
     },
     {
-      "name": "Games \u2014 Get (avec replay)",
+      "name": "Games — Get (avec replay)",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/games/:id",
@@ -136,7 +136,7 @@
       }
     },
     {
-      "name": "Games \u2014 Save",
+      "name": "Games — Save",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/games",
@@ -157,7 +157,7 @@
       }
     },
     {
-      "name": "Analytics \u2014 Me",
+      "name": "Analytics — Me",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/analytics/me",
@@ -170,7 +170,7 @@
       }
     },
     {
-      "name": "Wallet \u2014 Get",
+      "name": "Wallet — Get",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/wallet",
@@ -183,7 +183,7 @@
       }
     },
     {
-      "name": "Wallet \u2014 Claim daily 500",
+      "name": "Wallet — Claim daily 500",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/wallet/claim",
@@ -196,7 +196,7 @@
       }
     },
     {
-      "name": "Teams \u2014 List",
+      "name": "Teams — List",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/teams",
@@ -209,7 +209,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Mine",
+      "name": "Teams — Mine",
       "request": {
         "method": "GET",
         "url": "{{baseUrl}}/teams/mine",
@@ -222,7 +222,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Create",
+      "name": "Teams — Create",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/teams",
@@ -238,12 +238,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"name\":\"K\u00fddos Legends\",\"visibility\":\"private\"}"
+          "raw": "{\"name\":\"Kýdos Legends\",\"visibility\":\"private\"}"
         }
       }
     },
     {
-      "name": "Teams \u2014 Rename",
+      "name": "Teams — Rename",
       "request": {
         "method": "PUT",
         "url": "{{baseUrl}}/teams/:id",
@@ -264,7 +264,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Join",
+      "name": "Teams — Join",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/teams/:id/join",
@@ -277,7 +277,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Leave",
+      "name": "Teams — Leave",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/teams/:id/leave",
@@ -290,7 +290,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Kick member",
+      "name": "Teams — Kick member",
       "request": {
         "method": "DELETE",
         "url": "{{baseUrl}}/teams/:id/members/:userId",
@@ -303,7 +303,7 @@
       }
     },
     {
-      "name": "Teams \u2014 Change member role",
+      "name": "Teams — Change member role",
       "request": {
         "method": "PUT",
         "url": "{{baseUrl}}/teams/:id/members/:userId/role",
@@ -324,10 +324,10 @@
       }
     },
     {
-      "name": "Games \u2014 Public search by name",
+      "name": "Games — Public search by name",
       "request": {
         "method": "GET",
-        "url": "{{baseUrl}}/games/public?q=Atn\u00e9",
+        "url": "{{baseUrl}}/games/public?q=Atné",
         "header": [
           {
             "key": "Authorization",
@@ -337,7 +337,7 @@
       }
     },
     {
-      "name": "Tables \u2014 Cancel pending",
+      "name": "Tables — Cancel pending",
       "request": {
         "method": "POST",
         "url": "{{baseUrl}}/tables/:id/cancel",
@@ -348,6 +348,279 @@
           }
         ]
       }
+    },
+    {
+      "name": "Tournaments — List (auto level filter)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments"
+          ]
+        },
+        "description": "v14.12 — Auto-filtered by user level (?all=1 to bypass)."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Preview economics (byPosition)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/preview-economics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "preview-economics"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"capacity\": 16,\n  \"entryFee\": 100,\n  \"prizesByPosition\": [\n    {\n      \"position\": 1,\n      \"prize\": 500\n    },\n    {\n      \"position\": 2,\n      \"prize\": 200\n    },\n    {\n      \"position\": 3,\n      \"prize\": 100\n    },\n    {\n      \"position\": 5,\n      \"prize\": 40\n    },\n    {\n      \"position\": 9,\n      \"prize\": 10\n    }\n  ]\n}"
+        },
+        "description": "v14.12 — Compute totalPaid with ex-aequo handling."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Create (draft)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Coupe des Héros\",\n  \"format\": \"DUO_STEEL\",\n  \"capacity\": 16,\n  \"entryFee\": 100,\n  \"startAt\": \"2026-08-25T18:00:00Z\",\n  \"description\": \"Bracket rapide 16 duos.\",\n  \"color\": \"#c99c3f\",\n  \"icon\": \"♦\",\n  \"minLevel\": 0,\n  \"maxLevel\": null,\n  \"prizesByPosition\": [\n    {\n      \"position\": 1,\n      \"prize\": 500\n    },\n    {\n      \"position\": 2,\n      \"prize\": 200\n    },\n    {\n      \"position\": 3,\n      \"prize\": 100\n    },\n    {\n      \"position\": 5,\n      \"prize\": 40\n    },\n    {\n      \"position\": 9,\n      \"prize\": 10\n    }\n  ],\n  \"publishImmediately\": false\n}"
+        },
+        "description": "v14.12 — Create DRAFT or UPCOMING via publishImmediately."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Publish (DRAFT → UPCOMING)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/publish",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "{{tournamentId}}",
+            "publish"
+          ]
+        },
+        "description": "v14.12 — Creator-only."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Get bracket (world-cup view)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/bracket",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "{{tournamentId}}",
+            "bracket"
+          ]
+        },
+        "description": "v14.12 NEW — 400 if UPCOMING, 404 if DRAFT non-creator."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Join (Duo : 2 robots)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "{{tournamentId}}",
+            "join"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"robotIds\": [\n    \"{{robotId1}}\",\n    \"{{robotId2}}\"\n  ]\n}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Join (Hybrid : coéquipier + remplaçant)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "{{tournamentId}}",
+            "join"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"robotIds\": [\n    \"{{robotId1}}\",\n    \"{{substituteRobotId}}\"\n  ]\n}"
+        },
+        "description": "v14.12 — Last robot is substitute (v14.5 convention)."
+      },
+      "response": []
+    },
+    {
+      "name": "Tournaments — Leave",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/leave",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tournaments",
+            "{{tournamentId}}",
+            "leave"
+          ]
+        },
+        "description": "UPCOMING only. Full refund."
+      },
+      "response": []
+    },
+    {
+      "name": "Games — List filtered by mode + kind (v14.11)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/games?scope=mine&mode=competition&kind=hybride",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "games?scope=mine&mode=competition&kind=hybride"
+          ]
+        },
+        "description": "v14.11 — mode ∈ {local, online, competition, all} × kind ∈ {hybride, acier, royal, local, all}."
+      },
+      "response": []
+    },
+    {
+      "name": "Tables — Public live (5 per page)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/tables/public-live?page=1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tables",
+            "public-live?page=1"
+          ]
+        },
+        "description": "v14.7 — Public playing tables, 5/page."
+      },
+      "response": []
     }
   ]
 }

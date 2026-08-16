@@ -36,6 +36,7 @@ import { InvitationsScreen } from './presentation/screens/InvitationsScreen';
 import { GameStatsScreen } from './presentation/screens/GameStatsScreen';
 import { ReplayScreen } from './presentation/screens/ReplayScreen';
 import { TournamentScreen } from './presentation/screens/TournamentScreen';
+import { TournamentBracketScreen } from './presentation/screens/TournamentBracketScreen';
 import { MatchmakingScreen } from './presentation/screens/MatchmakingScreen';
 import { MatchEnrollScreen } from './presentation/screens/MatchEnrollScreen';
 import { PublicGamesScreen } from './presentation/screens/PublicGamesScreen';
@@ -105,6 +106,7 @@ router
   .register('about',   AboutScreen,         { title: 'À propos',     fanLabel: 'INFOS',    glyph: '✦', grad: 'var(--g-heart)' })
   .register('replay',  ReplayScreen,        { title: 'Rejeu' })
   .register('tournament', TournamentScreen, { title: 'Tournoi' })
+  .register('tournament-bracket', TournamentBracketScreen, { title: 'Bracket' })
   .register('matchmaking', MatchmakingScreen, { title: 'Recherche…' })
   .register('enroll', MatchEnrollScreen, { title: 'Inscription' })
   .register('public-games', PublicGamesScreen, { title: 'Parties publiques' })

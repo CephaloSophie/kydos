@@ -3,7 +3,7 @@
     "name": "Belote Contrée — API (TNR)",
     "_postman_id": "belote-contree-api",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Tests de Non-Régression (TNR) — toutes les API REST de belote-server, montées sous /api. Lance d'abord Auth ▸ Login (enregistre {{token}}). Les créations enregistrent les IDs ({{robotId}}, {{brainId}}…) pour les requêtes suivantes."
+    "description": "Tests de Non-Régression (TNR) — toutes les API REST de belote-server, montées sous /api. Lance d'abord Auth ▸ Login (enregistre {{token}}). Les créations enregistrent les IDs ({{robotId}}, {{brainId}}…) pour les requêtes suivantes.\n\n**v14.14 update** : ajout des endpoints tournois enrichis (create, publish, bracket, prizesByPosition), filtre historique mode/kind, tables publiques live."
   },
   "item": [
     {
@@ -1064,6 +1064,29 @@
               "raw": "{}"
             }
           }
+        },
+        {
+          "name": "Parties publiques en cours (v14.7)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tables/public-live?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tables",
+                "public-live?page=1"
+              ]
+            },
+            "description": "v14.7 — 5 tables public+playing par page, triées par lastActivityAt. Utilisé par PublicGamesScreen."
+          }
         }
       ]
     },
@@ -1250,6 +1273,326 @@
       ]
     },
     {
+      "name": "Tournois (v14.12+)",
+      "description": "Endpoints tournois enrichis : create/publish/bracket, prizesByPosition, filtre level.",
+      "item": [
+        {
+          "name": "Liste tournois (filtre auto par level)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments"
+              ]
+            },
+            "description": "Filtre auto par level. ?all=1 pour bypass. ?status=upcoming|live|finished pour filtrer."
+          }
+        },
+        {
+          "name": "Liste tournois (?status=live)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments?status=live",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments?status=live"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Liste tous les tournois (?all=1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments?all=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments?all=1"
+              ]
+            },
+            "description": "Bypass du filtre par level utilisateur — mode admin."
+          }
+        },
+        {
+          "name": "Aperçu économies (par position)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/preview-economics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "preview-economics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 16,\n  \"entryFee\": 100,\n  \"prizesByPosition\": [\n    {\n      \"position\": 1,\n      \"prize\": 500\n    },\n    {\n      \"position\": 2,\n      \"prize\": 200\n    },\n    {\n      \"position\": 3,\n      \"prize\": 100\n    },\n    {\n      \"position\": 5,\n      \"prize\": 40\n    },\n    {\n      \"position\": 9,\n      \"prize\": 10\n    }\n  ]\n}"
+            },
+            "description": "v14.12 — Calcule collected/paid/houseNet avec ex æquo. Renvoie breakdown détaillé."
+          }
+        },
+        {
+          "name": "Aperçu économies (legacy rounds)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/preview-economics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "preview-economics"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capacity\": 16,\n  \"entryFee\": 100,\n  \"rounds\": [\n    {\n      \"round\": 4,\n      \"prize\": 5000\n    }\n  ]\n}"
+            },
+            "description": "Rétrocompat : accepte encore rounds[] si prizesByPosition absent."
+          }
+        },
+        {
+          "name": "Créer un tournoi (draft)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coupe des Héros\",\n  \"format\": \"DUO_STEEL\",\n  \"capacity\": 16,\n  \"entryFee\": 100,\n  \"startAt\": \"2026-08-25T18:00:00Z\",\n  \"description\": \"Bracket rapide 16 duos robots. Ex æquo pour les demi.\",\n  \"color\": \"#c99c3f\",\n  \"icon\": \"♦\",\n  \"minLevel\": 0,\n  \"maxLevel\": null,\n  \"prizesByPosition\": [\n    {\n      \"position\": 1,\n      \"prize\": 500\n    },\n    {\n      \"position\": 2,\n      \"prize\": 200\n    },\n    {\n      \"position\": 3,\n      \"prize\": 100\n    },\n    {\n      \"position\": 5,\n      \"prize\": 40\n    },\n    {\n      \"position\": 9,\n      \"prize\": 10\n    }\n  ],\n  \"publishImmediately\": false\n}"
+            },
+            "description": "Crée en DRAFT. Mettre publishImmediately: true pour aller direct en UPCOMING."
+          }
+        },
+        {
+          "name": "Publier un draft (DRAFT → UPCOMING)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}",
+                "publish"
+              ]
+            },
+            "description": "Seul le créateur peut publier."
+          }
+        },
+        {
+          "name": "Détail tournoi",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Bracket coupe du monde",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/bracket",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}",
+                "bracket"
+              ]
+            },
+            "description": "v14.12 NEW — Arbre bracket persistant. Rejette UPCOMING (400) et DRAFT non-créateur (404)."
+          }
+        },
+        {
+          "name": "S'inscrire (Duo d'acier : 2 robots)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}",
+                "join"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"robotIds\": [\n    \"{{robotId1}}\",\n    \"{{robotId2}}\"\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "S'inscrire (Alliance hybride : 1 robot + 1 remplaçant)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}",
+                "join"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"robotIds\": [\n    \"{{robotId1}}\",\n    \"{{substituteRobotId}}\"\n  ]\n}"
+            },
+            "description": "v14.12 — Le dernier robot est le substitute (convention v14.5)."
+          }
+        },
+        {
+          "name": "Se désinscrire",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tournaments",
+                "{{tournamentId}}",
+                "leave"
+              ]
+            },
+            "description": "Autorisé uniquement en UPCOMING. Remboursement complet."
+          }
+        }
+      ]
+    },
+    {
       "name": "Parties (Games)",
       "description": "",
       "item": [
@@ -1340,6 +1683,28 @@
               ]
             },
             "description": ""
+          }
+        },
+        {
+          "name": "Historique — filtré mode + kind (v14.11)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/games?scope=mine&mode=competition&kind=hybride",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "games?scope=mine&mode=competition&kind=hybride"
+              ]
+            },
+            "description": "v14.11 — Filtre croisé : mode ∈ {local, online, competition, all} × kind ∈ {hybride, acier, royal, local, all}."
           }
         }
       ]

@@ -242,3 +242,148 @@ Le back office affichera :
 
 Tous les messages sont en français, écrits pour être lisibles par un joueur
 non-technicien.
+
+---
+
+# Nouveautés v14.11 → v14.14
+
+## Bannière compétition en haut de l'accueil (v14.11)
+
+Quand un match compétition est en cours ou vient de se terminer, une bannière
+s'affiche **en haut** de l'écran d'accueil (au-dessus des cartes principales).
+Elle contient :
+
+- Un **dot animé** de la couleur du **type de table** :
+  - or `#c99c3f` pour Alliance hybride ;
+  - bleu `#3f6ea1` pour Duo d'acier ;
+  - rouge `#b0384a` pour Carrée royale.
+- Le libellé `COMPÉTITION · EN COURS` (ou `DÉMARRAGE`, `VICTOIRE`, `DÉFAITE`,
+  `MATCH NUL` selon l'état).
+- Le format et le score.
+- Un bouton **▶ Rejoindre** (au lieu de « Reprendre ») pour reprendre la
+  main sur la table live, ou **▶ Rejouer** pour un match terminé.
+
+La bannière disparaît automatiquement 2 minutes après la fin du match.
+
+## Écran Compétitions dynamique (v14.11)
+
+- Les 3 **formats de match rapide** sont affichés dans un **carrousel
+  horizontal** — extensible si un 4ᵉ format arrive.
+- Les **tournois** sont eux aussi dans un carrousel : 0, 3 ou 15 tournois,
+  peu importe, tout scroll horizontalement (touch, flèches, drag souris).
+- Chaque tournoi apparaît sous forme d'une **carte verticale** :
+  - icône d'enseigne (♦/♣/♥/♠) en haut à gauche, couleur du tournoi ;
+  - chip d'état (À VENIR / EN COURS animé / TERMINÉ) en haut à droite ;
+  - nom du tournoi sur 2 lignes max ;
+  - format + date en petit ;
+  - compteur participants + prix d'entrée en pied ;
+  - bouton **S'inscrire** ou **Voir ›**.
+
+## Historique filtré par mode et par type (v14.11)
+
+L'écran **Historique** a désormais deux rangées de filtres croisés :
+
+**Par type de feutre** (kind) :
+Toutes / Alliance Hybride / Duo d'Acier / Carré Royal / Entraînement
+
+**Par mode de partie** (nouveau v14.11) :
+Tous modes / Compétition / Table en ligne / Entraînement
+
+Les parties de match compétition (HYBRID/ROYAL non-headless) sont désormais
+correctement marquées `mode: competition` grâce au nouveau champ `origin`
+sur la table éphémère (`origin: 'match' | 'tournament' | 'user'`).
+
+## Tournois enrichis (v14.12)
+
+Le back office peut maintenant définir sur chaque tournoi :
+
+- **`name`** — libellé (≥ 3 caractères).
+- **`format`** — DUO_STEEL ou HYBRID_ALLIANCE (ROYAL_SQUARE arrive en v14.15).
+- **`capacity`** — 4, 8, 16, 32, 64 ou 128 (puissance de 2 obligatoire).
+- **`entryFee`** — buy-in par joueur.
+- **`description`** — texte libre jusqu'à 500 caractères.
+- **`color`** — couleur hex CSS affichée sur la carte (défaut or `#e6c46a`).
+- **`icon`** — glyphe d'enseigne ou emoji court.
+- **`minLevel`** — niveau minimum du joueur (défaut 0).
+- **`maxLevel`** — niveau maximum ou `null` (pas de plafond).
+- **`prizesByPosition`** — tableau `[{position, prize}]` (voir ci-dessous).
+- **`startAt`** — date et heure de démarrage.
+
+### Gains par position finale, avec ex æquo (v14.12)
+
+Dans un bracket à élimination directe, les rangs finaux ne sont pas
+1, 2, 3, 4, 5, 6, 7, 8 — ce sont des rangs partagés :
+
+| Capacité | Rangs finaux possibles |
+|---|---|
+| 4  | 1, 2, 3 (×2) |
+| 8  | 1, 2, 3 (×2), 5 (×4) |
+| 16 | 1, 2, 3 (×2), 5 (×4), 9 (×8) |
+| 32 | 1, 2, 3 (×2), 5 (×4), 9 (×8), 17 (×16) |
+| 64 | + 33 (×32) |
+| 128 | + 65 (×64) |
+
+Le champ `prizesByPosition` liste le prix distribué à **chaque** occupant
+d'un rang. Exemple pour capacity=16 :
+
+```json
+[
+  { "position": 1, "prize": 5000 },
+  { "position": 2, "prize": 2000 },
+  { "position": 3, "prize": 1000 },
+  { "position": 5, "prize": 400 },
+  { "position": 9, "prize": 100 }
+]
+```
+
+Total distribué = 5000 + 2000 + 2×1000 + 4×400 + 8×100 = **11 400 ◆**.
+
+Les 2 demi-finalistes perdants sont **ex æquo 3ᵉ** — pas de 4ᵉ.
+Les 4 quart-finalistes perdants sont **ex æquo 5ᵉ**. Etc.
+
+### Filtre serveur par niveau (v14.12)
+
+Un tournoi n'apparaît dans la liste d'un joueur que si son niveau est compris
+entre `minLevel` et `maxLevel` du tournoi. Le back office peut lister tous les
+tournois via `GET /tournaments?all=1`.
+
+## Bracket arbre persistant (v14.12)
+
+Chaque tournoi porte maintenant un **arbre bracket** (`bracketTree`) mis à
+jour **en direct** à chaque fin de match :
+
+- Round 1 alimenté depuis les seeds (ordre d'inscription).
+- À chaque match terminé, le gagnant est propagé au round suivant.
+- Toutes les données sont sauvegardées : `matchId`, `gameId`, scores,
+  timings, gagnant.
+- Consultable à tout moment via `GET /tournaments/:id/bracket` (refusé
+  pour les tournois UPCOMING — pas encore d'arbre).
+
+## Vue « coupe du monde » (v14.13)
+
+Un nouvel écran `TournamentBracketScreen` (route `tournament-bracket?id=X`)
+affiche le bracket comme un tableau de coupe du monde :
+
+- **Colonnes rounds** de gauche à droite (Round 1 → Finale).
+- **Cartes matchs** empilées verticalement, centrées entre leurs enfants.
+- **Connecteurs SVG bézier** entre chaque match et son parent.
+- **Gagnant en surbrillance** avec la couleur du tournoi.
+- **Cliquable** vers le replay du match si `gameId` disponible.
+- Header avec icône, nom, format, capacité.
+
+Accès depuis TournamentScreen :
+- Vue **LIVE** : bouton or « ▶ Voir l'arbre » en haut.
+- Vue **FINISHED** : bouton blanc « ▶ Voir l'arbre complet » sous le podium.
+- Vue **UPCOMING** : pas d'accès (aucun bracket construit).
+
+## Types de la table éphémère (v14.11 / v14.14)
+
+Chaque table live a un nouveau champ `origin` :
+- `user` — créée par un joueur (partie libre).
+- `match` — éphémère, créée par matchLiveService pour un match compétition.
+- `tournament` — éphémère, créée pour un match de tournoi.
+
+Utilisé pour :
+- Marquer la Game archivée avec `mode: 'competition'`.
+- Exclure les tables de match/tournoi des lobbies publics.
+- Thème PixiTable coloré selon le format (acier=bleu, hybride=or, royal=rouge).

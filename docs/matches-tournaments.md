@@ -164,3 +164,54 @@ Rejeu d'une partie archivée avec **vitesses 0.5× / 1× / 2× / 4×**, **pause/
 Comme demandé, **le back office admin** (création/publication/annulation de tournois) est hors périmètre v14. Le seed inclut 4 tournois de démo (1 par statut) pour valider tous les écrans immédiatement. Le back office pourra être branché sur les endpoints existants et un futur `admin.controller.ts` sans refactoring.
 
 Le **runner temps-réel HYBRID/ROYAL** est implémenté (v14.4) via `matchLiveService` qui convertit un Match en Table éphémère et délègue à `liveGameService`. Voir `docs/match-live-runner.md` pour les détails du cycle de vie.
+
+---
+
+## Changements v14.11 → v14.14
+
+### Tournoi enrichi (v14.12)
+
+Le modèle `Tournament` a été enrichi de :
+- `description`, `color`, `icon` — habillage visuel
+- `minLevel`, `maxLevel` — critères d'accès
+- `prizesByPosition[]` — remplace `rounds[]` comme standard des gains
+- `bracketTree` — arbre persistant embarqué dans le document (rounds → matches → slots)
+- `participants[].substituteRobotId`, `finalPosition`, `prizeAwarded`
+
+Les **positions finales** respectent les règles ex æquo du bracket direct :
+capacity=16 → rangs [1, 2, 3(×2), 5(×4), 9(×8)]. Le prix défini pour un rang est
+distribué à chaque occupant. Formule : `rank(perdants round R) = capacity / 2^R + 1`.
+
+### Hooks fin de match (v14.12)
+
+Le `match.liveRunner.ts` et `match.headlessRunner.ts` appellent maintenant
+`tournamentService.recordMatchResult()` à chaque match terminé s'il fait
+partie d'un tournoi. Le service :
+- met à jour le nœud dans `bracketTree` (score, gagnant, gameId) ;
+- propage le gagnant au round suivant (slotA ou slotB du parent) ;
+- si finale finie → calcule positions finales via `computeFinalPositions`,
+  distribue les gains via `walletService.credit` + `houseAccountingService`,
+  marque `winners[]` (top 3), statut = FINISHED.
+
+### Table éphémère marquée (v14.11)
+
+Nouveau champ `Table.origin` : `'user' | 'match' | 'tournament'`. Lu par
+`liveGameService.launch()` et propagé jusqu'à `persistFinishedGame()` qui
+choisit alors `mode: 'competition'` pour les origins match/tournament.
+
+### API tournois — nouveaux endpoints (v14.12/13)
+
+```
+POST   /tournaments/preview-economics    (accepte prizesByPosition OU rounds)
+POST   /tournaments                       (create draft ou publie)
+POST   /tournaments/:id/publish           (DRAFT → UPCOMING)
+GET    /tournaments/:id/bracket           (arbre coupe du monde)
+```
+
+### Frontend « coupe du monde » (v14.13)
+
+- Nouvel écran `TournamentBracketScreen` (route `tournament-bracket?id=X`)
+- Rendu SVG des connecteurs bézier entre rounds
+- Cartes matchs empilées verticalement, centrées entre leurs enfants
+- Cliquable vers le replay si `gameId` présent
+- Boutons d'accès depuis `TournamentScreen` en vues LIVE et FINISHED

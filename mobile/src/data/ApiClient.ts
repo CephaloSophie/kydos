@@ -130,6 +130,66 @@ export class ApiClient {
     return this.call<{ refunded: number }>(`/tournaments/${id}/leave`, { method: 'POST' });
   }
 
+  /* --- v14.13 — Bracket & création --------------------------------------- */
+
+  /** Arbre bracket persistant pour vue « coupe du monde ». Erreur si UPCOMING. */
+  getTournamentBracket(id: string) {
+    return this.call<{
+      tournamentId: string;
+      name: string;
+      format: string;
+      capacity: number;
+      status: string;
+      color: string;
+      icon: string;
+      bracket: {
+        rounds: Array<{
+          roundIndex: number;
+          label: string;
+          matches: Array<{
+            matchIndex: number;
+            matchId: string | null;
+            gameId: string | null;
+            slotA: { userId: string | null; seedIndex: number | null; displayName: string };
+            slotB: { userId: string | null; seedIndex: number | null; displayName: string };
+            winner: 'A' | 'B' | null;
+            scoreA: number | null;
+            scoreB: number | null;
+            startedAt: string | null;
+            finishedAt: string | null;
+          }>;
+        }>;
+        lastCompletedRound: number;
+        builtAt: string | null;
+      };
+      participants: Array<{ userId: string | { _id: string; username?: string }; finalPosition?: number | null; prizeAwarded?: number }>;
+      winners: string[];
+    }>(`/tournaments/${id}/bracket`);
+  }
+
+  /** Création d'un tournoi (draft si publishImmediately absent). */
+  createTournament(input: {
+    name: string;
+    format: 'DUO_STEEL' | 'HYBRID_ALLIANCE' | 'ROYAL_SQUARE';
+    capacity: 4 | 8 | 16 | 32 | 64 | 128;
+    entryFee: number;
+    startAt: string;
+    description?: string;
+    color?: string;
+    icon?: string;
+    minLevel?: number;
+    maxLevel?: number | null;
+    prizesByPosition?: Array<{ position: number; prize: number }>;
+    publishImmediately?: boolean;
+  }) {
+    return this.call<{ tournamentId: string }>('/tournaments', { method: 'POST', body: JSON.stringify(input) });
+  }
+
+  /** DRAFT → UPCOMING (visible aux joueurs). */
+  publishTournament(id: string) {
+    return this.call<{ published: true }>(`/tournaments/${id}/publish`, { method: 'POST' });
+  }
+
   // --- Games / replays ----------------------------------------------------
   listGames(scope: HistoryScope = 'mine', opts: { page?: number; kind?: string; mode?: string } = {}) {
     const params = new URLSearchParams({ scope, page: String(opts.page ?? 1) });

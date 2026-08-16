@@ -587,3 +587,153 @@ endpoints admin dédiés qui délèguent à `tournamentService`, `walletService`
 Le back office peut être développé de manière incrémentale : commencer par
 la liste des tournois + le formulaire de création, puis ajouter les autres
 pages selon les priorités opérationnelles.
+
+---
+
+# Nouveautés v14.11 → v14.14 — endpoints et modèle
+
+## Endpoints tournois enrichis (v14.12/13)
+
+### Créer un tournoi
+```
+POST /tournaments
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "name": "Coupe des Héros",
+  "format": "DUO_STEEL",
+  "capacity": 16,
+  "entryFee": 100,
+  "startAt": "2026-08-20T18:00:00Z",
+  "description": "Bracket rapide 16 duos robots. Ex æquo pour les demi.",
+  "color": "#c99c3f",
+  "icon": "♦",
+  "minLevel": 0,
+  "maxLevel": null,
+  "prizesByPosition": [
+    { "position": 1, "prize": 500 },
+    { "position": 2, "prize": 200 },
+    { "position": 3, "prize": 100 },
+    { "position": 5, "prize": 40 },
+    { "position": 9, "prize": 10 }
+  ],
+  "publishImmediately": false
+}
+→ 200 { "tournamentId": "..." }
+```
+
+`publishImmediately: false` → statut **DRAFT** (invisible aux joueurs).
+`publishImmediately: true` → statut **UPCOMING** direct (inscriptions ouvertes).
+
+**Validations serveur** (retour 400 avec message clair) :
+- `name` ≥ 3 caractères.
+- `capacity` ∈ {4, 8, 16, 32, 64, 128}.
+- `entryFee` ≥ 0.
+- `startAt` dans le futur (tolérance 60 s).
+- `format` connu ; **ROYAL_SQUARE refusé en tournoi** (arrive en v14.15).
+- `maxLevel` ≥ `minLevel` si les deux fournis.
+
+### Publier un draft
+```
+POST /tournaments/:id/publish
+→ 200 { "published": true }
+```
+Seul le créateur peut publier. DRAFT → UPCOMING.
+
+### Consulter le bracket en direct ou en fin
+```
+GET /tournaments/:id/bracket
+→ 200 {
+  tournamentId, name, format, capacity, status, color, icon,
+  bracket: {
+    rounds: [
+      {
+        roundIndex: 1,
+        label: "8es de finale",
+        matches: [
+          {
+            matchIndex: 0,
+            matchId, gameId,
+            slotA: { userId, seedIndex, displayName },
+            slotB: { ... },
+            winner: 'A' | 'B' | null,
+            scoreA, scoreB,
+            startedAt, finishedAt
+          }, ...
+        ]
+      }, ...
+    ],
+    lastCompletedRound: 2,
+    builtAt: "..."
+  },
+  participants: [...],
+  winners: ["userId1", "userId2", "userId3"]
+}
+```
+- 400 si statut UPCOMING (aucun bracket construit).
+- 404 si DRAFT et non-créateur.
+
+### Aperçu économie
+```
+POST /tournaments/preview-economics
+{
+  "capacity": 16,
+  "entryFee": 100,
+  "prizesByPosition": [
+    { "position": 1, "prize": 500 },
+    { "position": 2, "prize": 200 },
+    { "position": 3, "prize": 100 },
+    { "position": 5, "prize": 40 },
+    { "position": 9, "prize": 10 }
+  ]
+}
+→ 200 {
+  "economics": {
+    "totalCollected": 1600,
+    "totalPaid": 1140,
+    "houseNet": 460,
+    "breakdown": [
+      { "position": 1, "occupants": 1, "prizePerOccupant": 500, "totalPaidAtThisPosition": 500 },
+      { "position": 2, "occupants": 1, "prizePerOccupant": 200, "totalPaidAtThisPosition": 200 },
+      { "position": 3, "occupants": 2, "prizePerOccupant": 100, "totalPaidAtThisPosition": 200 },
+      { "position": 5, "occupants": 4, "prizePerOccupant": 40, "totalPaidAtThisPosition": 160 },
+      { "position": 9, "occupants": 8, "prizePerOccupant": 10, "totalPaidAtThisPosition": 80 }
+    ]
+  }
+}
+```
+
+Compat rétro : si `rounds: []` est fourni au lieu de `prizesByPosition`, le
+serveur calcule l'économie legacy.
+
+### Filtre par niveau utilisateur
+```
+GET /tournaments                        # filtre auto par level du user
+GET /tournaments?all=1                  # renvoie tout (mode admin)
+GET /tournaments?status=live            # filtre par statut
+```
+
+## Modèle Tournament — nouveaux champs (v14.12)
+
+Cf. `server/src/modules/tournaments/tournament.model.ts` :
+
+| Champ | Type | Utilité |
+|---|---|---|
+| `description` | string ≤ 500 | Texte marketing affiché sur la carte |
+| `color` | string (hex) | Palette de la carte (défaut `#e6c46a`) |
+| `icon` | string | Enseigne ou emoji |
+| `minLevel`, `maxLevel` | number, number\|null | Critères d'accès filtrés côté serveur |
+| `prizesByPosition` | `[{position, prize}]` | Le nouveau standard des gains |
+| `bracketTree` | embed | Arbre persistant mis à jour à chaque fin de match |
+| `participants[].substituteRobotId` | ObjectId | Robot de secours (v14.5, ajouté au join tournoi en v14.12) |
+| `participants[].finalPosition` | number | Rang final calculé à la fin |
+| `participants[].prizeAwarded` | number | Prix versé (0 si pas dans les places rémunérées) |
+
+## Table éphémère `origin` (v14.11)
+
+`Table.origin` : `'user' | 'match' | 'tournament'`. Utilisé pour :
+
+- Marquer la Game archivée avec `mode: 'competition'` si origin ≠ user.
+- Filtrer les tables publiques (les tables match/tournament sont invisibles).
+- Distinguer dans l'historique compétition vs partie libre.

@@ -151,7 +151,13 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
             h('div', { class: 'title', style: { fontSize: '13px' } }, 'Tournoi en cours'),
             h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', marginTop: '3px' } },
               `${alive.length} survivant(s) \u00b7 ${totalRounds} rounds au total`)),
-          h('span', { class: 'live-chip__dot' }))),
+          h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
+            h('button', {
+              class: 'btn btn--sm',
+              style: { background: 'var(--c-gold)', color: '#1a0f00', fontWeight: '700' },
+              onClick: () => router.go(`tournament-bracket?id=${t._id}`),
+            }, '\u25b6 Voir l\u2019arbre'),
+            h('span', { class: 'live-chip__dot' })))),
       // Bracket (une colonne par round)
       h('div', { style: { display: 'grid', gridTemplateColumns: `repeat(${totalRounds}, 1fr)`, gap: '10px' } },
         ...Array.from({ length: totalRounds }, (_, i) => {
@@ -187,7 +193,13 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
           ? h('div', { style: { fontSize: '14px', opacity: '.95' } }, `Champion : ${winnerName(winners[0])}`)
           : h('div', {}, ''),
         winners.length > 1 ? h('div', { style: { fontSize: '12px', opacity: '.85', marginTop: '4px' } },
-          `Finalistes : ${winners.slice(0, 3).map(winnerName).join(', ')}`) : h('div', {}, '')),
+          `Finalistes : ${winners.slice(0, 3).map(winnerName).join(', ')}`) : h('div', {}, ''),
+        // v14.13 — Accès au bracket coupe du monde depuis le podium.
+        h('button', {
+          class: 'btn btn--sm',
+          style: { marginTop: '14px', background: '#fff', color: '#1a0f00', fontWeight: '700' },
+          onClick: () => router.go(`tournament-bracket?id=${t._id}`),
+        }, '\u25b6 Voir l\u2019arbre complet')),
       // Récap gains
       h('div', { class: 'card' },
         h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains distribu\u00e9s par tour'),

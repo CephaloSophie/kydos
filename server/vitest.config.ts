@@ -34,6 +34,10 @@ export default defineConfig({
           'src/modules/matches/matchFormat.test.ts',
           'src/modules/matchmaking/queue.test.ts',
           'src/modules/tournaments/tournament.test.ts',
+          // v14.14 : bracket avancé (scénarios complets, idempotence multi-round)
+          // et filtre mode du gameQuery service (avec stubs Mongoose).
+          'src/modules/tournaments/bracket-advance.test.ts',
+          'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',
     testTimeout: 15000,

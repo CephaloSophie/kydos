@@ -428,3 +428,47 @@ Typecheck complet : `npm run typecheck`. Démo moteur : `npm --workspace belote-
 - **Récompenses** : crédit par joueur en updates séparés (non atomiques) et calcul encore partiel
   (capots/contrées comptés à zéro). À durcir avant toute vraie compétition classée.
 - Le **multijoueur en ligne** reste le chemin le moins éprouvé en conditions réelles.
+
+---
+
+## Nouveautés v14.11 → v14.14
+
+### v14.11 · Refonte accueil + historique filtré
+- Bannière compétition remontée en haut de l'accueil, dot coloré selon le
+  type de table (or/bleu/rouge), bouton « ▶ Rejoindre ».
+- 4 cartes features au lieu de 3 (ajout « À propos de kydos »), tiles bas
+  plus hautes.
+- Écran Compétitions : 3 formats + tournois en carrousels horizontaux
+  extensibles.
+- Historique filtrable par **mode** (compétition / table en ligne /
+  entraînement) croisé avec **kind** (hybride/acier/royal/local).
+- Nouveau champ `Table.origin` (`user | match | tournament`) — les Games
+  archivées sont désormais correctement marquées `mode: 'competition'`.
+
+### v14.12 · Tournois enrichis
+- Modèle Tournament enrichi : `color`, `icon`, `description`, `minLevel`,
+  `maxLevel`, `prizesByPosition[]`, `bracketTree` (arbre embarqué).
+- Économie **par position finale avec ex æquo** (2× 3ᵉ pas de 4ᵉ, 4× 5ᵉ, etc.).
+- Bracket persistant mis à jour à chaque fin de match via hook
+  `tournamentService.recordMatchResult()` appelé par les runners.
+- Nouveaux endpoints : `POST /tournaments`, `POST /tournaments/:id/publish`,
+  `GET /tournaments/:id/bracket`, filtre auto par level utilisateur.
+- 22 tests unitaires supplémentaires sur bracket.ts + economics.ts.
+
+### v14.13 · Vue « coupe du monde »
+- Nouvel écran `TournamentBracketScreen` (route `tournament-bracket?id=X`).
+- Rendu SVG des connecteurs bézier entre rounds.
+- Cartes matchs empilées, gagnant highlight, cliquable vers replay.
+- Boutons d'accès depuis `TournamentScreen` LIVE et FINISHED.
+
+### v14.14 · Documentation & tests
+- MàJ complète des documents : competitions-fonctionnel, back-office-guide,
+  matches-tournaments, api-reference, ai/API.
+- Collections Postman enrichies (TNR + mobile) avec nouveaux endpoints
+  tournois, variables `tournamentId`/`substituteRobotId`/`robotId1/2`.
+- Nouveaux tests unitaires : scénarios complets bracket capacity=8 et 16,
+  filtre mode gameQuery avec stubs Mongoose.
+- TNR serveur : **4/4 étapes vertes, 288 tests, couverture 35.25 %**.
+
+Voir `docs/competitions-fonctionnel.md` (section « Nouveautés v14.11 → v14.14 »)
+et `docs/back-office-guide.md` (section endpoints tournois enrichis).
