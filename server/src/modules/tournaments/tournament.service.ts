@@ -17,7 +17,7 @@ import { walletService } from '../wallet/wallet.service.js';
 import { RobotModel } from '../robot/robot.model.js';
 import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
-import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions } from './bracket.js';
+import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions, formTeamSeeds } from './bracket.js';
 
 export class TournamentService {
   /**
@@ -91,10 +91,11 @@ export class TournamentService {
     if (input.entryFee < 0) throw badRequest('Buy-in n\u00e9gatif interdit.');
     if (!input.startAt || input.startAt.getTime() < Date.now() - 60_000) throw badRequest('Date de d\u00e9but dans le pass\u00e9.');
     if (!getMatchFormatRules(input.format)) throw badRequest('Format inconnu.');
-    // v14.12 — ROYAL_SQUARE (4 humains simultanés) n'est pas encore intégré
-    // à l'arbre bracket. Prévu en v14.13. On refuse proprement à la création.
-    if (input.format === MatchFormat.ROYAL_SQUARE) {
-      throw badRequest('Le format Carr\u00e9e royale n\u2019est pas encore support\u00e9 en tournoi (arriv\u00e9e en v14.13).');
+    // v14.14 — Carrée royale : le bracket se joue en ÉQUIPES de 2 humains
+    // (capacity/2 feuilles). On exige au moins 4 humains (2 équipes) ; capacity
+    // étant une puissance de 2, capacity/2 en est une aussi (bracket propre).
+    if (input.format === MatchFormat.ROYAL_SQUARE && input.capacity < 4) {
+      throw badRequest('Carrée royale : au moins 4 joueurs requis (2 équipes).');
     }
     if (input.minLevel != null && input.minLevel < 0) throw badRequest('minLevel < 0');
     if (input.maxLevel != null && input.minLevel != null && input.maxLevel < input.minLevel) {
@@ -256,13 +257,30 @@ export class TournamentService {
     t.participants.sort((a: any, b: any) => a.joinedAt.getTime() - b.joinedAt.getTime());
     t.participants.forEach((p: any, i: number) => { p.seedIndex = i; });
 
-    // v14.12 — Construction de l'arbre bracket. Seeds = participants ordonnés,
-    // displayName renseigné pour affichage direct (dénormalisation).
-    const seeds = t.participants.map((p: any) => ({
+    // Seeds individuels (userId + displayName dénormalisé pour affichage).
+    const indiv = t.participants.map((p: any) => ({
       userId: String((typeof p.userId === 'object' && p.userId) ? p.userId._id : p.userId),
       displayName: (typeof p.userId === 'object' && p.userId?.username) ? p.userId.username : 'Joueur',
     }));
-    const tree = buildInitialBracket(t.capacity as any, seeds);
+
+    // v14.14 — Carrée royale : on forme des ÉQUIPES de 2 humains, tirées
+    // aléatoirement, fixes jusqu'à la fin. Le bracket se joue alors sur
+    // capacity/2 feuilles (chaque slot = une équipe). Les autres formats
+    // (Duo, Hybrid) gardent un bracket 1 vs 1 sur `capacity` feuilles.
+    let seeds; let leafCount: number;
+    if (t.format === MatchFormat.ROYAL_SQUARE) {
+      const shuffled = [...indiv];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      seeds = formTeamSeeds(shuffled);
+      leafCount = seeds.length;               // capacity / 2 équipes (chaque slot = 1 équipe)
+    } else {
+      seeds = indiv;
+      leafCount = t.capacity;
+    }
+    const tree = buildInitialBracket(leafCount, seeds);
     (t as any).bracketTree = tree;
 
     t.status = TournamentStatus.LIVE;
@@ -295,8 +313,9 @@ export class TournamentService {
     if (!found) return;                      // match pas dans ce bracket
     const round = tree.rounds[found.roundIndex - 1];
     const bm = round.matches[found.matchIndex];
-    // Déterminer quel slot est le gagnant.
-    const winner: 'A' | 'B' = String(bm.slotA.userId) === String(input.winnerUserId) ? 'A' : 'B';
+    // Déterminer quel slot est le gagnant (Carrée royale : vérifier les 2 coéquipiers).
+    const winner: 'A' | 'B' = (String(bm.slotA.userId) === String(input.winnerUserId)
+      || String((bm.slotA as any).userId2) === String(input.winnerUserId)) ? 'A' : 'B';
 
     const result = advanceBracket(tree as any, {
       roundIndex: found.roundIndex,
@@ -312,8 +331,9 @@ export class TournamentService {
     // Marquer l'éliminé dans participants (utile pour affichage rapide et
     // pour la logique 1-tournoi-jour dans les stats).
     const loserSlot = winner === 'A' ? bm.slotB : bm.slotA;
-    if (loserSlot.userId) {
-      const p = t.participants.find((pp: any) => String(pp.userId) === String(loserSlot.userId));
+    for (const luid of [loserSlot.userId, (loserSlot as any).userId2]) {
+      if (!luid) continue;
+      const p = t.participants.find((pp: any) => String(pp.userId) === String(luid));
       if (p && !p.eliminatedAtRound) p.eliminatedAtRound = found.roundIndex;
     }
 
@@ -331,7 +351,9 @@ export class TournamentService {
    */
   async #finalizeTournament(t: any, tree: any): Promise<void> {
     const capacity = t.capacity as number;
-    const positions = computeFinalPositions(tree, capacity);
+    // v14.14 — Carrée royale : rangs calculés sur les ÉQUIPES (capacity/2 feuilles).
+    const leaves = t.format === MatchFormat.ROYAL_SQUARE ? capacity / 2 : capacity;
+    const positions = computeFinalPositions(tree, leaves);
 
     // Distribuer les prix : soit prizesByPosition (v14.12), soit rounds (legacy).
     const useByPosition = Array.isArray(t.prizesByPosition) && t.prizesByPosition.length > 0;
@@ -341,7 +363,7 @@ export class TournamentService {
     } else {
       // Legacy : convertit rounds vers positions équivalentes.
       // Round R (perdants) → rang capacity/2^R + 1. Vainqueur (finale gagnée) → rang 1.
-      const totalRounds = Math.log2(capacity);
+      const totalRounds = Math.log2(leaves);
       for (const rp of (t.rounds || [])) {
         // rp.round est le round survécu par le gagnant → il reçoit rp.prize.
         // On convertit : les survivants au round R (avant élimination) sont

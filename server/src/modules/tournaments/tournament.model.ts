@@ -90,6 +90,10 @@ const BracketSlotSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     seedIndex: { type: Number, default: null },
     displayName: { type: String, default: '' },
+    // v14.14 — Carrée royale : 2ᵉ coéquipier de l'équipe occupant ce slot
+    // (null pour les formats 1 vs 1 Duo/Hybrid où un slot = un seul joueur).
+    userId2: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    displayName2: { type: String, default: '' },
   },
   { _id: false },
 );

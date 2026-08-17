@@ -210,6 +210,8 @@ const BracketSlotSchema = new Schema(
     userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     seedIndex: { type: Number, default: null },
     displayName: { type: String, default: '' },
+    userId2: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    displayName2: { type: String, default: '' },
   },
   { _id: false },
 );

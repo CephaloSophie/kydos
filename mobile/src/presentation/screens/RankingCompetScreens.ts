@@ -84,9 +84,6 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
 
   const statusEl = h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)', minHeight: '14px', marginTop: '10px', textAlign: 'center' } });
 
-  /** Choisit N robots pour l'inscription (les mieux notés d'abord). */
-  const pickRobots = (n: number): string[] => ctx.session.robots.slice(0, n).map((r) => r.id);
-
   const enqueue = async (f: FormatCard) => {
     if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
     // Si déjà en file ou match en cours pour ce format, aller directement
@@ -177,7 +174,7 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   interface TournamentRow {
     _id: string; name: string; format: string; status: string;
     capacity: number; entryFee: number; startAt: string;
-    participants?: unknown[];
+    participants?: { userId: string }[];
   }
   let currentTournamentFilter: 'upcoming' | 'live' | 'finished' = 'upcoming';
   // Host container : sera rempli par un Carousel à chaque loadTournaments.
@@ -203,6 +200,8 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   const renderTournamentCard = (t: TournamentRow) => {
     const participantCount = (t.participants ?? []).length;
     const canJoin = t.status === 'upcoming';
+    const meId = ctx.session.profile?.id;
+    const isRegistered = !!meId && (t.participants ?? []).some((p) => String(p.userId) === String(meId));
     const rules = FORMATS.find((f) => f.id === t.format);
     const style = STATUS_COLORS[t.status] ?? STATUS_COLORS.finished;
     // v14.11 : color/icon du modèle si présents (arrive en v14.12), sinon fallback format.
@@ -235,34 +234,34 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
         h('span', { class: 'mono compet-tournament-card__stat' }, `${participantCount}/${t.capacity}`),
         h('span', { class: 'mono compet-tournament-card__stat compet-tournament-card__stat--fee' }, `${t.entryFee} \u25c6`)),
       // Bouton (inscription si upcoming, sinon liseré discret)
-      canJoin
+      canJoin && isRegistered
         ? h('button', {
             class: 'btn btn--sm compet-tournament-card__join',
-            onClick: (e: Event) => { e.stopPropagation(); void joinTournament(t, rules?.robotsPerPlayer ?? 0); },
-          }, 'S\u2019inscrire')
-        : h('div', { class: 'mono compet-tournament-card__cta' }, 'Voir \u203a'),
+            style: { background: 'rgba(224,135,149,.18)', color: '#e08795', borderColor: 'rgba(224,135,149,.45)' },
+            onClick: (e: Event) => { e.stopPropagation(); void leaveTournament(t); },
+          }, 'Se d\u00e9sinscrire')
+        : canJoin
+          ? h('button', {
+              class: 'btn btn--sm compet-tournament-card__join',
+              onClick: (e: Event) => { e.stopPropagation(); router.go(`tournament-enroll?id=${t._id}`); },
+            }, 'S\u2019inscrire')
+          : h('div', { class: 'mono compet-tournament-card__cta' }, 'Voir \u203a'),
     ) as HTMLElement;
     card.style.setProperty('--card-color', cardColor);
     return card;
   };
 
-  const joinTournament = async (t: TournamentRow, robotsRequired: number) => {
+  const leaveTournament = async (t: TournamentRow) => {
     if (!api.isAuthenticated()) { tournamentsMsg.textContent = '\u2717 Connexion requise'; return; }
-    const robotIds = pickRobots(robotsRequired);
-    if (robotIds.length < robotsRequired) {
-      tournamentsMsg.textContent = `\u2717 Il vous faut ${robotsRequired} robot(s) pour ce tournoi.`;
-      return;
-    }
     try {
-      await api.joinTournament(t._id, robotIds);
+      const r = await api.leaveTournament(t._id);
       await ctx.session.refreshWallet();
-      tournamentsMsg.textContent = `\u2713 Inscription \u00e0 « ${t.name} » confirm\u00e9e.`;
+      tournamentsMsg.textContent = `\u2713 D\u00e9sinscrit de « ${t.name} » — +${r.refunded} ◆ rembours\u00e9s.`;
       void loadTournaments();
     } catch (e) {
       tournamentsMsg.textContent = `\u2717 ${(e as Error).message}`;
     }
   };
-
   const loadTournaments = async () => {
     try {
       const r = await api.listTournaments(currentTournamentFilter);

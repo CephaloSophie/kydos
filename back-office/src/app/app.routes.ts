@@ -18,6 +18,7 @@ export const routes: Routes = [
       { path: 'promos', loadComponent: () => import('./pages/promos/promos.component').then(m => m.PromosComponent) },
       { path: 'accounting', loadComponent: () => import('./pages/accounting/accounting.component').then(m => m.AccountingComponent) },
       { path: 'monitor', loadComponent: () => import('./pages/monitor/monitor.component').then(m => m.MonitorComponent) },
+      { path: 'help', loadComponent: () => import('./pages/help/help.component').then(m => m.HelpComponent) },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

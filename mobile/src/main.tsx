@@ -39,6 +39,7 @@ import { TournamentScreen } from './presentation/screens/TournamentScreen';
 import { TournamentBracketScreen } from './presentation/screens/TournamentBracketScreen';
 import { MatchmakingScreen } from './presentation/screens/MatchmakingScreen';
 import { MatchEnrollScreen } from './presentation/screens/MatchEnrollScreen';
+import { TournamentEnrollScreen } from './presentation/screens/TournamentEnrollScreen';
 import { PublicGamesScreen } from './presentation/screens/PublicGamesScreen';
 import { WalletScreen } from './presentation/screens/WalletScreen';
 import { TeamsScreen, MyTeamScreen } from './presentation/screens/TeamsScreens';
@@ -109,6 +110,7 @@ router
   .register('tournament-bracket', TournamentBracketScreen, { title: 'Bracket' })
   .register('matchmaking', MatchmakingScreen, { title: 'Recherche…' })
   .register('enroll', MatchEnrollScreen, { title: 'Inscription' })
+  .register('tournament-enroll', TournamentEnrollScreen, { title: 'Inscription tournoi' })
   .register('public-games', PublicGamesScreen, { title: 'Parties publiques' })
   .register('gamestats', GameStatsScreen,    { title: 'Statistiques' })
   .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)' })
