@@ -4,6 +4,36 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
 
 ---
 
+## v16 — Paramètres de jeu configurables, gestion Match rapide, refresh, seeds
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demande** : passer en v16 (supprimer `web`), pouvoir régler manches/score cible (et tous les paramètres table/session) à la création d'un tournoi, gérer les MATCH RAPIDE au back-office avec affichage dynamique, refresh manuel (pas de websocket), tests, et régénérer les seeds.
+
+### A. Housekeeping v16
+- Suppression du workspace `web/` (plus utilisé, aucune dépendance) ; nettoyage `package.json`, `Makefile`, `scripts/`.
+- Versions bumpées à **16.0.0** partout (+ `APP_VERSION` mobile).
+
+### B. Paramètres de jeu configurables (tournois)
+- `PartieConfig.baseTarget/labelTarget` (belote-core) passent de littéraux à `number` (le moteur les lisait déjà partout). Tests unitaires ajoutés.
+- `Table.config` gagne `baseTarget/labelTarget` ; `liveGame` les lit.
+- `Tournament.gameConfig` (manches, score cible, temps par tour, thème, signaux…) appliqué à chaque match via l'orchestrateur → `provision` / `headlessRunner`.
+- Formulaire back-office : section « Paramètres de jeu ».
+
+### C. Gestion des MATCH RAPIDE
+- Config persistée `MatchFormatConfig` (mise, gain, manches, score cible, habillage, actif, ordre), seedée depuis le catalogue. Règles structurelles inchangées.
+- `matchFormatConfig.service.getEffective` fusionne structure + config ; rake effectif = rake catalogue + delta (préserve le 50 du Duo). Matchmaking et settle utilisent la config (quick match uniquement ; tournois inchangés).
+- Endpoint `GET /matches/formats` ; page back-office « Match rapide » + entrée menu.
+- Mobile : `CompetScreen` rend les formats dynamiquement (carrousel horizontal, nombre variable), repli statique hors-ligne.
+
+### D. Refresh manuel back-office
+- Icône « ↻ Actualiser » sur monitoring, détail tournoi, match rapide ; suppression des auto-poll (pas de websocket).
+
+### E. Tests & seeds
+- core 58 · server 153 — tous verts. Nouveaux tests : score cible configurable + `effectiveHouseRake`.
+- Seed régénéré v16 : `ameur`/`hamid` en rôle `admin` (back-office), tournois en `prizesByPosition` + `gameConfig`, config Match rapide initialisée.
+
+---
+
 ## Commit `<progression live + scores>` — fix: progression des tournois live + scores en direct
 
 **Branche** : `claude/back-office-angular-mhtcd8`

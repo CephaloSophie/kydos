@@ -32,6 +32,7 @@ npm run seed:admin -- monadmin motdepasse admin&#64;kydos.local</pre>
   {{ '{' }} $set: {{ '{' }} role: "admin" {{ '}' }} {{ '}' }}
 )</pre>
         <p class="muted">Rôles possibles : <code>user</code> (défaut), <code>admin</code> (accès back-office), <code>banned</code> (bloqué).</p>
+        <p class="muted">Le seed de l'app (<code>npm run seed</code> côté serveur de jeu) crée aussi <code>ameur</code> et <code>hamid</code> en <code>admin</code> (mot de passe <code>belote123</code>).</p>
       </section>
 
       <!-- Lancement -->
@@ -74,6 +75,7 @@ npx ng serve --proxy-config proxy.conf.json</pre>
           <li><strong>Publier</strong> : brouillon → à venir (inscriptions ouvertes).</li>
           <li><strong>Annuler</strong> : à venir → annulé, rembourse tous les inscrits.</li>
           <li><strong>Supprimer</strong> : brouillon uniquement.</li>
+          <li><strong>Paramètres de jeu</strong> : nombre de manches, score cible par manche, temps par tour, thème… appliqués à chaque match du tournoi.</li>
         </ul>
         <p class="muted mono">GET/POST/PUT /admin/tournaments · POST /admin/tournaments/:id/publish · /cancel · POST /admin/tournaments/preview-economics</p>
       </section>
@@ -99,6 +101,18 @@ npx ng serve --proxy-config proxy.conf.json</pre>
           <li><strong>Supprimer</strong> : définitif.</li>
         </ul>
         <p class="muted mono">GET/POST/PUT/DELETE /admin/promos</p>
+      </section>
+
+      <!-- Match rapide -->
+      <section class="card">
+        <div class="card-header"><h3>⚡ Match rapide</h3></div>
+        <p>Configure les 3 formats de « Match rapide » proposés dans Compétitions : <strong>mise</strong>, <strong>gain</strong>, <strong>nombre de manches</strong>, <strong>score cible</strong>, habillage et activation.</p>
+        <ul>
+          <li>Le <em>net kydos / match</em> se recalcule en direct (rake catalogue + delta mise/gain).</li>
+          <li>Un format inactif n'apparaît pas côté joueur.</li>
+          <li>L'app mobile récupère ces réglages dynamiquement (carrousel horizontal).</li>
+        </ul>
+        <p class="muted mono">GET/PUT /admin/match-formats · GET /matches/formats (mobile)</p>
       </section>
 
       <!-- Comptabilité -->
