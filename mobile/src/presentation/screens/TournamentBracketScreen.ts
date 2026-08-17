@@ -54,8 +54,8 @@ interface BracketData {
         matchIndex: number;
         matchId: string | null;
         gameId: string | null;
-        slotA: { userId: string | null; seedIndex: number | null; displayName: string };
-        slotB: { userId: string | null; seedIndex: number | null; displayName: string };
+        slotA: { userId: string | null; seedIndex: number | null; displayName: string; userId2?: string | null; displayName2?: string };
+        slotB: { userId: string | null; seedIndex: number | null; displayName: string; userId2?: string | null; displayName2?: string };
         winner: 'A' | 'B' | null;
         scoreA: number | null;
         scoreB: number | null;
@@ -212,6 +212,12 @@ export function TournamentBracketScreen(ctx: AppContext): HTMLElement {
 
     const slot = (slot: typeof m.slotA, isWinner: boolean, isLoser: boolean, score: number | null) => {
       const empty = !slot.userId;
+      // v14.14 — Carrée royale : un slot = une équipe de 2 (displayName & displayName2).
+      const label = empty
+        ? '—'
+        : slot.displayName2
+          ? `${slot.displayName || '?'} & ${slot.displayName2}`
+          : slot.displayName || `Seed ${slot.seedIndex ?? '?'}`;
       return h('div', {
         style: {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -225,7 +231,7 @@ export function TournamentBracketScreen(ctx: AppContext): HTMLElement {
           fontSize: '11px', fontWeight: isWinner ? '700' : '500',
           color: isWinner ? '#fff' : 'var(--c-text)',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1',
-        } }, empty ? '—' : slot.displayName || `Seed ${slot.seedIndex ?? '?'}`),
+        } }, label),
         h('span', { class: 'mono', style: {
           fontSize: '11px', fontWeight: '700', flexShrink: '0', marginLeft: '6px',
           color: isWinner ? cardColor : 'var(--c-text-mute)',

@@ -55,9 +55,25 @@ npx ng build
 
 Les fichiers statiques générés peuvent être servis par nginx, Apache ou tout serveur HTTP.
 
-## Créer un compte admin
+## Créer un compte admin (seed)
 
-Il n'y a pas de formulaire d'inscription admin. Définir le rôle manuellement dans MongoDB :
+Il n'y a pas de formulaire d'inscription admin — un compte doit porter le rôle `admin`.
+
+**Méthode recommandée — script seed :**
+
+```bash
+cd back-office/server
+
+# Identifiants par défaut (admin / admin123)
+npm run seed:admin
+
+# Ou identifiants personnalisés : <username> <password> <email>
+npm run seed:admin -- monadmin motdepasse admin@kydos.local
+```
+
+Si l'utilisateur existe déjà, son rôle passe à `admin` ; sinon il est créé. Le script lit `MONGO_URI` depuis `.env`.
+
+**Alternative — directement en MongoDB :**
 
 ```js
 db.users.updateOne(
@@ -66,7 +82,7 @@ db.users.updateOne(
 )
 ```
 
-Puis se connecter via l'interface `/login` avec les identifiants habituels.
+Puis se connecter via l'interface `/login`. Un **Guide** interne (menu latéral) documente chaque section du back-office.
 
 ## PM2 (production)
 

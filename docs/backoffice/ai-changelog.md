@@ -34,7 +34,39 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
    - L'inscription route vers `tournament-enroll` au lieu d'auto-sélectionner les robots.
 
 ### Note
-- Le format **Carrée royale en tournoi** reste bloqué à l'exécution côté serveur (`tournament.service.create` — bracket 4 humains simultanés prévu ultérieurement). La sélection du robot remplaçant est néanmoins gérée à l'inscription.
+- Le format **Carrée royale en tournoi** était encore bloqué à ce stade — débloqué au commit suivant.
+
+---
+
+## Commit `<carrée royale + guide>` — feat: Carrée royale en tournoi + guide back-office
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demande utilisateur** : Faire fonctionner la Carrée royale en tournoi, mettre à jour la doc, ajouter les instructions seed/admin, et ajouter au back-office l'info utile pour chaque controller.
+
+### Carrée royale en tournoi (bracket par équipes de 2)
+
+Modèle retenu (conforme au spec joueur) : les 4 humains d'un match royal forment 2 équipes de 2. Comme le bracket est en 1 vs 1, **chaque feuille du bracket = une équipe de 2 humains**, formée aléatoirement au démarrage et fixe jusqu'à la fin. Le bracket se joue donc sur `capacity / 2` feuilles.
+
+Serveur (`server/src/modules/tournaments`, `matches`) :
+- `bracket.ts` : slot de bracket étendu (`userId2`/`displayName2`) ; `buildInitialBracket(leafCount, seeds)` générique ; propagation et `computeFinalPositions` attribuent le rang aux 2 coéquipiers ; nouvelle fonction pure `formTeamSeeds`.
+- `economics.ts` : `tournamentEconomicsByPosition` accepte `leaves` + `teamSize` (royal : `leaves = capacity/2`, `teamSize = 2`) → chaque rang paie 2 humains par équipe.
+- `tournament.model.ts` : `BracketSlotSchema` porte `userId2`/`displayName2`.
+- `tournament.service.ts` : création royale débloquée (min. 4 joueurs) ; `startNow` mélange et forme les équipes ; `recordMatchResult` détecte le vainqueur sur les 2 coéquipiers ; finalisation calcule les rangs sur les équipes.
+- `tournament.orchestrator.ts` : branche royale de `#buildParticipants` (4 humains, 2 par équipe, robot remplaçant par joueur) ; provisionne une table live pour royal comme pour hybrid.
+- Tests : `royal-bracket.test.ts` (6 tests) — formation d'équipes, bracket, avance, rangs ex æquo, économie. **150 tests serveur au vert.**
+
+Mobile :
+- `TournamentBracketScreen.ts` : un slot affiche les 2 coéquipiers (`Nom & Nom`).
+- L'écran d'inscription (`TournamentEnrollScreen`) gère déjà le remplaçant royal.
+
+Back-office (économie admin correcte pour royal) :
+- `routes/tournaments.ts` : `computeEconomics(..., format)` applique `leaves`/`teamSize` pour royal ; `format` passé à la création et à `preview-economics`.
+- Angular : `previewEconomics(..., format)` envoie le format.
+
+### Guide back-office + seed
+
+- Nouvelle page **Guide** (`pages/help`, route `/help`, menu latéral) documentant chaque section (controller) : tournois, utilisateurs, promos, comptabilité, monitoring, sécurité/audit — avec règles, actions et endpoints — plus les instructions **seed admin** et de lancement.
+- `README.md` : ajout de la méthode `npm run seed:admin`.
 
 ---
 

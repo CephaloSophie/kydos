@@ -38,9 +38,9 @@ export class TournamentService {
     return this.http.delete<{ deleted: boolean }>(`${this.apiUrl}/${id}`);
   }
 
-  previewEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[]) {
+  previewEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[], format?: string) {
     return this.http.post<{ economics: EconomicsResult }>(`${this.apiUrl}/preview-economics`, {
-      capacity, entryFee, prizesByPosition,
+      capacity, entryFee, prizesByPosition, format,
     });
   }
 }

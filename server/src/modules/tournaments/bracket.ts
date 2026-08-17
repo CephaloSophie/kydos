@@ -25,14 +25,20 @@
  *     (1, 2, 3, 5, 9, …). Chaque occupant du rang reçoit le prix.
  * ========================================================================== */
 
-import type { TournamentCapacity } from './tournament.model.js';
-
 /* ── Structures internes (miroir simplifié des schemas Mongo) ─────────────── */
 
 export interface BracketSlot {
   userId: string | null;
   seedIndex: number | null;
   displayName: string;
+  /**
+   * v14.14 — Carrée royale : un slot du bracket représente une ÉQUIPE de 2
+   * humains (formés aléatoirement au démarrage, fixes jusqu'à la fin). Le
+   * second coéquipier est stocké ici. `null` pour les formats en 1 vs 1
+   * (Duo d'acier, Alliance hybride) où un slot = un seul participant.
+   */
+  userId2?: string | null;
+  displayName2?: string;
 }
 
 export interface BracketMatch {
@@ -148,6 +154,32 @@ export function positionForLoserAtRound(capacity: number, roundIndex: number): n
 export interface SeedInput {
   userId: string;
   displayName: string;
+  /** v14.14 — 2ᵉ coéquipier pour un seed « équipe » (Carrée royale). */
+  userId2?: string;
+  displayName2?: string;
+}
+
+/**
+ * v14.14 — Forme des ÉQUIPES de 2 à partir d'une liste de participants
+ * (Carrée royale). Fonction PURE : le mélange aléatoire éventuel est fait
+ * en amont par l'appelant. Paire les participants consécutifs :
+ *   [p0,p1,p2,p3] → [{p0,p1}, {p2,p3}].
+ * Lève si le nombre de participants est impair.
+ */
+export function formTeamSeeds(participants: { userId: string; displayName: string }[]): SeedInput[] {
+  if (participants.length % 2 !== 0) {
+    throw new Error(`Nombre de participants impair (${participants.length}) : impossible de former des équipes de 2.`);
+  }
+  const seeds: SeedInput[] = [];
+  for (let i = 0; i < participants.length; i += 2) {
+    seeds.push({
+      userId: participants[i].userId,
+      displayName: participants[i].displayName,
+      userId2: participants[i + 1].userId,
+      displayName2: participants[i + 1].displayName,
+    });
+  }
+  return seeds;
 }
 
 /**
@@ -161,34 +193,42 @@ export interface SeedInput {
  * seed[3], etc. Le gagnant du match k va vers le match `floor(k/2)` du
  * round suivant, sur le slot A si k pair, B si k impair.
  */
-export function buildInitialBracket(capacity: TournamentCapacity, seeds: SeedInput[]): BracketTree {
-  if (seeds.length !== capacity) {
-    throw new Error(`Nombre de seeds (${seeds.length}) != capacity (${capacity})`);
+export function buildInitialBracket(leafCount: number, seeds: SeedInput[]): BracketTree {
+  if (seeds.length !== leafCount) {
+    throw new Error(`Nombre de seeds (${seeds.length}) != nombre de feuilles (${leafCount})`);
   }
-  const totalRounds = roundCountForCapacity(capacity);
+  // v14.14 — `leafCount` = nombre de feuilles du bracket. Pour les formats
+  // 1 vs 1 (Duo/Hybrid) c'est la capacité en joueurs ; pour Carrée royale
+  // c'est le nombre d'ÉQUIPES (capacity / 2). Chaque seed peut porter 2 users.
+  const totalRounds = roundCountForCapacity(leafCount);
   const rounds: BracketRound[] = [];
+  const emptySlot = (): BracketSlot => ({ userId: null, seedIndex: null, displayName: '', userId2: null, displayName2: '' });
+  const seedSlot = (idx: number): BracketSlot => ({
+    userId: seeds[idx].userId, seedIndex: idx, displayName: seeds[idx].displayName,
+    userId2: seeds[idx].userId2 ?? null, displayName2: seeds[idx].displayName2 ?? '',
+  });
 
   // Round 1 : alimenté depuis seeds.
   const round1Matches: BracketMatch[] = [];
-  for (let i = 0; i < capacity / 2; i++) {
+  for (let i = 0; i < leafCount / 2; i++) {
     const parentIndex = Math.floor(i / 2);
     round1Matches.push({
       matchIndex: i,
       matchId: null,
       gameId: null,
-      slotA: { userId: seeds[i * 2].userId, seedIndex: i * 2, displayName: seeds[i * 2].displayName },
-      slotB: { userId: seeds[i * 2 + 1].userId, seedIndex: i * 2 + 1, displayName: seeds[i * 2 + 1].displayName },
+      slotA: seedSlot(i * 2),
+      slotB: seedSlot(i * 2 + 1),
       winner: null, scoreA: null, scoreB: null,
       startedAt: null, finishedAt: null,
       nextMatchIndex: totalRounds > 1 ? parentIndex : null,
       nextSlot: totalRounds > 1 ? (i % 2 === 0 ? 'A' : 'B') : null,
     });
   }
-  rounds.push({ roundIndex: 1, label: labelForRound(capacity, 1), matches: round1Matches });
+  rounds.push({ roundIndex: 1, label: labelForRound(leafCount, 1), matches: round1Matches });
 
   // Rounds suivants : matchs vides (les slots seront remplis par advanceBracket).
   for (let r = 2; r <= totalRounds; r++) {
-    const matchCount = capacity / Math.pow(2, r);
+    const matchCount = leafCount / Math.pow(2, r);
     const isLastRound = r === totalRounds;
     const matches: BracketMatch[] = [];
     for (let i = 0; i < matchCount; i++) {
@@ -196,15 +236,15 @@ export function buildInitialBracket(capacity: TournamentCapacity, seeds: SeedInp
         matchIndex: i,
         matchId: null,
         gameId: null,
-        slotA: { userId: null, seedIndex: null, displayName: '' },
-        slotB: { userId: null, seedIndex: null, displayName: '' },
+        slotA: emptySlot(),
+        slotB: emptySlot(),
         winner: null, scoreA: null, scoreB: null,
         startedAt: null, finishedAt: null,
         nextMatchIndex: isLastRound ? null : Math.floor(i / 2),
         nextSlot: isLastRound ? null : (i % 2 === 0 ? 'A' : 'B'),
       });
     }
-    rounds.push({ roundIndex: r, label: labelForRound(capacity, r), matches });
+    rounds.push({ roundIndex: r, label: labelForRound(leafCount, r), matches });
   }
 
   return { rounds, builtAt: new Date(), lastCompletedRound: 0 };
@@ -273,6 +313,8 @@ export function advanceBracket(bracket: BracketTree, input: AdvanceInput): {
         target.userId = winnerSlot.userId;
         target.seedIndex = winnerSlot.seedIndex;
         target.displayName = winnerSlot.displayName;
+        target.userId2 = winnerSlot.userId2 ?? null;   // v14.14 — propage le coéquipier (Carrée royale)
+        target.displayName2 = winnerSlot.displayName2 ?? '';
         propagated = true;
       }
     }
@@ -309,13 +351,17 @@ export function computeFinalPositions(bracket: BracketTree, capacity: number): M
       if (!m.winner) continue;
       const winnerSlot = m.winner === 'A' ? m.slotA : m.slotB;
       const loserSlot = m.winner === 'A' ? m.slotB : m.slotA;
-      // Le perdant prend le rang de ce round.
+      // Le perdant prend le rang de ce round (les 2 coéquipiers en Carrée royale).
       if (loserSlot.userId && !positions.has(loserSlot.userId)) {
         positions.set(loserSlot.userId, rankOfLosers);
       }
-      // Si c'est la finale, le vainqueur prend le rang 1.
+      if (loserSlot.userId2 && !positions.has(loserSlot.userId2)) {
+        positions.set(loserSlot.userId2, rankOfLosers);
+      }
+      // Si c'est la finale, le vainqueur prend le rang 1 (les 2 coéquipiers).
       if (round.roundIndex === bracket.rounds.length && winnerSlot.userId) {
         positions.set(winnerSlot.userId, 1);
+        if (winnerSlot.userId2) positions.set(winnerSlot.userId2, 1);
       }
     }
   }

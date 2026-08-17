@@ -65,6 +65,16 @@ Bouton **+ Nouveau tournoi**. Formulaire complet :
 
 Si le net est **négatif** (perte pour Kydos), un avertissement rouge apparaît. Il faut cocher **"Je comprends et j'accepte la perte"** pour pouvoir sauvegarder.
 
+**Les 3 formats de jeu :**
+
+| Format            | Composition                         | Robots déclarés à l'inscription |
+|-------------------|-------------------------------------|---------------------------------|
+| Duo d'acier       | 2 robots vs 2 robots                | 2 coéquipiers                   |
+| Alliance hybride  | Humain + robot vs humain + robot    | 1 coéquipier + 1 remplaçant     |
+| Carrée royale     | 4 humains (2 équipes)               | 1 remplaçant                    |
+
+> **Carrée royale en tournoi** : le système forme des **équipes de 2 humains aléatoirement** au démarrage (fixes jusqu'à la fin). Le bracket se joue donc sur *capacité / 2* équipes, et chaque rang final (donc chaque gain) est partagé par les 2 coéquipiers. L'aperçu économique en tient compte automatiquement lorsque le format « Carrée royale » est sélectionné.
+
 Options de sauvegarde :
 - **Sauvegarder en brouillon** — crée le tournoi en statut `draft`
 - **Publier immédiatement** — crée et publie directement (`upcoming`)
@@ -207,5 +217,16 @@ Le menu latéral (sidebar) donne accès à :
 4. **Codes Promo** — Gestion promotionnelle
 5. **Comptabilité** — Suivi financier
 6. **Monitoring** — Suivi temps réel
+7. **Guide** — Aide intégrée : documentation de chaque section, règles de gestion, création d'un admin (seed), lancement
 
 Le **header** affiche le nom de l'admin connecté et un bouton de déconnexion.
+
+---
+
+## 10. Guide intégré
+
+La page **Guide** (menu latéral) centralise, directement dans l'interface, toute l'information utile pour administrer la plateforme :
+- Création d'un compte admin via le script seed (`npm run seed:admin`) ou MongoDB.
+- Lancement de l'API et du frontend.
+- Les 3 formats de jeu et le fonctionnement de la Carrée royale en tournoi.
+- Pour chaque section (tournois, utilisateurs, promos, comptabilité, monitoring, sécurité/audit) : rôle, règles, actions disponibles et endpoints.

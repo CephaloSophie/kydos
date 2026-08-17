@@ -95,7 +95,13 @@ Tous les endpoints sont sous le préfixe `/admin`. Sauf `/admin/auth/login` et `
 - `finished` — seul le `name` peut être édité (clarté historique)
 - `cancelled` — aucune modification
 
-**Économie** : `computeEconomics()` calcule `totalCollected`, `totalPaid`, `houseNet` via `occupantsAtPosition()`. Si `houseNet < 0`, le champ `acceptLoss: true` est requis.
+**Économie** : `computeEconomics(capacity, entryFee, prizesByPosition, format)` calcule `totalCollected`, `totalPaid`, `houseNet` via `occupantsAtPosition()`. Si `houseNet < 0`, le champ `acceptLoss: true` est requis.
+
+**Carrée royale (`royal_square`) en tournoi** : le bracket se joue en **équipes de 2 humains** formées aléatoirement au démarrage (fixes jusqu'à la fin). Conséquences :
+- Le bracket a `capacity / 2` feuilles (chaque slot = une équipe).
+- Chaque rang final est occupé par les **2 coéquipiers** de chaque équipe → l'économie applique `leaves = capacity/2` et `teamSize = 2` (chaque position paie 2 humains par équipe).
+- Chaque humain déclare **1 robot remplaçant** à l'inscription (prend la main en cas d'absence).
+- Implémenté dans `bracket.ts` (slot `userId2`/`displayName2`, `formTeamSeeds`), `tournament.service.ts` (seeding/finalisation), `tournament.orchestrator.ts` (4 sièges humains). Couvert par `royal-bracket.test.ts`.
 
 ### 3.3 Utilisateurs
 
@@ -240,6 +246,20 @@ export JWT_SECRET="un-secret-long-et-aleatoire-en-production"
 export MONGO_URI="mongodb://user:pass@host:27017/beloteKydosV14?authSource=admin"
 export ADMIN_PORT=3001
 ```
+
+### 5.4 Créer un administrateur (seed)
+
+Le back-office n'expose pas d'inscription : un compte doit porter le rôle `admin`. Script fourni (`back-office/server/src/seed-admin.ts`) :
+
+```bash
+cd back-office/server
+npm run seed:admin                                  # admin / admin123 par défaut
+npm run seed:admin -- <username> <password> <email> # identifiants personnalisés
+```
+
+Le script lit `MONGO_URI` depuis `.env`. Si l'utilisateur existe, il est promu `admin` ; sinon il est créé. Alternative manuelle : `db.users.updateOne({ username }, { $set: { role: 'admin' } })`.
+
+Une page **Guide** intégrée au back-office (menu latéral, route `/help`) reprend ces instructions et documente chaque controller.
 
 ---
 

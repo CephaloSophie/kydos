@@ -250,7 +250,7 @@ export class TournamentFormComponent implements OnInit {
       this.economics = null;
       return;
     }
-    this.tournamentService.previewEconomics(this.form.capacity, this.form.entryFee, prizesByPosition)
+    this.tournamentService.previewEconomics(this.form.capacity, this.form.entryFee, prizesByPosition, this.form.format)
       .subscribe(res => this.economics = res.economics);
   }
 

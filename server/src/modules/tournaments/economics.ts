@@ -78,6 +78,14 @@ export interface EconomicsByPositionInput {
   capacity: number;
   entryFee: number;
   prizesByPosition: PositionPrize[];
+  /**
+   * v14.14 — Carrée royale : le bracket se joue en ÉQUIPES de 2. Le nombre de
+   * FEUILLES du bracket vaut alors capacity/2, et chaque rang (position) est
+   * occupé par `teamSize` (=2) humains par équipe. Défaut : format 1 vs 1
+   * (leaves = capacity, teamSize = 1).
+   */
+  leaves?: number;
+  teamSize?: number;
 }
 
 export interface EconomicsByPositionRow {
@@ -120,10 +128,12 @@ export function occupantsAtPosition(capacity: number, position: number): number 
  */
 export function tournamentEconomicsByPosition(input: EconomicsByPositionInput): EconomicsByPositionResult {
   const totalCollected = input.capacity * input.entryFee;
+  const leaves = input.leaves ?? input.capacity;   // v14.14 — feuilles du bracket
+  const teamSize = input.teamSize ?? 1;            // v14.14 — humains par occupant de rang
   const breakdown: EconomicsByPositionRow[] = [];
   let totalPaid = 0;
   for (const pp of input.prizesByPosition) {
-    const occupants = occupantsAtPosition(input.capacity, pp.position);
+    const occupants = occupantsAtPosition(leaves, pp.position) * teamSize;
     const totalPaidAtThisPosition = occupants * pp.prize;
     totalPaid += totalPaidAtThisPosition;
     breakdown.push({ position: pp.position, occupants, prizePerOccupant: pp.prize, totalPaidAtThisPosition });

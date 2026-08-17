@@ -97,13 +97,13 @@ export class TournamentOrchestrator {
         // Headless : joue immédiatement en background. Le hook
         // recordMatchResult sera appelé en fin de match.
         void matchHeadlessRunner.run(String(created._id), { manches: 2 }).catch(() => {});
-      } else if (format === MatchFormat.HYBRID_ALLIANCE) {
-        // Provisionne une table live que les humains rejoindront.
+      } else if (format === MatchFormat.HYBRID_ALLIANCE || format === MatchFormat.ROYAL_SQUARE) {
+        // v14.14 — HYBRID (2 humains) et ROYAL (4 humains) : table live que
+        // les humains rejoindront. Provisionne au démarrage du match.
         try {
           await matchLiveService.provision(String(created._id));
         } catch { /* si provision échoue, la table sera créée à la demande */ }
       }
-      // ROYAL_SQUARE : non supporté en tournoi v14.12 (rejeté à la création).
     }
 
     if (dirty) await t.save();
@@ -158,7 +158,27 @@ export class TournamentOrchestrator {
         { seat: 3, userId: asId(String(pB.userId)), robotId: asId(robotsB[0]), team: 'B', isHuman: false },
       ];
     }
-    // ROYAL_SQUARE non supporté en tournoi v14.12.
+    if (format === MatchFormat.ROYAL_SQUARE) {
+      // v14.14 — Chaque slot du bracket est une ÉQUIPE de 2 humains
+      // (formée au démarrage). slotA = équipe A (sièges 0/2), slotB = équipe B
+      // (sièges 1/3). Aucun robot coéquipier ; un robot REMPLAÇANT par humain
+      // prend la main en cas d'absence (substituteRobotId, renseigné à l'inscription).
+      const a1 = bm.slotA.userId ? String(bm.slotA.userId) : null;
+      const a2 = bm.slotA.userId2 ? String(bm.slotA.userId2) : null;
+      const b1 = bm.slotB.userId ? String(bm.slotB.userId) : null;
+      const b2 = bm.slotB.userId2 ? String(bm.slotB.userId2) : null;
+      if (!a1 || !a2 || !b1 || !b2) return null;
+      const sub = (uid: string) => {
+        const p = participantsByUser.get(uid);
+        return p?.substituteRobotId ? asId(String(p.substituteRobotId)) : null;
+      };
+      return [
+        { seat: 0, userId: asId(a1), robotId: null, substituteRobotId: sub(a1), team: 'A', isHuman: true },
+        { seat: 2, userId: asId(a2), robotId: null, substituteRobotId: sub(a2), team: 'A', isHuman: true },
+        { seat: 1, userId: asId(b1), robotId: null, substituteRobotId: sub(b1), team: 'B', isHuman: true },
+        { seat: 3, userId: asId(b2), robotId: null, substituteRobotId: sub(b2), team: 'B', isHuman: true },
+      ];
+    }
     return null;
   }
 }

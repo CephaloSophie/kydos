@@ -69,5 +69,6 @@ export class SidebarComponent {
     { path: '/promos', label: 'Codes Promo', icon: '🎟️', exact: false },
     { path: '/accounting', label: 'Comptabilité', icon: '💰', exact: false },
     { path: '/monitor', label: 'Monitoring', icon: '📡', exact: false },
+    { path: '/help', label: 'Guide', icon: '📖', exact: false },
   ];
 }

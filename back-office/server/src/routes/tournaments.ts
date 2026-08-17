@@ -19,11 +19,22 @@ function occupantsAtPosition(capacity: number, position: number): number {
   return 0;
 }
 
-function computeEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[]) {
+/**
+ * Économie d'un tournoi (prix par position).
+ *
+ * Carrée royale (royal_square) : le bracket se joue en ÉQUIPES de 2 humains,
+ * donc `capacity/2` feuilles, et chaque rang final est occupé par 2 humains
+ * par équipe. On applique alors leaves = capacity/2 et teamSize = 2.
+ * Les autres formats (1 vs 1) : leaves = capacity, teamSize = 1.
+ */
+function computeEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[], format?: string) {
+  const isRoyal = format === 'royal_square';
+  const leaves = isRoyal ? capacity / 2 : capacity;
+  const teamSize = isRoyal ? 2 : 1;
   const totalCollected = capacity * entryFee;
   let totalPaid = 0;
   const breakdown = prizesByPosition.map(pp => {
-    const occupants = occupantsAtPosition(capacity, pp.position);
+    const occupants = occupantsAtPosition(leaves, pp.position) * teamSize;
     const totalPaidAtThisPosition = occupants * pp.prize;
     totalPaid += totalPaidAtThisPosition;
     return { position: pp.position, occupants, prizePerOccupant: pp.prize, totalPaidAtThisPosition };
@@ -91,7 +102,7 @@ router.post('/', async (req: AdminRequest, res) => {
     }
 
     if (prizesByPosition?.length) {
-      const economics = computeEconomics(capacity, entryFee, prizesByPosition);
+      const economics = computeEconomics(capacity, entryFee, prizesByPosition, format);
       if (economics.houseNet < 0 && !acceptLoss) {
         res.status(400).json({
           error: `Ce tournoi coûtera ${Math.abs(economics.houseNet)} ◆ à kydos. Ajoutez acceptLoss: true pour confirmer.`,
@@ -274,12 +285,12 @@ router.delete('/:id', async (req: AdminRequest, res) => {
 
 router.post('/preview-economics', async (req, res) => {
   try {
-    const { capacity, entryFee, prizesByPosition } = req.body;
+    const { capacity, entryFee, prizesByPosition, format } = req.body;
     if (!capacity || entryFee === undefined || !prizesByPosition) {
       res.status(400).json({ error: 'Champs requis: capacity, entryFee, prizesByPosition' });
       return;
     }
-    const economics = computeEconomics(capacity, entryFee, prizesByPosition);
+    const economics = computeEconomics(capacity, entryFee, prizesByPosition, format);
     res.json({ economics });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
