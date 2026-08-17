@@ -18,10 +18,13 @@ export interface EnginePlayer {
 export interface PartieConfig {
   /** 1, 2 ou 4 manches. */
   manches: 1 | 2 | 4;
-  /** Objectif de manche standard (1500). */
-  baseTarget: 1500;
-  /** Objectif du label (2000). */
-  labelTarget: 2000;
+  /**
+   * Objectif de manche standard (défaut 1500). v16 — configurable par table /
+   * tournoi (le back-office peut fixer un score cible personnalisé).
+   */
+  baseTarget: number;
+  /** Objectif du label (défaut 2000). v16 — configurable. */
+  labelTarget: number;
   responseTimeMs: number;
   maxPlayTimeMs: number;
   /** Sens du jeu : false = antihoraire (défaut), true = horaire. Fixe pour la partie. */

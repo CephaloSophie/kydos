@@ -53,7 +53,7 @@ export class MatchLiveService {
    * Crée (ou récupère) la Table éphémère associée à un Match non-headless
    * en PAIRING. Retourne le tableId à ouvrir côté client.
    */
-  async provision(matchId: string): Promise<{ tableId: string }> {
+  async provision(matchId: string, configOverride?: Record<string, any>): Promise<{ tableId: string }> {
     const cached = this.#tableByMatch.get(matchId);
     if (cached) return { tableId: cached };
 
@@ -102,10 +102,20 @@ export class MatchLiveService {
       visibility: 'private',
       seats,
       config: {
-        manches: 2,
+        // v16 — réglages repris du tournoi / de la config match si fournis.
+        manches: [1, 2, 4].includes(configOverride?.manches) ? configOverride!.manches : 2,
+        baseTarget: configOverride?.baseTarget > 0 ? configOverride!.baseTarget : 1500,
+        labelTarget: configOverride?.labelTarget > 0 ? configOverride!.labelTarget : 2000,
+        trickDelayMs: configOverride?.trickDelayMs ?? 900,
+        speed: configOverride?.speed ?? 1,
+        feltTheme: configOverride?.feltTheme ?? 'classic',
         maxPlayers: 4,
-        allowSpectators: true,
-        turnTimeoutMs: 15_000,
+        allowSpectators: configOverride?.allowSpectators !== false,
+        turnTimeoutMs: configOverride?.turnTimeoutMs ?? 15_000,
+        signals: {
+          reflexion: configOverride?.signals?.reflexion !== false,
+          repeatSuit: configOverride?.signals?.repeatSuit !== false,
+        },
       },
       startsAt: new Date(),
       lastActivityAt: new Date(),

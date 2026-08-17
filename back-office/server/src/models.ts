@@ -252,12 +252,31 @@ const BracketTreeSchema = new Schema(
   { _id: false },
 );
 
+const TournamentGameConfigSchema = new Schema(
+  {
+    manches: { type: Number, enum: [1, 2, 4], default: 2 },
+    baseTarget: { type: Number, default: 1500 },
+    labelTarget: { type: Number, default: 2000 },
+    trickDelayMs: { type: Number, default: 900 },
+    speed: { type: Number, default: 1 },
+    turnTimeoutMs: { type: Number, default: 15000 },
+    allowSpectators: { type: Boolean, default: true },
+    feltTheme: { type: String, enum: ['classic', 'cosmos', 'olympus'], default: 'classic' },
+    signals: {
+      reflexion: { type: Boolean, default: true },
+      repeatSuit: { type: Boolean, default: true },
+    },
+  },
+  { _id: false },
+);
+
 const TournamentSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
     format: { type: String, enum: MATCH_FORMATS, required: true, index: true },
     status: { type: String, enum: TOURNAMENT_STATUSES, default: 'draft', index: true },
     capacity: { type: Number, enum: TOURNAMENT_CAPACITIES, required: true },
+    gameConfig: { type: TournamentGameConfigSchema, default: () => ({}) },
     description: { type: String, default: '', maxlength: 500 },
     color: { type: String, default: '#e6c46a' },
     icon: { type: String, default: '♦' },

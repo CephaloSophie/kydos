@@ -148,6 +148,28 @@ const BracketTreeSchema = new Schema(
   { _id: false },
 );
 
+/* ── Configuration de jeu du tournoi (v16) ─────────────────────────────────
+ * Paramètres appliqués à CHAQUE match du tournoi, repris tels quels sur la
+ * Table éphémère / la session de jeu (mêmes réglages qu'une table classique).
+ * Permet au back-office de fixer le nombre de manches, le score cible, etc. */
+const TournamentGameConfigSchema = new Schema(
+  {
+    manches: { type: Number, enum: [1, 2, 4], default: 2 },
+    baseTarget: { type: Number, default: 1500 },   // score cible d'une manche standard
+    labelTarget: { type: Number, default: 2000 },  // score cible du grand label
+    trickDelayMs: { type: Number, default: 900 },
+    speed: { type: Number, default: 1 },
+    turnTimeoutMs: { type: Number, default: 15000 },
+    allowSpectators: { type: Boolean, default: true },
+    feltTheme: { type: String, enum: ['classic', 'cosmos', 'olympus'], default: 'classic' },
+    signals: {
+      reflexion: { type: Boolean, default: true },
+      repeatSuit: { type: Boolean, default: true },
+    },
+  },
+  { _id: false },
+);
+
 /* ── Schéma principal ─────────────────────────────────────────────────────── */
 
 const TournamentSchema = new Schema(
@@ -156,6 +178,9 @@ const TournamentSchema = new Schema(
     format: { type: String, enum: Object.values(MatchFormat), required: true, index: true },
     status: { type: String, enum: Object.values(TournamentStatus), default: TournamentStatus.DRAFT, index: true },
     capacity: { type: Number, enum: TOURNAMENT_CAPACITIES, required: true },
+
+    /* v16 — Réglages de jeu appliqués aux matchs du tournoi. */
+    gameConfig: { type: TournamentGameConfigSchema, default: () => ({}) },
 
     /* v14.12 — Habillage visuel & sémantique */
     description: { type: String, default: '', maxlength: 500 },

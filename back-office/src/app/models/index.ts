@@ -23,6 +23,7 @@ export interface Tournament {
   entryFee: number;
   rounds: RoundPrize[];
   prizesByPosition: PositionPrize[];
+  gameConfig?: TournamentGameConfig;
   startAt: string;
   createdBy: string;
   participants: TournamentParticipant[];
@@ -32,6 +33,18 @@ export interface Tournament {
   finishedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TournamentGameConfig {
+  manches: number;
+  baseTarget: number;
+  labelTarget: number;
+  trickDelayMs: number;
+  speed: number;
+  turnTimeoutMs: number;
+  allowSpectators: boolean;
+  feltTheme: string;
+  signals: { reflexion: boolean; repeatSuit: boolean };
 }
 
 export interface TournamentParticipant {

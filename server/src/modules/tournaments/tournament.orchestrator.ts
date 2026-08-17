@@ -50,6 +50,9 @@ export class TournamentOrchestrator {
 
     const format = t.format as MatchFormat;
     const rules = getMatchFormatRules(format);
+    // v16 — réglages de jeu du tournoi appliqués à chaque match (manches, score
+    // cible, timeouts…). Défaut si absent (tournois créés avant v16).
+    const gameConfig = (t.gameConfig ?? {}) as Record<string, any>;
     const tree = t.bracketTree;
     if (!tree || !tree.rounds || tree.rounds.length === 0) {
       return { finished: false, roundsScheduled: 0, matchesLaunched: 0 };
@@ -95,8 +98,11 @@ export class TournamentOrchestrator {
       // Lancer le match selon son format.
       if (format === MatchFormat.DUO_STEEL) {
         // Headless : joue immédiatement en background. Le hook
-        // recordMatchResult sera appelé en fin de match.
-        void matchHeadlessRunner.run(String(created._id), { manches: 2 }).catch(() => {});
+        // recordMatchResult sera appelé en fin de match. v16 — réglages tournoi.
+        const manches = [1, 2, 4].includes(gameConfig.manches) ? gameConfig.manches : 2;
+        void matchHeadlessRunner.run(String(created._id), {
+          manches, baseTarget: gameConfig.baseTarget, labelTarget: gameConfig.labelTarget,
+        }).catch(() => {});
       } else if (format === MatchFormat.HYBRID_ALLIANCE || format === MatchFormat.ROYAL_SQUARE) {
         // v14.14 — HYBRID (2 humains) et ROYAL (4 humains) : table live que
         // les humains rejoindront. Provisionne la table PUIS passe le match en
@@ -109,7 +115,7 @@ export class TournamentOrchestrator {
         // touche que status/startedAt et n'écrase pas le liveTableId posé par
         // provision().
         try {
-          await matchLiveService.provision(String(created._id));
+          await matchLiveService.provision(String(created._id), gameConfig);   // v16 — config tournoi
         } catch { /* si provision échoue, la table sera créée à la demande */ }
         await MatchModel.updateOne(
           { _id: created._id },

@@ -42,6 +42,32 @@ function computeEconomics(capacity: number, entryFee: number, prizesByPosition: 
   return { totalCollected, totalPaid, houseNet: totalCollected - totalPaid, breakdown };
 }
 
+/**
+ * Normalise la config de jeu d'un tournoi (v16). Applique bornes et valeurs
+ * par défaut pour tout paramètre accepté par la table / la session de jeu.
+ */
+function sanitizeGameConfig(raw: any): any {
+  const g = raw || {};
+  const clamp = (v: any, min: number, max: number, def: number) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
+  };
+  return {
+    manches: [1, 2, 4].includes(Number(g.manches)) ? Number(g.manches) : 2,
+    baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
+    labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
+    trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
+    speed: clamp(g.speed, 0.5, 4, 1),
+    turnTimeoutMs: clamp(g.turnTimeoutMs, 3000, 120000, 15000),
+    allowSpectators: g.allowSpectators !== false,
+    feltTheme: ['classic', 'cosmos', 'olympus'].includes(g.feltTheme) ? g.feltTheme : 'classic',
+    signals: {
+      reflexion: g.signals?.reflexion !== false,
+      repeatSuit: g.signals?.repeatSuit !== false,
+    },
+  };
+}
+
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -77,7 +103,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req: AdminRequest, res) => {
   try {
-    const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds, acceptLoss, publishImmediately } = req.body;
+    const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds, gameConfig, acceptLoss, publishImmediately } = req.body;
 
     if (!name || name.length < 3) {
       res.status(400).json({ error: 'Le nom doit contenir au moins 3 caractères' });
@@ -126,6 +152,7 @@ router.post('/', async (req: AdminRequest, res) => {
       icon: icon || '♦',
       prizesByPosition: prizesByPosition || [],
       rounds: rounds || [],
+      gameConfig: sanitizeGameConfig(gameConfig),
       status: publishImmediately ? 'upcoming' : 'draft',
       createdBy: req.adminId,
     });
@@ -157,7 +184,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
         return;
       }
     } else if (tournament.status === 'draft') {
-      const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds } = req.body;
+      const { name, format, capacity, entryFee, minLevel, maxLevel, startAt, description, color, icon, prizesByPosition, rounds, gameConfig } = req.body;
       if (name !== undefined) tournament.name = name;
       if (format !== undefined) tournament.format = format;
       if (capacity !== undefined) tournament.capacity = capacity;
@@ -170,6 +197,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
       if (icon !== undefined) tournament.icon = icon;
       if (prizesByPosition !== undefined) tournament.prizesByPosition = prizesByPosition;
       if (rounds !== undefined) tournament.rounds = rounds;
+      if (gameConfig !== undefined) tournament.gameConfig = sanitizeGameConfig(gameConfig);
     } else {
       res.status(400).json({ error: 'Ce tournoi ne peut pas être modifié dans son état actuel' });
       return;
