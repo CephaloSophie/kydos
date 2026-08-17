@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TournamentService } from '../../services/tournament.service';
@@ -12,6 +12,7 @@ import type { Tournament, TournamentStatus } from '../../models';
       <div class="page-header">
         <h1>{{ tournament.icon }} {{ tournament.name }}</h1>
         <div style="display: flex; gap: 8px">
+          <button class="btn btn-secondary" (click)="reload()" title="Actualiser">↻ Actualiser</button>
           @if (tournament.status === 'draft') {
             <a [routerLink]="['/tournaments', tournament._id, 'edit']" class="btn btn-secondary">Editer</a>
             <button class="btn btn-success" (click)="publish()">Publier</button>
@@ -168,10 +169,9 @@ import type { Tournament, TournamentStatus } from '../../models';
     .bracket-score { font-weight: 700; color: var(--primary); }
   `],
 })
-export class TournamentDetailComponent implements OnInit, OnDestroy {
+export class TournamentDetailComponent implements OnInit {
   tournament: Tournament | null = null;
   private id = '';
-  private poller: any = null;
 
   constructor(private route: ActivatedRoute, private tournamentService: TournamentService) {}
 
@@ -180,22 +180,10 @@ export class TournamentDetailComponent implements OnInit, OnDestroy {
     this.reload();
   }
 
-  ngOnDestroy() {
-    if (this.poller) clearInterval(this.poller);
-  }
-
-  private reload() {
-    this.tournamentService.getById(this.id).subscribe(res => {
-      this.tournament = res.tournament;
-      // Rafraîchit en direct tant que le tournoi est EN COURS (scores live
-      // recopiés dans le bracket par le serveur de jeu).
-      if (this.tournament?.status === 'live' && !this.poller) {
-        this.poller = setInterval(() => this.reload(), 4000);
-      } else if (this.tournament?.status !== 'live' && this.poller) {
-        clearInterval(this.poller);
-        this.poller = null;
-      }
-    });
+  // Rafraîchissement MANUEL (pas de websocket) : le serveur de jeu recopie les
+  // scores en cours dans le bracket (MongoDB) ; un clic les relit.
+  reload() {
+    this.tournamentService.getById(this.id).subscribe(res => this.tournament = res.tournament);
   }
 
   publish() {
