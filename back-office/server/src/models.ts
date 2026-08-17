@@ -329,6 +329,25 @@ const HouseTransactionSchema = new Schema(
 HouseTransactionSchema.index({ kind: 1, createdAt: -1 });
 mongoose.models.HouseTransaction ?? model('HouseTransaction', HouseTransactionSchema);
 
+const MatchFormatConfigSchema = new Schema(
+  {
+    format: { type: String, enum: MATCH_FORMATS, required: true, unique: true, index: true },
+    label: { type: String, required: true },
+    subtitle: { type: String, default: '' },
+    buyInPerPlayer: { type: Number, required: true, min: 0 },
+    prizePerWinner: { type: Number, required: true, min: 0 },
+    manches: { type: Number, enum: [1, 2, 4], default: 2 },
+    baseTarget: { type: Number, default: 1500 },
+    labelTarget: { type: Number, default: 2000 },
+    color: { type: String, default: '#3f6ea1' },
+    icon: { type: String, default: '♦' },
+    active: { type: Boolean, default: true, index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.MatchFormatConfig ?? model('MatchFormatConfig', MatchFormatConfigSchema);
+
 const PromoCodeSchema = new Schema(
   {
     code: { type: String, required: true, unique: true, index: true, match: /^\d{12}$/ },

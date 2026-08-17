@@ -15,6 +15,7 @@
  * ========================================================================== */
 import { Types } from 'mongoose';
 import { MatchFormat, getMatchFormatRules } from '../matches/matchFormat.js';
+import { matchFormatConfigService } from '../matches/matchFormatConfig.service.js';
 import { MatchModel, MatchStatus } from '../matches/match.model.js';
 import { walletService } from '../wallet/wallet.service.js';
 import { RobotModel } from '../robot/robot.model.js';
@@ -71,8 +72,9 @@ export class MatchmakingService {
       return { status: 'queued', queuePosition: alreadyIndex + 1 };
     }
 
-    // Débit du buy-in (tout ou rien).
-    await walletService.stake(req.userId, rules.buyInPerPlayer);
+    // Débit de la mise (tout ou rien). v16 — mise configurable (back-office).
+    const eff = await matchFormatConfigService.getEffective(req.format);
+    await walletService.stake(req.userId, eff.buyInPerPlayer);
 
     // Ajout à la file. Le ticket transporte les robots dans l'ordre
     // [coéquipier(s)…, remplaçant?]. Le buildParticipants les affectera.
@@ -87,12 +89,13 @@ export class MatchmakingService {
 
   /** Annule une inscription en file (remboursement). Sans effet si le match est déjà lancé. */
   async cancel(userId: string, format: MatchFormat): Promise<{ refunded: number }> {
-    const rules = getMatchFormatRules(format);
     const queue = getMatchmakingQueue();
     const removed = await queue.remove(format, userId);
     if (!removed) throw notFound('Aucune inscription en file pour ce format.');
-    await walletService.credit(userId, rules.buyInPerPlayer, undefined, 'refund');
-    return { refunded: rules.buyInPerPlayer };
+    // v16 — remboursement de la mise configurée.
+    const eff = await matchFormatConfigService.getEffective(format);
+    await walletService.credit(userId, eff.buyInPerPlayer, undefined, 'refund');
+    return { refunded: eff.buyInPerPlayer };
   }
 
   /** Extrait les N joueurs de tête et crée un Match, si l'effectif est atteint. */
@@ -124,20 +127,24 @@ export class MatchmakingService {
     //   - HYBRID_ALLIANCE / ROYAL_SQUARE : provisionne une Table éphémère et
     //     laisse liveGameService démarrer dès que les joueurs se connectent.
     if (rules.isHeadless) {
-      void this.#runHeadlessInBackground(matchId);
+      void this.#runHeadlessInBackground(matchId, format);
     } else {
       // Fire-and-forget aussi pour ne pas bloquer la réponse HTTP.
-      void this.#provisionLiveTableInBackground(matchId);
+      void this.#provisionLiveTableInBackground(matchId, format);
     }
 
     return matchId;
   }
 
   /** Lance le runner headless en arrière-plan (import dynamique pour éviter les cycles). */
-  async #runHeadlessInBackground(matchId: string): Promise<void> {
+  async #runHeadlessInBackground(matchId: string, format: MatchFormat): Promise<void> {
     try {
+      const eff = await matchFormatConfigService.getEffective(format);   // v16 — réglages configurables
       const { matchHeadlessRunner } = await import('../matches/match.headlessRunner.js');
-      await matchHeadlessRunner.run(matchId, { manches: 2 });
+      await matchHeadlessRunner.run(matchId, {
+        manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
+        prizePerWinner: eff.prizePerWinner, houseRake: eff.houseRake,
+      });
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error(`[matchmaking] échec du runner headless ${matchId}:`, e);
@@ -145,10 +152,13 @@ export class MatchmakingService {
   }
 
   /** Provisionne la Table éphémère et met le Match en RUNNING (les joueurs peuvent rejoindre). */
-  async #provisionLiveTableInBackground(matchId: string): Promise<void> {
+  async #provisionLiveTableInBackground(matchId: string, format: MatchFormat): Promise<void> {
     try {
+      const eff = await matchFormatConfigService.getEffective(format);   // v16 — réglages de jeu configurables
       const { matchLiveService } = await import('../matches/match.liveRunner.js');
-      await matchLiveService.provision(matchId);
+      await matchLiveService.provision(matchId, {
+        manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
+      });
       // Passe le match en RUNNING dès que la table est prête. Les joueurs
       // peuvent se connecter ; liveGameService.launch se déclenchera quand
       // tous les sièges seront présents (ou après un timeout de grâce).

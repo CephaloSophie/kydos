@@ -65,6 +65,7 @@ export class SidebarComponent {
   navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: '📊', exact: true },
     { path: '/tournaments', label: 'Tournois', icon: '🏆', exact: false },
+    { path: '/match-formats', label: 'Match rapide', icon: '⚡', exact: false },
     { path: '/users', label: 'Utilisateurs', icon: '👤', exact: false },
     { path: '/promos', label: 'Codes Promo', icon: '🎟️', exact: false },
     { path: '/accounting', label: 'Comptabilité', icon: '💰', exact: false },

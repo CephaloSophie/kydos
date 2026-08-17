@@ -42,6 +42,24 @@ export class MatchmakingController {
   }
 
   /**
+   * v16 — Liste dynamique des MATCH RAPIDE proposés (config back-office) :
+   * mise, gain, manches, score cible, habillage. Le mobile la rend dans un
+   * carrousel horizontal (nombre variable selon les formats actifs).
+   */
+  async formats(_request: AuthenticatedRequest, response: Response) {
+    const { matchFormatConfigService } = await import('../matches/matchFormatConfig.service.js');
+    const list = await matchFormatConfigService.list(true);
+    response.json({
+      formats: list.map((c: any) => ({
+        format: c.format, label: c.label, subtitle: c.subtitle,
+        buyIn: c.buyInPerPlayer, prize: c.prizePerWinner,
+        manches: c.manches, baseTarget: c.baseTarget, labelTarget: c.labelTarget,
+        color: c.color, icon: c.icon, order: c.order,
+      })),
+    });
+  }
+
+  /**
    * Retourne le match en cours ou récemment terminé de l'utilisateur.
    * Utile pour le mobile qui poll après matching pour savoir si un match a
    * été créé pour lui (statut running → aller sur l'écran match ;

@@ -104,6 +104,10 @@ export class ApiClient {
   }
   /** Tailles de chaque file (Duo d'acier, Alliance hybride, Carrée royale). */
   matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }
+  /** v16 — Liste dynamique des MATCH RAPIDE (config back-office). */
+  listMatchFormats() {
+    return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number }> }>('/matches/formats');
+  }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }
   /** Détail complet d'un match (participants avec robots populés). */

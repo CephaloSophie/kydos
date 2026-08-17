@@ -116,3 +116,22 @@ export function verifyEconomics(format: MatchFormat): { collected: number; paid:
   const rake = collected - paid;
   return { collected, paid, rake, balanced: rake === r.houseRake };
 }
+
+/**
+ * v16 — Rake maison EFFECTIF quand la mise/gain sont configurés par le
+ * back-office. On PART du rake du catalogue (règle métier — p.ex. Duo d'acier
+ * = 50 même si collecté−payé = 250) et on l'ajuste du DELTA de mise/gain :
+ *   rake = baseRake + (mise − mise₀)×humains − (gain − gain₀)×vainqueurs
+ * Ainsi, aux valeurs par défaut on retrouve exactement le rake catalogue, et un
+ * changement de mise/gain se répercute proportionnellement. Fonction PURE.
+ */
+export function effectiveHouseRake(
+  baseRake: number,
+  buyInPerPlayer: number, prizePerWinner: number,
+  defaultBuyIn: number, defaultPrize: number,
+  humansPerMatch: number, winnersPerMatch: number,
+): number {
+  return baseRake
+    + (buyInPerPlayer - defaultBuyIn) * humansPerMatch
+    - (prizePerWinner - defaultPrize) * winnersPerMatch;
+}

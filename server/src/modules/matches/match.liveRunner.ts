@@ -261,18 +261,31 @@ export class MatchLiveService {
     // (son robot coéquipier joue avec, on ne crédite que l'humain).
     const format = match.format as MatchFormat;
     const rules = getMatchFormatRules(format);
+    // v16 — pour un MATCH RAPIDE (hors tournoi), la mise/gain proviennent de la
+    // config éditable du back-office ; en tournoi on garde le comportement
+    // historique (le gain de tournoi est versé par recordMatchResult).
+    let prizePerWinner = rules.prizePerWinner;
+    let houseRake = rules.houseRake;
+    if (!(match as any).tournament) {
+      try {
+        const { matchFormatConfigService } = await import('./matchFormatConfig.service.js');
+        const eff = await matchFormatConfigService.getEffective(format);
+        prizePerWinner = eff.prizePerWinner;
+        houseRake = eff.houseRake;
+      } catch { /* fallback catalogue */ }
+    }
     if (info.winner) {
       const winners = match.participants.filter((p: any) => p.team === info.winner && p.isHuman);
       for (const p of winners) {
         try {
-          await walletService.credit(String(p.userId), rules.prizePerWinner, info.gameId, 'game_win');
+          await walletService.credit(String(p.userId), prizePerWinner, info.gameId, 'game_win');
         } catch (e) {
           log.warn('crédit vainqueur échoué', { userId: p.userId, error: (e as Error).message });
         }
       }
     }
     try {
-      await houseAccountingService.recordMatchRake(match._id, rules.houseRake, format);
+      await houseAccountingService.recordMatchRake(match._id, houseRake, format);
     } catch (e) {
       log.warn('rake maison échoué', { matchId, error: (e as Error).message });
     }
