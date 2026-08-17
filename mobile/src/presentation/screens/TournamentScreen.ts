@@ -24,11 +24,12 @@ export enum TournamentStatusClient {
 }
 
 interface RoundPrize { round: number; prize: number }
-interface Participant { userId: string; robotIds?: string[]; seedIndex?: number | null; eliminatedAtRound?: number | null }
+interface PositionPrize { position: number; prize: number }
+interface Participant { userId: string; robotIds?: string[]; seedIndex?: number | null; eliminatedAtRound?: number | null; finalPosition?: number | null; prizeAwarded?: number }
 interface TournamentDetail {
   _id: string; name: string; format: string; status: TournamentStatusClient;
   capacity: number; entryFee: number; minLevel: number;
-  rounds: RoundPrize[]; startAt: string; startedAt?: string | null; finishedAt?: string | null;
+  rounds: RoundPrize[]; prizesByPosition?: PositionPrize[]; startAt: string; startedAt?: string | null; finishedAt?: string | null;
   participants: Participant[]; bracket?: string[][]; winners?: string[];
 }
 
@@ -37,7 +38,6 @@ const FORMAT_LABEL: Record<string, string> = {
   hybrid_alliance: 'Alliance hybride',
   royal_square: 'Carr\u00e9e royale',
 };
-const ROBOTS_PER_PLAYER: Record<string, number> = { duo_steel: 2, hybrid_alliance: 1, royal_square: 0 };
 
 /** Formatte une durée relative (dans 2h · commence dans 12 min · il y a 3h). */
 function relativeTime(target: Date): string {
@@ -67,7 +67,7 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
     return root;
   }
 
-  const pickRobots = (n: number): string[] => ctx.session.robots.slice(0, n).map((r) => r.id);
+  const posLabel = (pos: number): string => pos === 1 ? '1er' : `${pos}e`;
 
   const render = (t: TournamentDetail) => {
     clear(root);
@@ -91,24 +91,10 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
     const meId = ctx.session.profile?.id;
     const isRegistered = t.participants.some((p) => p.userId === meId);
     const isFull = t.participants.length >= t.capacity;
-    const robotsNeeded = ROBOTS_PER_PLAYER[t.format] ?? 0;
 
     const statusEl = h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)', minHeight: '14px' } });
 
-    const doJoin = async () => {
-      if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
-      const robotIds = pickRobots(robotsNeeded);
-      if (robotIds.length < robotsNeeded) {
-        statusEl.textContent = `\u2717 Il vous faut ${robotsNeeded} robot(s) dans votre \u00e9curie.`;
-        return;
-      }
-      try {
-        await api.joinTournament(t._id, robotIds);
-        await ctx.session.refreshWallet();
-        statusEl.textContent = '\u2713 Inscription confirm\u00e9e.';
-        void reload();
-      } catch (e) { statusEl.textContent = `\u2717 ${(e as Error).message}`; }
-    };
+    const doJoin = () => router.go(`tournament-enroll?id=${t._id}`);
     const doLeave = async () => {
       try {
         const r = await api.leaveTournament(t._id);
@@ -131,12 +117,14 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
             ? h('span', { class: 'mono' }, 'COMPLET')
             : h('button', { class: 'btn btn--sm', style: { color: '#8f6f1f', background: '#fff' }, onClick: () => void doJoin() }, 'S\u2019inscrire'),
         statusEl),
-      // Bloc gains par round
+      // Bloc gains par position (v14.14 : donn\u00e9es r\u00e9elles prizesByPosition).
       h('div', { class: 'card' },
-        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains par tour'),
-        ...(t.rounds ?? []).map((r) => h('div', { class: 'between mono', style: { fontSize: '11px', padding: '4px 0', color: 'var(--c-text-soft)' } },
-          h('span', {}, `Tour ${r.round}`),
-          h('span', { style: { color: 'var(--c-gold)' } }, `${r.prize} \u25c6`)))),
+        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains par position'),
+        ...((t.prizesByPosition ?? []).length
+          ? (t.prizesByPosition ?? []).map((pp) => h('div', { class: 'between mono', style: { fontSize: '11px', padding: '4px 0', color: 'var(--c-text-soft)' } },
+              h('span', {}, posLabel(pp.position)),
+              h('span', { style: { color: 'var(--c-gold)' } }, `${pp.prize} \u25c6`)))
+          : [h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, 'Aucun gain d\u00e9fini pour ce tournoi.')])),
     );
   };
 
@@ -182,7 +170,6 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
   const renderFinished = (t: TournamentDetail) => {
     const winners = t.winners ?? [];
     const winnerName = (uid: string) => uid === ctx.session.profile?.id ? 'Vous' : `Joueur ${uid.slice(-4)}`;
-    const totalRounds = Math.log2(t.capacity);
 
     return h('div', { class: 'col gap-3' },
       // Bandeau podium
@@ -200,25 +187,26 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
           style: { marginTop: '14px', background: '#fff', color: '#1a0f00', fontWeight: '700' },
           onClick: () => router.go(`tournament-bracket?id=${t._id}`),
         }, '\u25b6 Voir l\u2019arbre complet')),
-      // Récap gains
+      // R\u00e9cap gains par position (v14.14 : donn\u00e9es r\u00e9elles).
       h('div', { class: 'card' },
-        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains distribu\u00e9s par tour'),
-        ...(t.rounds ?? []).map((r) => h('div', { class: 'between mono', style: { fontSize: '11px', padding: '4px 0', color: 'var(--c-text-soft)' } },
-          h('span', {}, `Tour ${r.round}`),
-          h('span', { style: { color: 'var(--c-gold)' } }, `${r.prize} \u25c6 \u00d7 survivants`)))),
-      // Replays des matchs (par round)
+        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains par position'),
+        ...((t.prizesByPosition ?? []).length
+          ? (t.prizesByPosition ?? []).map((pp) => h('div', { class: 'between mono', style: { fontSize: '11px', padding: '4px 0', color: 'var(--c-text-soft)' } },
+              h('span', {}, posLabel(pp.position)),
+              h('span', { style: { color: 'var(--c-gold)' } }, `${pp.prize} \u25c6`)))
+          : [h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, 'Aucun gain d\u00e9fini.')])),
+      // Classement final : positions r\u00e9elles + gains vers\u00e9s par participant.
       h('div', { class: 'card' },
-        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Rejouer les matchs'),
-        ...Array.from({ length: totalRounds }, (_, i) => {
-          const matchIds = (t.bracket ?? [])[i] ?? [];
-          if (matchIds.length === 0) return null;
-          return h('div', { style: { padding: '6px 0' } },
-            h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)' } }, `Round ${i + 1}`),
-            h('div', { class: 'row gap-2 wrap', style: { marginTop: '4px' } },
-              ...matchIds.map((mid) =>
-                h('button', { class: 'btn btn--sm btn--ghost', onClick: () => router.go(`replay?id=${mid}`) },
-                  `\u25b6 ${mid.slice(-6)}`))));
-        }).filter(Boolean) as HTMLElement[]),
+        h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Classement final'),
+        ...(() => {
+          const ranked = [...(t.participants ?? [])]
+            .filter((p) => p.finalPosition != null)
+            .sort((a, b) => (a.finalPosition ?? 0) - (b.finalPosition ?? 0));
+          if (ranked.length === 0) return [h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, 'Classement indisponible.')];
+          return ranked.map((p) => h('div', { class: 'between mono', style: { fontSize: '11px', padding: '4px 0', color: 'var(--c-text-soft)' } },
+            h('span', {}, `${posLabel(p.finalPosition as number)} \u00b7 ${winnerName(String(p.userId))}`),
+            h('span', { style: { color: (p.prizeAwarded ?? 0) > 0 ? 'var(--c-gold)' : 'var(--c-text-mute)' } }, `${p.prizeAwarded ?? 0} \u25c6`)));
+        })()),
     );
   };
 

@@ -63,11 +63,11 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 })
 export class SidebarComponent {
   navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '&#9632;', exact: true },
-    { path: '/tournaments', label: 'Tournois', icon: '&#9813;', exact: false },
-    { path: '/users', label: 'Utilisateurs', icon: '&#9787;', exact: false },
-    { path: '/promos', label: 'Codes Promo', icon: '&#9733;', exact: false },
-    { path: '/accounting', label: 'Comptabilité', icon: '&#9830;', exact: false },
-    { path: '/monitor', label: 'Monitoring', icon: '&#9881;', exact: false },
+    { path: '/dashboard', label: 'Dashboard', icon: '📊', exact: true },
+    { path: '/tournaments', label: 'Tournois', icon: '🏆', exact: false },
+    { path: '/users', label: 'Utilisateurs', icon: '👤', exact: false },
+    { path: '/promos', label: 'Codes Promo', icon: '🎟️', exact: false },
+    { path: '/accounting', label: 'Comptabilité', icon: '💰', exact: false },
+    { path: '/monitor', label: 'Monitoring', icon: '📡', exact: false },
   ];
 }

@@ -4,6 +4,40 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
 
 ---
 
+## Commit `<retours joueur>` — fix: sidebar icons + inscription tournoi avec choix des robots
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demande utilisateur** : Retours sur le back-office et l'app joueur (compétitions/tournois).
+
+### Ce qui a été fait
+
+1. **Back-office — icônes du menu latéral** (`back-office/.../sidebar/sidebar.component.ts`)
+   - Les icônes étaient des entités HTML (`&#9881;`) rendues via interpolation Angular `{{ }}`, donc échappées et affichées en texte brut. Remplacées par de vrais emoji (📊 🏆 👤 🎟️ 💰 📡).
+
+2. **App joueur (mobile) — choix des robots à l'inscription tournoi** (nouveau `TournamentEnrollScreen.ts`)
+   - Avant : l'inscription auto-sélectionnait les N premiers robots (`pickRobots`), et le compte de robots ignorait le remplaçant → Alliance hybride et Carrée royale échouaient (mauvais nombre de robots envoyés).
+   - Nouveau : écran de sélection des robots par rôle, calqué EXACTEMENT sur `MatchEnrollScreen` (compétition normale) :
+     - Duo d'acier → 2 coéquipiers, pas de remplaçant.
+     - Alliance hybride → 1 coéquipier + 1 remplaçant.
+     - Carrée royale → 1 remplaçant.
+   - Convention d'envoi identique au serveur : `[coéquipier(s)…, remplaçant?]`.
+   - Route `tournament-enroll?id=X` enregistrée dans `main.tsx`.
+
+3. **App joueur — inscription/désinscription sur les cartes** (`RankingCompetScreens.ts`)
+   - La carte tournoi route désormais vers l'écran de choix des robots (au lieu d'auto-sélectionner).
+   - Si le joueur est déjà inscrit, un bouton **Se désinscrire** s'affiche à la place de **S'inscrire** (remboursement du buy-in).
+
+4. **App joueur — données & bracket dans le détail tournoi** (`TournamentScreen.ts`)
+   - Les vues UPCOMING/FINISHED utilisaient l'ancien champ `rounds` (vide) → remplacé par `prizesByPosition` (données réelles, comme le back-office).
+   - Vue FINISHED : ajout d'un **classement final** (position réelle + gains versés par participant) à partir de `participants`.
+   - Le bouton « Voir l'arbre » pointe vers `TournamentBracketScreen` (déjà fonctionnel, lit `bracketTree`).
+   - L'inscription route vers `tournament-enroll` au lieu d'auto-sélectionner les robots.
+
+### Note
+- Le format **Carrée royale en tournoi** reste bloqué à l'exécution côté serveur (`tournament.service.create` — bracket 4 humains simultanés prévu ultérieurement). La sélection du robot remplaçant est néanmoins gérée à l'inscription.
+
+---
+
 ## Commit `9a7a5ec` — feat: add Angular back-office admin panel with Express API
 
 **Date** : Session initiale
