@@ -1,6 +1,0 @@
-/* Feuille de styles complète du module @kanto-aplo/belote-table.
-   À importer une fois par l'application hôte :  import '@kanto-aplo/belote-table/styles.css'; */
-@import "../styles/fonts.css";
-@import "../styles/design-tokens.css";
-@import "../styles/animations.css";
-@import "../styles.css";

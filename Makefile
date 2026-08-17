@@ -63,8 +63,8 @@ install:  ## Installe toutes les dépendances (npm ci)
 	@$(NPM) ci --no-audit --no-fund
 
 # --- Développement ------------------------------------------------------------
-dev: ## Lance serveur + web + met à jour mobile/.env — parallèle
-	@$(MAKE) -j 2 dev-server-permissive dev-web
+dev: ## Lance serveur + mobile — parallèle
+	@$(MAKE) -j 2 dev-server-permissive dev-mobile
 
 dev-server: ## Serveur Node (MongoDB attendu sur mongodb://127.0.0.1:27017)
 	@$(NPM) --workspace belote-server run dev
@@ -72,8 +72,8 @@ dev-server: ## Serveur Node (MongoDB attendu sur mongodb://127.0.0.1:27017)
 dev-server-permissive: ## Serveur Node avec CORS_ORIGIN=* et Mongo en mémoire (dev fluide)
 	@CORS_ORIGIN=* USE_MEMORY_DB=1 $(NPM) --workspace belote-server run dev
 
-dev-web: ## Application web (Vite)
-	@$(NPM) --workspace belote-web run dev
+dev-mobile: ## Application mobile (Vite)
+	@$(NPM) --workspace belote-mobile run dev
 
 # --- Capacitor : socle mobile -------------------------------------------------
 cap-add-android: ## Ajoute le projet natif Android (1re fois — Android Studio requis)
@@ -155,17 +155,13 @@ tnr-server: ## TNR serveur (avec intégration Mongo si MONGOMS_AVAILABLE=1)
 coverage: ## Rapport de couverture consolidé (5 workspaces)
 	@$(NPM) run coverage
 
-e2e-web: ## E2E web (Playwright, navigateur réel — CI ou local si Chromium installé)
-	@$(NPM) run e2e:web
-
 test: ## Tests unitaires de tous les workspaces
 	@$(NPM) --workspaces --if-present run test
 
-typecheck: ## Typecheck des 5 workspaces
+typecheck: ## Typecheck des 4 workspaces
 	@$(NPM) --workspace belote-core run typecheck
 	@$(NPM) --workspace @kydos/table-pixi run typecheck
 	@$(NPM) --workspace belote-server run typecheck
-	@$(NPM) --workspace belote-web run typecheck
 	@$(NPM) --workspace belote-mobile run typecheck
 
 # --- Nettoyage ----------------------------------------------------------------

@@ -15,7 +15,6 @@ const WORKSPACES = [
   { name: 'core', dir: 'packages/core', pkg: 'belote-core' },
   { name: 'table-pixi', dir: 'packages/table-pixi', pkg: '@kydos/table-pixi' },
   { name: 'server', dir: 'server', pkg: 'belote-server' },
-  { name: 'web', dir: 'web', pkg: 'belote-web' },
   { name: 'mobile', dir: 'mobile', pkg: 'belote-mobile' },
 ];
 const C = { r: '\x1b[31m', g: '\x1b[32m', y: '\x1b[33m', d: '\x1b[2m', b: '\x1b[1m', x: '\x1b[0m' };
