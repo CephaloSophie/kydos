@@ -116,10 +116,21 @@ export function TournamentBracketScreen(ctx: AppContext): HTMLElement {
 
   root.append(header, status, canvas);
 
+  // v14.14 \u2014 Rafra\u00eechissement automatique tant que le tournoi est LIVE, pour
+  // afficher les scores EN DIRECT (le serveur recopie le score des matchs en
+  // cours dans le bracket toutes les ~3 s). On stoppe d\u00e8s qu'il est termin\u00e9.
+  let poller: ReturnType<typeof setInterval> | null = null;
+  const stopPolling = () => { if (poller) { clearInterval(poller); poller = null; } };
+
   const load = async () => {
     try {
       const data = await api.getTournamentBracket(tournamentId) as BracketData;
       renderBracket(data);
+      if (data.status === 'live' && !poller) {
+        poller = setInterval(() => { void load(); }, 4000);
+      } else if (data.status !== 'live') {
+        stopPolling();
+      }
     } catch (e) {
       status.textContent = `\u2717 ${(e as Error).message}`;
     }
@@ -270,5 +281,6 @@ export function TournamentBracketScreen(ctx: AppContext): HTMLElement {
   };
 
   void load();
+  root._cleanup = () => stopPolling();
   return root;
 }

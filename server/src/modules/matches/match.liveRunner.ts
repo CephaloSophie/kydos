@@ -295,6 +295,41 @@ export class MatchLiveService {
   }
 
   /**
+   * v14.14 — Recopie le score EN COURS des matchs de tournoi (live) dans
+   * l'arbre bracket persistant (MongoDB), pour qu'il soit consultable en
+   * direct par le back-office ET les joueurs. Léger : ne touche que les
+   * matchs RUNNING rattachés à un tournoi, et l'écriture est ignorée si le
+   * score n'a pas changé.
+   */
+  async syncTournamentLiveScores(): Promise<void> {
+    const running = await MatchModel.find({
+      status: MatchStatus.RUNNING,
+      tournament: { $ne: null },
+      liveTableId: { $ne: null },
+    }).select('_id tournament liveTableId').lean();
+    if (running.length === 0) return;
+
+    // Index tableId → scores {A,B} depuis les sessions live en mémoire.
+    const sessions = liveGameService.snapshotSessions();
+    const scoreByTable = new Map<string, { A: number; B: number }>();
+    for (const s of sessions) scoreByTable.set(s.tableId, s.scores);
+
+    const { tournamentService } = await import('../tournaments/tournament.service.js');
+    for (const m of running) {
+      const tableId = String((m as any).liveTableId);
+      const sc = scoreByTable.get(tableId);
+      if (!sc) continue;
+      try {
+        await tournamentService.updateLiveScore({
+          tournamentId: String((m as any).tournament),
+          matchId: String((m as any)._id),
+          scoreA: sc.A, scoreB: sc.B,
+        });
+      } catch { /* résilience */ }
+    }
+  }
+
+  /**
    * Sweep périodique : cherche les tables live des matchs qui sont
    * potentiellement terminées et fait le settle. Utilisé par le worker
    * tournois pour progresser sans polling agressif.

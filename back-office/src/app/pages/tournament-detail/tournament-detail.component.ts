@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TournamentService } from '../../services/tournament.service';
@@ -168,14 +168,34 @@ import type { Tournament, TournamentStatus } from '../../models';
     .bracket-score { font-weight: 700; color: var(--primary); }
   `],
 })
-export class TournamentDetailComponent implements OnInit {
+export class TournamentDetailComponent implements OnInit, OnDestroy {
   tournament: Tournament | null = null;
+  private id = '';
+  private poller: any = null;
 
   constructor(private route: ActivatedRoute, private tournamentService: TournamentService) {}
 
   ngOnInit() {
-    const id = this.route.snapshot.params['id'];
-    this.tournamentService.getById(id).subscribe(res => this.tournament = res.tournament);
+    this.id = this.route.snapshot.params['id'];
+    this.reload();
+  }
+
+  ngOnDestroy() {
+    if (this.poller) clearInterval(this.poller);
+  }
+
+  private reload() {
+    this.tournamentService.getById(this.id).subscribe(res => {
+      this.tournament = res.tournament;
+      // Rafraîchit en direct tant que le tournoi est EN COURS (scores live
+      // recopiés dans le bracket par le serveur de jeu).
+      if (this.tournament?.status === 'live' && !this.poller) {
+        this.poller = setInterval(() => this.reload(), 4000);
+      } else if (this.tournament?.status !== 'live' && this.poller) {
+        clearInterval(this.poller);
+        this.poller = null;
+      }
+    });
   }
 
   publish() {

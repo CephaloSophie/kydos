@@ -138,6 +138,13 @@ async function boot(): Promise<void> {
 
   router.start();
 
+  // v14.14 — Pastille LIVE globale : rejoindre un match en cours depuis
+  // n'importe quel écran (montée une fois, hors du viewport routeur).
+  try {
+    const { mountLiveMatchIndicator } = await import('./presentation/components/LiveMatchIndicator');
+    mountLiveMatchIndicator(ctx);
+  } catch { /* non bloquant */ }
+
   // Retirer l'écran d'initialisation (les 4 robots) une fois l'app montée.
   requestAnimationFrame(() => {
     const bootEl = document.getElementById('boot');

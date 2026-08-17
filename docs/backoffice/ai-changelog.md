@@ -4,6 +4,37 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
 
 ---
 
+## Commit `<progression live + scores>` — fix: progression des tournois live + scores en direct
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demande utilisateur** : Le tournoi Alliance hybride ne passe pas en finale ; perdants toujours notifiés « Rejoindre » ; arbre et scores non mis à jour ; vouloir des scores en direct (back-office + joueurs) ; pastille LIVE globale.
+
+### Bug critique corrigé — le tournoi n'avançait pas (matchs live)
+
+Cause racine : l'orchestrateur créait les matchs de tournoi en `PAIRING` mais ne les passait jamais en `RUNNING`. Or `sweepFinishedMatches` (qui règle les matchs terminés) ne balaie **que** les matchs `RUNNING`. Résultat : `recordMatchResult` n'était jamais appelé pour les matchs live (Alliance hybride / Carrée royale) → arbre, scores et éliminations figés, round suivant (finale) jamais créé, et perdants voyant toujours « Rejoindre » (leur match restait `PAIRING`). Les Duo d'acier (headless) n'étaient pas touchés car leur runner passe bien en RUNNING→FINISHED.
+
+Correctifs (`server/src/modules/tournaments`, `matches`) :
+- `tournament.orchestrator.ts` : après provision de la table live, passage du match en `RUNNING` (updateOne atomique, préserve `liveTableId`).
+- `tournament.service.recordMatchResult` : dès qu'un round est complet, exécution immédiate de l'orchestrateur → les gagnants voient leur match suivant en quelques secondes (au lieu d'attendre le tick worker 30 s).
+- `join()` : message d'erreur nommant le(s) robot(s) déjà engagé(s) ce jour-là (diagnostic).
+
+### Scores en direct (back-office + joueurs) sans Redis
+
+Le back-office étant un process séparé du serveur de jeu, la mémoire live n'est pas partagée. Solution : le serveur de jeu **recopie le score des matchs en cours dans le bracket (MongoDB)** toutes les ~3 s → consultable en direct des deux côtés, sans infra Redis supplémentaire.
+- `match.liveRunner.syncTournamentLiveScores()` + appel dans le sweep socket (3 s).
+- `tournament.service.updateLiveScore()` : écrit `scoreA/scoreB` dans le nœud bracket (no-op si terminé/inchangé).
+- Mobile : `TournamentBracketScreen` se rafraîchit automatiquement (4 s) tant que le tournoi est LIVE.
+- Back-office : `tournament-detail` se rafraîchit automatiquement tant que le tournoi est LIVE.
+
+### Pastille LIVE globale (mobile)
+
+`LiveMatchIndicator` : pastille « LIVE » flottante (haut-gauche, premier plan) affichée sur toutes les pages dès qu'un match de compétition/tournoi est en cours (tous formats). Un tap rejoint la partie. Montée une fois au démarrage, masquée sur table/online/login.
+
+### Reste à faire (signalé au joueur)
+- Écran « attente » du gagnant (score en direct de l'autre demi-finale + lien spectateur) et spectateur d'un match précis : nécessitent une vérification sur appareil réel (UI temps-réel socket).
+
+---
+
 ## Commit `<retours joueur>` — fix: sidebar icons + inscription tournoi avec choix des robots
 
 **Branche** : `claude/back-office-angular-mhtcd8`

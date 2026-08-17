@@ -373,6 +373,31 @@ export class TournamentService {
   }
 
   /**
+   * v14.14 — Écrit le score EN COURS d'un match dans l'arbre bracket (sans
+   * marquer de vainqueur). Appelé périodiquement par le sweep temps-réel à
+   * partir du score live de la table. Comme le bracket vit en MongoDB, ce
+   * score devient consultable EN DIRECT à la fois par le back-office (process
+   * séparé) et par les joueurs — sans dépendance Redis supplémentaire.
+   * No-op si le match a déjà un vainqueur (score final déjà figé).
+   */
+  async updateLiveScore(input: { tournamentId: string; matchId: string; scoreA: number; scoreB: number }): Promise<void> {
+    const t = await TournamentModel.findById(input.tournamentId);
+    if (!t || t.status !== TournamentStatus.LIVE) return;
+    const tree = (t as any).bracketTree;
+    if (!tree?.rounds) return;
+    const found = findBracketMatchByMatchId(tree, input.matchId);
+    if (!found) return;
+    const bm = tree.rounds[found.roundIndex - 1].matches[found.matchIndex];
+    if (!bm || bm.winner) return;                      // déjà terminé → score figé
+    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB) return;  // inchangé
+    bm.scoreA = input.scoreA;
+    bm.scoreB = input.scoreB;
+    if (!bm.startedAt) bm.startedAt = new Date();
+    (t as any).markModified?.('bracketTree');
+    await t.save();
+  }
+
+  /**
    * Finalisation du tournoi : calcule les positions finales, verse les gains
    * (selon prizesByPosition ou fallback rounds legacy), enregistre les
    * `houseAccountingService` par prix versé, remplit `winners` (top 3).
