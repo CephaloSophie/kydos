@@ -181,7 +181,23 @@ export class TournamentService {
     try {
       if (locks.length > 0) await TournamentRobotDayLockModel.insertMany(locks, { ordered: true });
     } catch (e: any) {
-      if (e?.code === 11000) throw badRequest('Un de vos robots est d\u00e9j\u00e0 engag\u00e9 dans un tournoi ce jour-l\u00e0.');
+      if (e?.code === 11000) {
+        // On identifie PR\u00c9CIS\u00c9MENT le(s) robot(s) d\u00e9j\u00e0 engag\u00e9(s) ce jour-l\u00e0 et,
+        // pour le diagnostic, dans quel tournoi \u2014 le message g\u00e9n\u00e9rique masquait
+        // l'origine du blocage (souvent un verrou orphelin d'un test pr\u00e9c\u00e9dent).
+        const existing: any[] = await TournamentRobotDayLockModel
+          .find({ robotId: { $in: robotIds.map((r) => new Types.ObjectId(r)) }, dayKey })
+          .select('robotId tournamentId').lean();
+        const lockedRobotIds = existing.map((l) => String(l.robotId));
+        const robotsInfo: any[] = await RobotModel.find({ _id: { $in: lockedRobotIds } }).select('name').lean();
+        const names = robotsInfo.map((r) => r.name).filter(Boolean);
+        const label = names.length ? names.join(', ') : lockedRobotIds.join(', ');
+        throw badRequest(
+          `Robot(s) d\u00e9j\u00e0 engag\u00e9(s) dans un tournoi le ${dayKey} : ${label}. `
+          + 'Un robot ne peut participer qu\'\u00e0 un seul tournoi par jour. '
+          + 'Choisissez un autre robot, ou attendez un autre jour.',
+        );
+      }
       throw e;
     }
 
@@ -342,6 +358,18 @@ export class TournamentService {
       await this.#finalizeTournament(t, tree as any);
     }
     await t.save();
+
+    // Progression immédiate : dès qu'un round est entièrement terminé (et que
+    // le tournoi n'est pas fini), on crée tout de suite les matchs du round
+    // suivant plutôt que d'attendre le prochain tick du worker (jusqu'à 30 s).
+    // Les gagnants voient ainsi leur match suivant apparaître en quelques
+    // secondes. Import dynamique pour éviter tout cycle service ↔ orchestrateur.
+    if (result.roundJustDone && !result.tournamentDone) {
+      try {
+        const { tournamentOrchestrator } = await import('./tournament.orchestrator.js');
+        await tournamentOrchestrator.run(String(t._id));
+      } catch { /* le worker rattrapera au prochain tick */ }
+    }
   }
 
   /**

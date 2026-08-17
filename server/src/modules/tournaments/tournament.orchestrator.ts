@@ -99,10 +99,22 @@ export class TournamentOrchestrator {
         void matchHeadlessRunner.run(String(created._id), { manches: 2 }).catch(() => {});
       } else if (format === MatchFormat.HYBRID_ALLIANCE || format === MatchFormat.ROYAL_SQUARE) {
         // v14.14 — HYBRID (2 humains) et ROYAL (4 humains) : table live que
-        // les humains rejoindront. Provisionne au démarrage du match.
+        // les humains rejoindront. Provisionne la table PUIS passe le match en
+        // RUNNING (comme le matchmaking, matchmaking.service.ts).
+        //
+        // CRITIQUE : sans le passage en RUNNING, `sweepFinishedMatches` — qui ne
+        // balaie QUE les matchs RUNNING — ne réglerait jamais ce match. Le
+        // bracket ne progresserait donc pas (pas de round suivant, scores et
+        // arbre figés, perdants jamais éliminés). Le `updateOne` atomique ne
+        // touche que status/startedAt et n'écrase pas le liveTableId posé par
+        // provision().
         try {
           await matchLiveService.provision(String(created._id));
         } catch { /* si provision échoue, la table sera créée à la demande */ }
+        await MatchModel.updateOne(
+          { _id: created._id },
+          { $set: { status: MatchStatus.RUNNING, startedAt: new Date() } },
+        );
       }
     }
 
