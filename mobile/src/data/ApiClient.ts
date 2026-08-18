@@ -125,6 +125,8 @@ export class ApiClient {
   }
   /** Détail complet d'un tournoi. */
   getTournament(id: string) { return this.call<{ tournament: unknown }>(`/tournaments/${id}`); }
+  /** v16 — Statut ACTIF du joueur dans un tournoi live (écran d'attente / rejoindre). */
+  getMyTournament() { return this.call<{ active: TournamentActive | null }>('/tournaments/mine'); }
   /** Inscription au tournoi (débit du buy-in, verrous 1/robot/jour). */
   joinTournament(id: string, robotIds: string[] = []) {
     return this.call<{ joined: true }>(`/tournaments/${id}/join`, { method: 'POST', body: JSON.stringify({ robotIds }) });
@@ -310,6 +312,34 @@ export interface ServerWallet {
   canClaimToday: boolean;
   lastClaimDay: string | null;
   transactions: ServerWalletTransaction[];
+}
+
+/** v16 — Match attendu (adversaire en cours de désignation) avec score live. */
+export interface AwaitedTournamentMatch {
+  matchId: string | null;
+  roundIndex: number;
+  matchIndex: number;
+  slotAName: string;
+  slotBName: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  winner: 'A' | 'B' | null;
+  tableId: string | null;
+}
+
+/** v16 — Statut actif du joueur dans un tournoi live. */
+export interface TournamentActive {
+  tournamentId: string;
+  name: string;
+  format: string;
+  color: string;
+  icon: string;
+  state: 'champion' | 'playing' | 'waiting' | 'pending' | 'eliminated' | 'none';
+  roundIndex: number | null;
+  roundLabel: string;
+  myMatchId: string | null;
+  myTableId: string | null;
+  awaiting: AwaitedTournamentMatch[];
 }
 
 /** Forme serveur d'un robot (serializer listByOwner). */

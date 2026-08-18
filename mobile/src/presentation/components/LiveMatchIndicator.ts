@@ -34,11 +34,15 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
     },
   }, dot, label) as HTMLButtonElement;
 
+  // current = { kind: 'match', match } | { kind: 'tournament' }
   let current: any = null;
 
   const rejoin = async () => {
-    const m = current;
-    if (!m) return;
+    if (!current) return;
+    // v16 — engagement TOURNOI (match en cours ou attente) → salle d'attente
+    // qui dispatche (rejoindre la table / regarder l'autre match).
+    if (current.kind === 'tournament') { router.go('tournament-wait'); return; }
+    const m = current.match;
     const format = m.format as string;
     if (format === 'duo_steel') { router.go(`matchmaking?format=${format}`); return; }
     try {
@@ -54,11 +58,22 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
     if (screen && HIDDEN_SCREENS.has(screen)) { chip.style.display = 'none'; return; }
     if (!api.isAuthenticated()) { chip.style.display = 'none'; current = null; return; }
     try {
+      // Priorité au match rapide en cours ; sinon engagement tournoi.
       const { match } = await api.getMyMatch();
       const m = match as any | null;
-      const live = m && (m.status === 'running' || m.status === 'pairing');
-      current = live ? m : null;
-      chip.style.display = live ? 'inline-flex' : 'none';
+      if (m && (m.status === 'running' || m.status === 'pairing')) {
+        current = { kind: 'match', match: m };
+        chip.style.display = 'inline-flex';
+        return;
+      }
+      const { active } = await api.getMyTournament();
+      if (active && (active.state === 'playing' || active.state === 'waiting' || active.state === 'pending')) {
+        current = { kind: 'tournament' };
+        chip.style.display = 'inline-flex';
+        return;
+      }
+      current = null;
+      chip.style.display = 'none';
     } catch { /* transitoire : on garde l'état courant */ }
   };
 
