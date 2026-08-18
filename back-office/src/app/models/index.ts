@@ -40,6 +40,7 @@ export interface TournamentGameConfig {
   baseTarget: number;
   labelTarget: number;
   roundCountdownSec: number;
+  autoRejoinSec: number;
   trickDelayMs: number;
   speed: number;
   turnTimeoutMs: number;

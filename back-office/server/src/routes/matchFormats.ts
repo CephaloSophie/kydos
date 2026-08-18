@@ -94,6 +94,7 @@ router.post('/', async (req: AdminRequest, res) => {
       icon: b.icon ? String(b.icon) : base.icon,
       minLevel: num(b.minLevel, 0, 9999, 0),
       maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
+      autoRejoinSec: num(b.autoRejoinSec, 0, 60, 5),
       active: b.active !== false,
       order: num(b.order, 0, 999, count),
     });
@@ -111,7 +112,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     const cfg = await Model.findById(req.params.id) as any;
     if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
 
-    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, active, order } = req.body;
+    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, active, order } = req.body;
     if (label !== undefined) cfg.label = String(label);
     if (subtitle !== undefined) cfg.subtitle = String(subtitle);
     if (buyInPerPlayer !== undefined) cfg.buyInPerPlayer = num(buyInPerPlayer, 0, 1_000_000, cfg.buyInPerPlayer);
@@ -123,6 +124,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (icon !== undefined) cfg.icon = String(icon);
     if (minLevel !== undefined) cfg.minLevel = num(minLevel, 0, 9999, cfg.minLevel);
     if (maxLevel !== undefined) cfg.maxLevel = (maxLevel === null || maxLevel === '') ? null : num(maxLevel, 0, 9999, cfg.maxLevel ?? 0);
+    if (autoRejoinSec !== undefined) cfg.autoRejoinSec = num(autoRejoinSec, 0, 60, cfg.autoRejoinSec ?? 5);
     if (active !== undefined) cfg.active = !!active;
     if (order !== undefined) cfg.order = num(order, 0, 999, cfg.order);
     await cfg.save();

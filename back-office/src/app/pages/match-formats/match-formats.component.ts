@@ -97,6 +97,13 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
                 <input type="number" [(ngModel)]="f.order" min="0" />
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Redirection auto depuis la popup LIVE (s)</label>
+                <input type="number" [(ngModel)]="f.autoRejoinSec" min="0" max="60" step="1" />
+              </div>
+              <div class="form-group"></div>
+            </div>
             <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
               <input type="checkbox" [(ngModel)]="f.active" [id]="'a-' + f.format" />
               <label [for]="'a-' + f.format" style="margin:0">Proposé aux joueurs</label>

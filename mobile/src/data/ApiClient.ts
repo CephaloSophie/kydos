@@ -342,6 +342,8 @@ export interface TournamentActive {
   myMatchId: string | null;
   myTableId: string | null;
   awaiting: AwaitedTournamentMatch[];
+  /** v16 — délai (s) avant redirection auto depuis la popup LIVE. */
+  autoRejoinSec?: number;
 }
 
 /** Forme serveur d'un robot (serializer listByOwner). */

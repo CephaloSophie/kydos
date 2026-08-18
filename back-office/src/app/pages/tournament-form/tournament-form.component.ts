@@ -106,7 +106,10 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
             <label>Compte à rebours avant chaque round (s)</label>
             <input type="number" [(ngModel)]="form.gameConfig.roundCountdownSec" min="0" max="300" step="1" />
           </div>
-          <div class="form-group"></div>
+          <div class="form-group">
+            <label>Redirection auto depuis la popup LIVE (s)</label>
+            <input type="number" [(ngModel)]="form.gameConfig.autoRejoinSec" min="0" max="60" step="1" />
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -249,6 +252,7 @@ export class TournamentFormComponent implements OnInit {
       baseTarget: 1500,
       labelTarget: 2000,
       roundCountdownSec: 10,
+      autoRejoinSec: 5,
       turnTimeoutMs: 15000,
       trickDelayMs: 900,
       speed: 1,
@@ -289,6 +293,7 @@ export class TournamentFormComponent implements OnInit {
             baseTarget: t.gameConfig?.baseTarget ?? 1500,
             labelTarget: t.gameConfig?.labelTarget ?? 2000,
             roundCountdownSec: t.gameConfig?.roundCountdownSec ?? 10,
+            autoRejoinSec: t.gameConfig?.autoRejoinSec ?? 5,
             turnTimeoutMs: t.gameConfig?.turnTimeoutMs ?? 15000,
             trickDelayMs: t.gameConfig?.trickDelayMs ?? 900,
             speed: t.gameConfig?.speed ?? 1,

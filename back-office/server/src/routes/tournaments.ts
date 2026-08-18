@@ -57,6 +57,7 @@ function sanitizeGameConfig(raw: any): any {
     baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
     labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
     roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),
+    autoRejoinSec: clamp(g.autoRejoinSec, 0, 60, 5),
     trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
     speed: clamp(g.speed, 0.5, 4, 1),
     turnTimeoutMs: clamp(g.turnTimeoutMs, 3000, 120000, 15000),

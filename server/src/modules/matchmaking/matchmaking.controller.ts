@@ -101,6 +101,12 @@ export class MatchmakingController {
         .populate('participants.robotId', 'name mobile owner')
         .lean();
     }
+    // v16 — expose autoRejoinSec (délai de redirection auto de la popup LIVE).
+    if (match?.formatConfig) {
+      const { MatchFormatConfigModel } = await import('../matches/matchFormatConfig.model.js');
+      const cfg: any = await MatchFormatConfigModel.findById(match.formatConfig).select('autoRejoinSec').lean();
+      match.autoRejoinSec = Number.isFinite(cfg?.autoRejoinSec) ? Number(cfg.autoRejoinSec) : 5;
+    }
     response.json({ match: match ?? null });
   }
 

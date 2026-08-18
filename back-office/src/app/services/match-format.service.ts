@@ -15,6 +15,7 @@ export interface MatchFormatConfig {
   icon: string;
   minLevel: number;
   maxLevel: number | null;
+  autoRejoinSec?: number;
   active: boolean;
   order: number;
   houseNet?: number;

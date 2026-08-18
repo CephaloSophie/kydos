@@ -49,7 +49,7 @@ export class TournamentService {
     const tournaments = await TournamentModel.find({
       status: TournamentStatus.LIVE,
       'participants.userId': new Types.ObjectId(userId),
-    }).select('name format color icon bracketTree').lean();
+    }).select('name format color icon bracketTree gameConfig').lean();
 
     // Repli : tournoi LIVE où le joueur est éliminé/champion (plus engagé mais
     // il peut encore consulter l'arbre et regarder les autres matchs). On le
@@ -57,6 +57,7 @@ export class TournamentService {
     let fallback: any | null = null;
 
     for (const t of tournaments as any[]) {
+      const autoRejoinSec = Number.isFinite(t.gameConfig?.autoRejoinSec) ? Number(t.gameConfig.autoRejoinSec) : 5;
       const status = computeUserTournamentStatus(t.bracketTree, userId);
       if (status.state === 'none') continue;
       if (status.state === 'eliminated' || status.state === 'champion') {
@@ -67,7 +68,7 @@ export class TournamentService {
             name: t.name, format: t.format, color: t.color, icon: t.icon,
             state: status.state,
             roundIndex: status.roundIndex, roundLabel,
-            startsAt: null, myMatchId: null, myTableId: null, awaiting: [],
+            startsAt: null, myMatchId: null, myTableId: null, awaiting: [], autoRejoinSec,
           };
         }
         continue;
@@ -100,6 +101,7 @@ export class TournamentService {
           ...a,
           tableId: a.matchId ? tableByMatch.get(a.matchId) ?? null : null,
         })),
+        autoRejoinSec,
       };
     }
     return fallback;

@@ -34,6 +34,8 @@ const MatchFormatConfigSchema = new Schema(
     /** v16 — Critère d'accès : niveau requis (min) et plafond (max, null = aucun). */
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },
+    /** v16 — délai (s) avant redirection auto depuis la popup LIVE. */
+    autoRejoinSec: { type: Number, default: 5, min: 0 },
     /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel. */
     active: { type: Boolean, default: true, index: true },
     order: { type: Number, default: 0 },

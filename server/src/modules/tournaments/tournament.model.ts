@@ -161,6 +161,8 @@ const TournamentGameConfigSchema = new Schema(
     labelTarget: { type: Number, default: 2000 },  // score cible du grand label
     // v16 — compte à rebours (s) avant le démarrage de chaque match/round.
     roundCountdownSec: { type: Number, default: 10 },
+    // v16 — délai (s) avant la redirection auto du joueur depuis la popup LIVE.
+    autoRejoinSec: { type: Number, default: 5 },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     turnTimeoutMs: { type: Number, default: 15000 },
