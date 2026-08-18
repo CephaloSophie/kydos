@@ -56,6 +56,7 @@ function sanitizeGameConfig(raw: any): any {
     manches: [1, 2, 4].includes(Number(g.manches)) ? Number(g.manches) : 2,
     baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
     labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
+    roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),
     trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
     speed: clamp(g.speed, 0.5, 4, 1),
     turnTimeoutMs: clamp(g.turnTimeoutMs, 3000, 120000, 15000),

@@ -52,6 +52,12 @@ export interface BracketMatch {
   scoreB: number | null;
   startedAt: Date | null;
   finishedAt: Date | null;
+  /**
+   * v16 — Instant planifié de démarrage : posé par l'orchestrateur dès que les
+   * 2 slots sont connus, à `now + roundCountdownSec`. Le match n'est créé/lancé
+   * qu'une fois cet instant atteint (compte à rebours côté joueur).
+   */
+  scheduledStartAt?: Date | null;
   nextMatchIndex: number | null;   // dans le round suivant
   nextSlot: 'A' | 'B' | null;      // A ou B du parent
 }

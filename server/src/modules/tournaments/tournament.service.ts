@@ -75,6 +75,7 @@ export class TournamentService {
         state: status.state,
         roundIndex: status.roundIndex,
         roundLabel,
+        startsAt: status.startsAt,   // v16 — compte à rebours (état 'pending')
         myMatchId: status.myMatchId,
         myTableId: status.myMatchId ? tableByMatch.get(status.myMatchId) ?? null : null,
         awaiting: status.awaiting.map((a) => ({

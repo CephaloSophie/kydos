@@ -70,6 +70,19 @@ describe('computeUserTournamentStatus (v16)', () => {
     expect(s.myMatchId).toBe('m-finale');
   });
 
+  it('compte à rebours : finale planifiée non créée → pending + startsAt', () => {
+    const t = fresh();
+    t.rounds[0].matches[0].matchId = 'm-demi0';
+    t.rounds[0].matches[1].matchId = 'm-demi1';
+    advanceBracket(t, { roundIndex: 1, matchIndex: 0, winner: 'A', scoreA: 501, scoreB: 300, gameId: 'g0' });
+    advanceBracket(t, { roundIndex: 1, matchIndex: 1, winner: 'A', scoreA: 501, scoreB: 100, gameId: 'g1' });
+    const at = new Date(Date.now() + 10_000);
+    (t.rounds[1].matches[0] as any).scheduledStartAt = at;
+    const s = computeUserTournamentStatus(t, 'u0');
+    expect(s.state).toBe('pending');
+    expect(s.startsAt).toBe(at.toISOString());
+  });
+
   it('perdant de sa demi → eliminated', () => {
     const t = fresh();
     t.rounds[0].matches[0].matchId = 'm-demi0';

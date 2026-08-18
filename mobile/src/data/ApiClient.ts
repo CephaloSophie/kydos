@@ -337,6 +337,8 @@ export interface TournamentActive {
   state: 'champion' | 'playing' | 'waiting' | 'pending' | 'eliminated' | 'none';
   roundIndex: number | null;
   roundLabel: string;
+  /** v16 — instant de démarrage planifié (compte à rebours), état 'pending'. */
+  startsAt: string | null;
   myMatchId: string | null;
   myTableId: string | null;
   awaiting: AwaitedTournamentMatch[];

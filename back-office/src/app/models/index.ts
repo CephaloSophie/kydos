@@ -39,6 +39,7 @@ export interface TournamentGameConfig {
   manches: number;
   baseTarget: number;
   labelTarget: number;
+  roundCountdownSec: number;
   trickDelayMs: number;
   speed: number;
   turnTimeoutMs: number;

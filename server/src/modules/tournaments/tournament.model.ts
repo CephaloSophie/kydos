@@ -122,6 +122,8 @@ const BracketMatchSchema = new Schema(
     scoreB: { type: Number, default: null },
     startedAt: { type: Date, default: null },
     finishedAt: { type: Date, default: null },
+    // v16 — instant planifié de démarrage (compte à rebours avant création).
+    scheduledStartAt: { type: Date, default: null },
     nextMatchIndex: { type: Number, default: null },
     nextSlot: { type: String, enum: ['A', 'B', null], default: null },
   },
@@ -157,6 +159,8 @@ const TournamentGameConfigSchema = new Schema(
     manches: { type: Number, enum: [1, 2, 4], default: 2 },
     baseTarget: { type: Number, default: 1500 },   // score cible d'une manche standard
     labelTarget: { type: Number, default: 2000 },  // score cible du grand label
+    // v16 — compte à rebours (s) avant le démarrage de chaque match/round.
+    roundCountdownSec: { type: Number, default: 10 },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     turnTimeoutMs: { type: Number, default: 15000 },
