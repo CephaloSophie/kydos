@@ -252,12 +252,31 @@ const BracketTreeSchema = new Schema(
   { _id: false },
 );
 
+const TournamentGameConfigSchema = new Schema(
+  {
+    manches: { type: Number, enum: [1, 2, 4], default: 2 },
+    baseTarget: { type: Number, default: 1500 },
+    labelTarget: { type: Number, default: 2000 },
+    trickDelayMs: { type: Number, default: 900 },
+    speed: { type: Number, default: 1 },
+    turnTimeoutMs: { type: Number, default: 15000 },
+    allowSpectators: { type: Boolean, default: true },
+    feltTheme: { type: String, enum: ['classic', 'cosmos', 'olympus'], default: 'classic' },
+    signals: {
+      reflexion: { type: Boolean, default: true },
+      repeatSuit: { type: Boolean, default: true },
+    },
+  },
+  { _id: false },
+);
+
 const TournamentSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
     format: { type: String, enum: MATCH_FORMATS, required: true, index: true },
     status: { type: String, enum: TOURNAMENT_STATUSES, default: 'draft', index: true },
     capacity: { type: Number, enum: TOURNAMENT_CAPACITIES, required: true },
+    gameConfig: { type: TournamentGameConfigSchema, default: () => ({}) },
     description: { type: String, default: '', maxlength: 500 },
     color: { type: String, default: '#e6c46a' },
     icon: { type: String, default: '♦' },
@@ -309,6 +328,27 @@ const HouseTransactionSchema = new Schema(
 );
 HouseTransactionSchema.index({ kind: 1, createdAt: -1 });
 mongoose.models.HouseTransaction ?? model('HouseTransaction', HouseTransactionSchema);
+
+const MatchFormatConfigSchema = new Schema(
+  {
+    format: { type: String, enum: MATCH_FORMATS, required: true, unique: true, index: true },
+    label: { type: String, required: true },
+    subtitle: { type: String, default: '' },
+    buyInPerPlayer: { type: Number, required: true, min: 0 },
+    prizePerWinner: { type: Number, required: true, min: 0 },
+    manches: { type: Number, enum: [1, 2, 4], default: 2 },
+    baseTarget: { type: Number, default: 1500 },
+    labelTarget: { type: Number, default: 2000 },
+    color: { type: String, default: '#3f6ea1' },
+    icon: { type: String, default: '♦' },
+    minLevel: { type: Number, default: 0, min: 0 },
+    maxLevel: { type: Number, default: null },
+    active: { type: Boolean, default: true, index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.MatchFormatConfig ?? model('MatchFormatConfig', MatchFormatConfigSchema);
 
 const PromoCodeSchema = new Schema(
   {

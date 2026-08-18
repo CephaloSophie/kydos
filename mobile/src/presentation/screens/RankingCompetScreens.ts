@@ -63,6 +63,8 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   /** Description d'un format d'inscription (miroir du catalog serveur). */
   interface FormatCard {
     id: 'duo_steel' | 'hybrid_alliance' | 'royal_square';
+    /** v16 — variante précise (MatchFormatConfig._id) ; absent pour le repli statique. */
+    variantId?: string;
     label: string;
     glyph: string;
     tag: string;
@@ -82,7 +84,17 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
       subtitle: 'Quatre humains, deux \u00e9quipes, une couronne.', buyIn: 100, prize: 150, robotsPerPlayer: 0, isHeadless: false },
   ];
 
+  // v16 — Champs STRUCTURELS par format (non configurables) : glyphe, tag,
+  // nombre de robots, headless. La mise/gain/label/couleur viennent du serveur.
+  const STRUCT: Record<string, { glyph: string; tag: string; robotsPerPlayer: number; isHeadless: boolean }> = {
+    duo_steel: { glyph: '♦', tag: '2 ROBOTS × 2', robotsPerPlayer: 2, isHeadless: true },
+    hybrid_alliance: { glyph: '♠', tag: 'HUMAIN + ROBOT', robotsPerPlayer: 1, isHeadless: false },
+    royal_square: { glyph: '♥', tag: '4 HUMAINS', robotsPerPlayer: 0, isHeadless: false },
+  };
+
   const statusEl = h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)', minHeight: '14px', marginTop: '10px', textAlign: 'center' } });
+  // Hôte du carrousel MATCH RAPIDE (rempli dynamiquement depuis le serveur).
+  const matchFormatsHost = h('div', {});
 
   const enqueue = async (f: FormatCard) => {
     if (!api.isAuthenticated()) { statusEl.textContent = '\u2717 Connexion requise'; return; }
@@ -98,12 +110,14 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
       // On ne connaît pas l'user_id en file côté client ; on tente l'enqueue :
       // si le serveur détecte "déjà en file", il renvoie queued (idempotent v14.7).
     } catch { /* pas grave */ }
-    router.go(`enroll?format=${f.id}`);
+    // v16 \u2014 on transporte la variante choisie + son \u00e9conomie jusqu'\u00e0 l'\u00e9cran.
+    const v = f.variantId ? `&variant=${f.variantId}` : '';
+    router.go(`enroll?format=${f.id}${v}&buyIn=${f.buyIn}&prize=${f.prize}&label=${encodeURIComponent(f.label)}`);
   };
 
   const cancel = async (f: FormatCard) => {
     try {
-      await api.cancelMatchQueue(f.id);
+      await api.cancelMatchQueue(f.id, f.variantId);
       await ctx.session.refreshWallet();
       statusEl.textContent = `\u2713 Inscription annul\u00e9e, buy-in rembours\u00e9.`;
     } catch (e) {
@@ -168,6 +182,34 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     ),
   );
     return card;
+  };
+
+  // v16 — Charge dynamiquement les MATCH RAPIDE depuis le serveur (config
+  // back-office : mise, gain, manches, score cible, habillage). Nombre variable
+  // → carrousel horizontal. Repli sur la liste statique si l'appel échoue.
+  const loadMatchFormats = async () => {
+    let cards: FormatCard[] = FORMATS;
+    try {
+      const { formats } = await api.listMatchFormats();
+      if (formats?.length) {
+        // Le serveur ne renvoie que les formats ÉLIGIBLES au niveau du joueur.
+        // Sécurité d'affichage : on plafonne à 10 cartes côté client.
+        cards = formats.slice(0, 10).map((f) => {
+          const s = STRUCT[f.format] ?? { glyph: '♦', tag: '', robotsPerPlayer: 0, isHeadless: false };
+          const color = f.color || '#3f6ea1';
+          return {
+            id: f.format as FormatCard['id'],
+            variantId: (f as any).id,
+            label: f.label, glyph: f.icon || s.glyph, tag: s.tag,
+            accent: `linear-gradient(160deg, ${color} 0%, ${color}bb 100%)`,
+            subtitle: f.subtitle, buyIn: f.buyIn, prize: f.prize,
+            robotsPerPlayer: s.robotsPerPlayer, isHeadless: s.isHeadless,
+          };
+        });
+      }
+    } catch { /* repli statique */ }
+    clear(matchFormatsHost);
+    matchFormatsHost.append(Carousel(cards.map(formatCard), { itemGap: 12, className: 'compet-formats-car' }));
   };
 
   // ── Section Tournois (v14.1) ─────────────────────────────────────────────
@@ -281,6 +323,7 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     }
   };
   void loadTournaments();
+  void loadMatchFormats();
 
   const filterBtn = (label: string, key: 'upcoming' | 'live' | 'finished') =>
     h('button', {
@@ -308,7 +351,7 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
 
     // Section 1 : Match rapide — carrousel scrollable (extensible si on ajoute des formats).
     h('div', { class: 'eyebrow', style: { marginBottom: '10px', color: 'var(--c-text-mute)' } }, 'MATCH RAPIDE'),
-    Carousel(FORMATS.map(formatCard), { itemGap: 12, className: 'compet-formats-car' }),
+    matchFormatsHost,
     statusEl,
 
     // Séparateur

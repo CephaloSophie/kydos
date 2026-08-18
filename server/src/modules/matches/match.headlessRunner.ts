@@ -34,7 +34,10 @@ export interface HeadlessMatchResult {
 
 export class MatchHeadlessRunner {
   /** Lance et termine un match (DUO_STEEL) en synchronous. Rend le résultat. */
-  async run(matchId: string, options: { manches: 1 | 2 | 4 } = { manches: 2 }): Promise<HeadlessMatchResult> {
+  async run(
+    matchId: string,
+    options: { manches: 1 | 2 | 4; baseTarget?: number; labelTarget?: number; prizePerWinner?: number; houseRake?: number } = { manches: 2 },
+  ): Promise<HeadlessMatchResult> {
     const match = await MatchModel.findById(matchId);
     if (!match) throw new Error(`Match introuvable : ${matchId}`);
     if (match.format !== MatchFormat.DUO_STEEL) throw new Error('Le runner headless ne gère que DUO_STEEL.');
@@ -58,7 +61,14 @@ export class MatchHeadlessRunner {
 
     const engine = new GameEngine(
       enginePlayers,
-      { ...DEFAULT_PARTIE, manches: options.manches, local: false },
+      {
+        ...DEFAULT_PARTIE,
+        manches: options.manches,
+        // v16 — score cible configurable (défaut 1500 / 2000).
+        baseTarget: options.baseTarget && options.baseTarget > 0 ? options.baseTarget : DEFAULT_PARTIE.baseTarget,
+        labelTarget: options.labelTarget && options.labelTarget > 0 ? options.labelTarget : DEFAULT_PARTIE.labelTarget,
+        local: false,
+      },
       contreeRules,
     );
     const logs: LogEntry[] = [];
@@ -115,11 +125,14 @@ export class MatchHeadlessRunner {
     // Économie : verser le prix au vainqueur (propriétaire de l'équipe A ou B),
     // enregistrer le rake maison.
     const rules = getMatchFormatRules(MatchFormat.DUO_STEEL);
+    // v16 — mise/gain configurables (quick match). Défaut = catalogue.
+    const prizePerWinner = options.prizePerWinner ?? rules.prizePerWinner;
+    const houseRake = options.houseRake ?? rules.houseRake;
     if (winnerTeam) {
       const winnerUserId = String(match.participants.find((p: any) => p.team === winnerTeam)!.userId);
-      await walletService.credit(winnerUserId, rules.prizePerWinner, gameId, 'game_win');
+      await walletService.credit(winnerUserId, prizePerWinner, gameId, 'game_win');
     }
-    await houseAccountingService.recordMatchRake(match._id, rules.houseRake, 'DUO_STEEL');
+    await houseAccountingService.recordMatchRake(match._id, houseRake, 'DUO_STEEL');
 
     // v14.12 — Si ce match Duo d'Acier fait partie d'un tournoi, update bracket.
     if ((match as any).tournament && winnerTeam) {

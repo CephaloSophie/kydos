@@ -18,6 +18,8 @@ import { RobotModel } from '../robot/robot.model.js';
 import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
 import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions, formTeamSeeds } from './bracket.js';
+import { computeUserTournamentStatus } from './userStatus.js';
+import { MatchModel } from '../matches/match.model.js';
 
 export class TournamentService {
   /**
@@ -34,6 +36,54 @@ export class TournamentService {
       query.$or = [{ maxLevel: null }, { maxLevel: { $gte: userLevel } }];
     }
     return TournamentModel.find(query).sort({ startAt: 1 }).lean();
+  }
+
+  /**
+   * v16 — Statut ACTIF du joueur dans un tournoi LIVE : en train de jouer,
+   * en attente de son prochain match (adversaire pas encore connu), etc.
+   * Enrichit les matchs attendus avec leur table live (pour le mode
+   * spectateur). Renvoie `null` si le joueur n'est engagé dans aucun tournoi
+   * live en cours de progression.
+   */
+  async getMyActive(userId: string): Promise<any | null> {
+    const tournaments = await TournamentModel.find({
+      status: TournamentStatus.LIVE,
+      'participants.userId': new Types.ObjectId(userId),
+    }).select('name format color icon bracketTree').lean();
+
+    for (const t of tournaments as any[]) {
+      const status = computeUserTournamentStatus(t.bracketTree, userId);
+      if (status.state === 'none' || status.state === 'eliminated' || status.state === 'champion') continue;
+
+      // Table live des matchs attendus / du mien, pour spectate / rejoindre.
+      const matchIds = [
+        ...status.awaiting.map((a) => a.matchId).filter(Boolean),
+        status.myMatchId,
+      ].filter(Boolean) as string[];
+      const tableByMatch = new Map<string, string>();
+      if (matchIds.length) {
+        const matches = await MatchModel.find({ _id: { $in: matchIds } }).select('liveTableId').lean();
+        for (const m of matches as any[]) {
+          if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
+        }
+      }
+      const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
+
+      return {
+        tournamentId: String(t._id),
+        name: t.name, format: t.format, color: t.color, icon: t.icon,
+        state: status.state,
+        roundIndex: status.roundIndex,
+        roundLabel,
+        myMatchId: status.myMatchId,
+        myTableId: status.myMatchId ? tableByMatch.get(status.myMatchId) ?? null : null,
+        awaiting: status.awaiting.map((a) => ({
+          ...a,
+          tableId: a.matchId ? tableByMatch.get(a.matchId) ?? null : null,
+        })),
+      };
+    }
+    return null;
   }
 
   /** Détail d'un tournoi (draft visible seulement à son créateur). */
@@ -181,7 +231,23 @@ export class TournamentService {
     try {
       if (locks.length > 0) await TournamentRobotDayLockModel.insertMany(locks, { ordered: true });
     } catch (e: any) {
-      if (e?.code === 11000) throw badRequest('Un de vos robots est d\u00e9j\u00e0 engag\u00e9 dans un tournoi ce jour-l\u00e0.');
+      if (e?.code === 11000) {
+        // On identifie PR\u00c9CIS\u00c9MENT le(s) robot(s) d\u00e9j\u00e0 engag\u00e9(s) ce jour-l\u00e0 et,
+        // pour le diagnostic, dans quel tournoi \u2014 le message g\u00e9n\u00e9rique masquait
+        // l'origine du blocage (souvent un verrou orphelin d'un test pr\u00e9c\u00e9dent).
+        const existing: any[] = await TournamentRobotDayLockModel
+          .find({ robotId: { $in: robotIds.map((r) => new Types.ObjectId(r)) }, dayKey })
+          .select('robotId tournamentId').lean();
+        const lockedRobotIds = existing.map((l) => String(l.robotId));
+        const robotsInfo: any[] = await RobotModel.find({ _id: { $in: lockedRobotIds } }).select('name').lean();
+        const names = robotsInfo.map((r) => r.name).filter(Boolean);
+        const label = names.length ? names.join(', ') : lockedRobotIds.join(', ');
+        throw badRequest(
+          `Robot(s) d\u00e9j\u00e0 engag\u00e9(s) dans un tournoi le ${dayKey} : ${label}. `
+          + 'Un robot ne peut participer qu\'\u00e0 un seul tournoi par jour. '
+          + 'Choisissez un autre robot, ou attendez un autre jour.',
+        );
+      }
       throw e;
     }
 
@@ -341,6 +407,43 @@ export class TournamentService {
     if (result.tournamentDone) {
       await this.#finalizeTournament(t, tree as any);
     }
+    await t.save();
+
+    // Progression immédiate : dès qu'un round est entièrement terminé (et que
+    // le tournoi n'est pas fini), on crée tout de suite les matchs du round
+    // suivant plutôt que d'attendre le prochain tick du worker (jusqu'à 30 s).
+    // Les gagnants voient ainsi leur match suivant apparaître en quelques
+    // secondes. Import dynamique pour éviter tout cycle service ↔ orchestrateur.
+    if (result.roundJustDone && !result.tournamentDone) {
+      try {
+        const { tournamentOrchestrator } = await import('./tournament.orchestrator.js');
+        await tournamentOrchestrator.run(String(t._id));
+      } catch { /* le worker rattrapera au prochain tick */ }
+    }
+  }
+
+  /**
+   * v14.14 — Écrit le score EN COURS d'un match dans l'arbre bracket (sans
+   * marquer de vainqueur). Appelé périodiquement par le sweep temps-réel à
+   * partir du score live de la table. Comme le bracket vit en MongoDB, ce
+   * score devient consultable EN DIRECT à la fois par le back-office (process
+   * séparé) et par les joueurs — sans dépendance Redis supplémentaire.
+   * No-op si le match a déjà un vainqueur (score final déjà figé).
+   */
+  async updateLiveScore(input: { tournamentId: string; matchId: string; scoreA: number; scoreB: number }): Promise<void> {
+    const t = await TournamentModel.findById(input.tournamentId);
+    if (!t || t.status !== TournamentStatus.LIVE) return;
+    const tree = (t as any).bracketTree;
+    if (!tree?.rounds) return;
+    const found = findBracketMatchByMatchId(tree, input.matchId);
+    if (!found) return;
+    const bm = tree.rounds[found.roundIndex - 1].matches[found.matchIndex];
+    if (!bm || bm.winner) return;                      // déjà terminé → score figé
+    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB) return;  // inchangé
+    bm.scoreA = input.scoreA;
+    bm.scoreB = input.scoreB;
+    if (!bm.startedAt) bm.startedAt = new Date();
+    (t as any).markModified?.('bracketTree');
     await t.save();
   }
 

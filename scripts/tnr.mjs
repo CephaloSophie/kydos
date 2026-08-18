@@ -24,17 +24,13 @@ const STEPS = [
   { group: 'typecheck', name: 'core',       cmd: 'npm --workspace belote-core run typecheck' },
   { group: 'typecheck', name: 'table-pixi', cmd: 'npm --workspace @kydos/table-pixi run typecheck' },
   { group: 'typecheck', name: 'server',     cmd: 'npm --workspace belote-server run typecheck' },
-  { group: 'typecheck', name: 'web',        cmd: 'npm --workspace belote-web run typecheck' },
   { group: 'typecheck', name: 'mobile',     cmd: 'npm --workspace belote-mobile run typecheck' },
 
   { group: 'tests', name: 'core',       cmd: 'npm --workspace belote-core run test' },
   { group: 'tests', name: 'table-pixi', cmd: 'npm --workspace @kydos/table-pixi run test' },
   { group: 'tests', name: 'server',     cmd: 'npm --workspace belote-server run test' },
-  { group: 'tests', name: 'web',        cmd: 'npm --workspace belote-web run test' },
   { group: 'tests', name: 'mobile',     cmd: 'npm --workspace belote-mobile run test' },
 
-  { group: 'build', name: 'web',        cmd: 'npm --workspace belote-web run build' },
-  { group: 'build', name: 'table-lib',  cmd: 'npm --workspace belote-web run build:lib' },
   { group: 'build', name: 'mobile',     cmd: 'npm --workspace belote-mobile run build' },
 
   { group: 'smoke', name: 'moteur', cmd: 'npm --workspace belote-core run demo', expect: 'Vainqueur de la partie' },

@@ -40,6 +40,7 @@ import { TournamentBracketScreen } from './presentation/screens/TournamentBracke
 import { MatchmakingScreen } from './presentation/screens/MatchmakingScreen';
 import { MatchEnrollScreen } from './presentation/screens/MatchEnrollScreen';
 import { TournamentEnrollScreen } from './presentation/screens/TournamentEnrollScreen';
+import { TournamentWaitScreen } from './presentation/screens/TournamentWaitScreen';
 import { PublicGamesScreen } from './presentation/screens/PublicGamesScreen';
 import { WalletScreen } from './presentation/screens/WalletScreen';
 import { TeamsScreen, MyTeamScreen } from './presentation/screens/TeamsScreens';
@@ -111,6 +112,7 @@ router
   .register('matchmaking', MatchmakingScreen, { title: 'Recherche…' })
   .register('enroll', MatchEnrollScreen, { title: 'Inscription' })
   .register('tournament-enroll', TournamentEnrollScreen, { title: 'Inscription tournoi' })
+  .register('tournament-wait', TournamentWaitScreen, { title: 'Salle d’attente' })
   .register('public-games', PublicGamesScreen, { title: 'Parties publiques' })
   .register('gamestats', GameStatsScreen,    { title: 'Statistiques' })
   .register('wallet',  WalletScreen,        { title: 'Porte-monnaie', fanLabel: 'JETONS', glyph: '◆', grad: 'var(--g-gold)' })
@@ -137,6 +139,13 @@ async function boot(): Promise<void> {
   } catch { /* le bootstrap ne lève jamais, mais ceinture + bretelles */ }
 
   router.start();
+
+  // v14.14 — Pastille LIVE globale : rejoindre un match en cours depuis
+  // n'importe quel écran (montée une fois, hors du viewport routeur).
+  try {
+    const { mountLiveMatchIndicator } = await import('./presentation/components/LiveMatchIndicator');
+    mountLiveMatchIndicator(ctx);
+  } catch { /* non bloquant */ }
 
   // Retirer l'écran d'initialisation (les 4 robots) une fois l'app montée.
   requestAnimationFrame(() => {

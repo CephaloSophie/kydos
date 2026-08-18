@@ -1,31 +1,28 @@
 {
   "name": "belote-contree",
-  "version": "14.14.0",
+  "version": "16.0.0",
   "private": true,
   "type": "module",
   "workspaces": [
     "packages/*",
     "server",
-    "web",
     "mobile"
   ],
   "scripts": {
-    "dev": "concurrently -n server,web -c yellow,cyan \"npm:dev:server\" \"npm:dev:web\"",
+    "dev": "concurrently -n server,mobile -c yellow,cyan \"npm:dev:server\" \"npm:dev:mobile\"",
     "dev:server": "npm --workspace belote-server run dev",
-    "dev:web": "npm --workspace belote-web run dev",
-    "build:web": "npm --workspace belote-web run build",
-    "typecheck": "npm --workspace belote-core run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-web run typecheck",
-    "mongo": "docker compose up -d mongo",
-    "test": "npm --workspace belote-core run test && npm --workspace belote-web run test",
     "dev:mobile": "npm --workspace belote-mobile run dev",
-    "typecheck:all": "npm --workspace belote-core run typecheck && npm --workspace @kydos/table-pixi run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-web run typecheck && npm --workspace belote-mobile run typecheck",
-    "test:all": "npm --workspace belote-core run test && npm --workspace @kydos/table-pixi run test && npm --workspace belote-server run test && npm --workspace belote-web run test && npm --workspace belote-mobile run test",
-    "build:all": "npm --workspace belote-web run build && npm --workspace belote-web run build:lib && npm --workspace belote-mobile run build",
+    "build:mobile": "npm --workspace belote-mobile run build",
+    "typecheck": "npm --workspace belote-core run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-mobile run typecheck",
+    "mongo": "docker compose up -d mongo",
+    "test": "npm --workspace belote-core run test && npm --workspace belote-server run test",
+    "typecheck:all": "npm --workspace belote-core run typecheck && npm --workspace @kydos/table-pixi run typecheck && npm --workspace belote-server run typecheck && npm --workspace belote-mobile run typecheck",
+    "test:all": "npm --workspace belote-core run test && npm --workspace @kydos/table-pixi run test && npm --workspace belote-server run test && npm --workspace belote-mobile run test",
+    "build:all": "npm --workspace belote-mobile run build",
     "tnr": "node scripts/tnr.mjs",
     "seed": "npm --workspace belote-server run seed",
     "tnr:server": "node scripts/tnr-server.mjs",
-    "coverage": "node scripts/coverage.mjs",
-    "e2e:web": "npm --workspace belote-web run e2e"
+    "coverage": "node scripts/coverage.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",

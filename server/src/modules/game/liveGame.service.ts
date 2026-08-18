@@ -109,7 +109,10 @@ export class LiveGameService {
 
     const partieConfig: PartieConfig = {
       manches: [1, 2, 4].includes(tableDocument.config?.manches) ? tableDocument.config.manches : 2,
-      baseTarget: 1500, labelTarget: 2000, responseTimeMs: 1000, maxPlayTimeMs: 10000,
+      // v16 — score cible configurable (défaut 1500 / 2000).
+      baseTarget: tableDocument.config?.baseTarget > 0 ? tableDocument.config.baseTarget : 1500,
+      labelTarget: tableDocument.config?.labelTarget > 0 ? tableDocument.config.labelTarget : 2000,
+      responseTimeMs: 1000, maxPlayTimeMs: 10000,
       clockwise: false, local: false,
       signals: {
         reflexion: tableDocument.config?.signals?.reflexion !== false,

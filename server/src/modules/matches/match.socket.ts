@@ -44,7 +44,10 @@ export class MatchSocket {
         // 2) Configure les remplaçants pour les tables live qui viennent d'un
         //    Match (une seule fois par table dès qu'elle est live).
         await matchLiveService.attachPendingSubstitutes();
-        // 3) Détecte les matchs terminés et fait le settle (score, gains, rake).
+        // 3) Recopie les scores EN COURS des matchs de tournoi dans le bracket
+        //    (consultable en direct par le back-office et les joueurs).
+        await matchLiveService.syncTournamentLiveScores();
+        // 4) Détecte les matchs terminés et fait le settle (score, gains, rake).
         await matchLiveService.sweepFinishedMatches(server);
       } catch { /* résilience */ }
     }, SWEEP_INTERVAL_MS);

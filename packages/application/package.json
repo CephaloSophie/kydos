@@ -1,6 +1,6 @@
 {
   "name": "belote-application",
-  "version": "14.14.0",
+  "version": "16.0.0",
   "type": "module",
   "main": "src/index.ts",
   "module": "src/index.ts",

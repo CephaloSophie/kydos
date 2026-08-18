@@ -24,6 +24,9 @@ const SeatSchema = new Schema(
 const TableConfigSchema = new Schema(
   {
     manches: { type: Number, default: 2 },
+    /** v16 — Objectif (score cible) d'une manche standard et du grand label. */
+    baseTarget: { type: Number, default: 1500 },
+    labelTarget: { type: Number, default: 2000 },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     gameType: { type: String, default: 'contree' },

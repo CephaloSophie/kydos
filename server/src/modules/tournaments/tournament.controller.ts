@@ -38,6 +38,11 @@ export class TournamentController {
     response.json({ tournament: await tournamentService.getById(request.params.id, request.userId!) });
   }
 
+  /** v16 — Statut actif du joueur dans un tournoi live (écran d'attente/rejoindre). */
+  async mine(request: AuthenticatedRequest, response: Response) {
+    response.json({ active: await tournamentService.getMyActive(request.userId!) });
+  }
+
   /** v14.12 — Arbre bracket pour affichage « coupe du monde ». */
   async getBracket(request: AuthenticatedRequest, response: Response) {
     response.json(await tournamentService.getBracket(request.params.id, request.userId!));

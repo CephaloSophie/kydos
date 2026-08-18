@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { MonitorService } from '../../services/monitor.service';
 import type { MonitorSnapshot } from '../../models';
@@ -9,10 +9,12 @@ import type { MonitorSnapshot } from '../../models';
   template: `
     <div class="page-header">
       <h1>Monitoring</h1>
-      <span style="color: var(--text-muted); font-size: 12px">
-        Dernière mise à jour : {{ snapshot?.at | date:'HH:mm:ss' }}
-        &middot; Auto-refresh {{ refreshing ? 'actif' : 'arrêté' }}
-      </span>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="color: var(--text-muted); font-size: 12px">
+          Dernière mise à jour : {{ snapshot?.at | date:'HH:mm:ss' }}
+        </span>
+        <button class="btn btn-secondary" (click)="refresh()" title="Actualiser">↻ Actualiser</button>
+      </div>
     </div>
 
     @if (snapshot) {
@@ -53,7 +55,6 @@ import type { MonitorSnapshot } from '../../models';
     <div class="card">
       <div class="card-header">
         <h3>Matchs actifs</h3>
-        <button class="btn btn-secondary btn-sm" (click)="refresh()">Rafraichir</button>
       </div>
       @if (activeMatches.length) {
         <div class="overflow-x">
@@ -81,22 +82,16 @@ import type { MonitorSnapshot } from '../../models';
     </div>
   `,
 })
-export class MonitorComponent implements OnInit, OnDestroy {
+export class MonitorComponent implements OnInit {
   snapshot: MonitorSnapshot | null = null;
   activeMatches: any[] = [];
   queueEntries: [string, number][] = [];
-  refreshing = true;
-  private intervalId: any;
 
   constructor(private monitorService: MonitorService) {}
 
   ngOnInit() {
+    // Rafraîchissement MANUEL (pas de websocket) : bouton « ↻ Actualiser ».
     this.refresh();
-    this.intervalId = setInterval(() => this.refresh(), 5000);
-  }
-
-  ngOnDestroy() {
-    clearInterval(this.intervalId);
   }
 
   refresh() {

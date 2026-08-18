@@ -179,6 +179,37 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
   competPoller = setInterval(() => void pollCompet(), 5000);
   void pollCompet();
 
+  /* ── Bannière TOURNOI (v16) : en cours / en attente du prochain match ── */
+  const tournamentBanner = h('div', { style: { display: 'none', marginBottom: '10px' } });
+  const renderTournamentBanner = (a: any | null) => {
+    const active = a && (a.state === 'playing' || a.state === 'waiting' || a.state === 'pending');
+    if (!active) { tournamentBanner.style.display = 'none'; tournamentBanner.innerHTML = ''; return; }
+    const label = a.state === 'waiting' ? 'EN ATTENTE DE L’ADVERSAIRE' : a.state === 'pending' ? 'MATCH IMMINENT' : 'MATCH EN COURS';
+    tournamentBanner.style.display = 'block';
+    tournamentBanner.innerHTML = '';
+    tournamentBanner.append(h('div', {
+      class: 'row gap-3', style: {
+        padding: '10px 14px', borderRadius: 'var(--r-md)', alignItems: 'center',
+        background: 'linear-gradient(90deg, rgba(230,196,106,.16), rgba(230,196,106,.04))',
+        border: '1px solid rgba(230,196,106,.4)', cursor: 'pointer',
+      },
+      onClick: () => router.go('tournament-wait'),
+    },
+      h('span', { style: { fontSize: '16px' } }, a.icon || '🏆'),
+      h('div', { style: { flex: '1', minWidth: '0' } },
+        h('div', { class: 'mono', style: { fontSize: '9px', letterSpacing: '.08em', color: 'var(--c-gold)', fontWeight: '700' } }, `TOURNOI · ${label}`),
+        h('div', { class: 'title', style: { fontSize: '13px', marginTop: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } },
+          `${a.name}${a.roundLabel ? ' · ' + a.roundLabel : ''}`)),
+      h('button', { class: 'btn btn--sm', style: { background: 'var(--c-gold)', color: '#1a0f00', fontWeight: '700', flexShrink: '0' } }, '▶ Rejoindre'),
+    ));
+  };
+  const pollTournament = async () => {
+    try { const { active } = await api.getMyTournament(); renderTournamentBanner(active); }
+    catch { /* transient */ }
+  };
+  const tournamentPoller = setInterval(() => void pollTournament(), 5000);
+  void pollTournament();
+
   /* ── Layout : NO-SCROLL, sans footer bandeau ───────────────────── */
   const root = h('div', {
     class: 'anim-screen home-root',
@@ -208,11 +239,12 @@ export function HomeScreen(ctx: AppContext): HTMLElement {
   // 3) Carrousel du menu tiles.
   const menusCar = Carousel(MENUS.map(menuTile), { itemGap: 8, className: 'home-menus-car' });
 
-  main.append(competBanner, featuresCar, menusCar);
+  main.append(tournamentBanner, competBanner, featuresCar, menusCar);
   root.append(topbar, main);
   root._cleanup = () => {
     topbar._cleanup?.();
     if (competPoller) clearInterval(competPoller);
+    clearInterval(tournamentPoller);
     (featuresCar as any)._cleanup?.();
     (menusCar as any)._cleanup?.();
   };

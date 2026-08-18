@@ -12,6 +12,7 @@ import type { Tournament, TournamentStatus } from '../../models';
       <div class="page-header">
         <h1>{{ tournament.icon }} {{ tournament.name }}</h1>
         <div style="display: flex; gap: 8px">
+          <button class="btn btn-secondary" (click)="reload()" title="Actualiser">↻ Actualiser</button>
           @if (tournament.status === 'draft') {
             <a [routerLink]="['/tournaments', tournament._id, 'edit']" class="btn btn-secondary">Editer</a>
             <button class="btn btn-success" (click)="publish()">Publier</button>
@@ -170,12 +171,19 @@ import type { Tournament, TournamentStatus } from '../../models';
 })
 export class TournamentDetailComponent implements OnInit {
   tournament: Tournament | null = null;
+  private id = '';
 
   constructor(private route: ActivatedRoute, private tournamentService: TournamentService) {}
 
   ngOnInit() {
-    const id = this.route.snapshot.params['id'];
-    this.tournamentService.getById(id).subscribe(res => this.tournament = res.tournament);
+    this.id = this.route.snapshot.params['id'];
+    this.reload();
+  }
+
+  // Rafraîchissement MANUEL (pas de websocket) : le serveur de jeu recopie les
+  // scores en cours dans le bracket (MongoDB) ; un clic les relit.
+  reload() {
+    this.tournamentService.getById(this.id).subscribe(res => this.tournament = res.tournament);
   }
 
   publish() {

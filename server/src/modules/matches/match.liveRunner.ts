@@ -53,7 +53,7 @@ export class MatchLiveService {
    * Crée (ou récupère) la Table éphémère associée à un Match non-headless
    * en PAIRING. Retourne le tableId à ouvrir côté client.
    */
-  async provision(matchId: string): Promise<{ tableId: string }> {
+  async provision(matchId: string, configOverride?: Record<string, any>): Promise<{ tableId: string }> {
     const cached = this.#tableByMatch.get(matchId);
     if (cached) return { tableId: cached };
 
@@ -102,10 +102,20 @@ export class MatchLiveService {
       visibility: 'private',
       seats,
       config: {
-        manches: 2,
+        // v16 — réglages repris du tournoi / de la config match si fournis.
+        manches: [1, 2, 4].includes(configOverride?.manches) ? configOverride!.manches : 2,
+        baseTarget: configOverride?.baseTarget > 0 ? configOverride!.baseTarget : 1500,
+        labelTarget: configOverride?.labelTarget > 0 ? configOverride!.labelTarget : 2000,
+        trickDelayMs: configOverride?.trickDelayMs ?? 900,
+        speed: configOverride?.speed ?? 1,
+        feltTheme: configOverride?.feltTheme ?? 'classic',
         maxPlayers: 4,
-        allowSpectators: true,
-        turnTimeoutMs: 15_000,
+        allowSpectators: configOverride?.allowSpectators !== false,
+        turnTimeoutMs: configOverride?.turnTimeoutMs ?? 15_000,
+        signals: {
+          reflexion: configOverride?.signals?.reflexion !== false,
+          repeatSuit: configOverride?.signals?.repeatSuit !== false,
+        },
       },
       startsAt: new Date(),
       lastActivityAt: new Date(),
@@ -251,18 +261,34 @@ export class MatchLiveService {
     // (son robot coéquipier joue avec, on ne crédite que l'humain).
     const format = match.format as MatchFormat;
     const rules = getMatchFormatRules(format);
+    // v16 — pour un MATCH RAPIDE (hors tournoi), la mise/gain proviennent de la
+    // config éditable du back-office ; en tournoi on garde le comportement
+    // historique (le gain de tournoi est versé par recordMatchResult).
+    let prizePerWinner = rules.prizePerWinner;
+    let houseRake = rules.houseRake;
+    if (!(match as any).tournament) {
+      try {
+        const { matchFormatConfigService } = await import('./matchFormatConfig.service.js');
+        // v16 — variante d'origine si connue (mise/gain propres), sinon 1ʳᵉ du format.
+        const eff = (match as any).formatConfig
+          ? await matchFormatConfigService.getEffectiveById(String((match as any).formatConfig))
+          : await matchFormatConfigService.getEffective(format);
+        prizePerWinner = eff.prizePerWinner;
+        houseRake = eff.houseRake;
+      } catch { /* fallback catalogue */ }
+    }
     if (info.winner) {
       const winners = match.participants.filter((p: any) => p.team === info.winner && p.isHuman);
       for (const p of winners) {
         try {
-          await walletService.credit(String(p.userId), rules.prizePerWinner, info.gameId, 'game_win');
+          await walletService.credit(String(p.userId), prizePerWinner, info.gameId, 'game_win');
         } catch (e) {
           log.warn('crédit vainqueur échoué', { userId: p.userId, error: (e as Error).message });
         }
       }
     }
     try {
-      await houseAccountingService.recordMatchRake(match._id, rules.houseRake, format);
+      await houseAccountingService.recordMatchRake(match._id, houseRake, format);
     } catch (e) {
       log.warn('rake maison échoué', { matchId, error: (e as Error).message });
     }
@@ -292,6 +318,41 @@ export class MatchLiveService {
     // Libération du cache local.
     this.#tableByMatch.delete(matchId);
     log.info('match temps-réel réglé', { matchId, tableId, winner: info.winner });
+  }
+
+  /**
+   * v14.14 — Recopie le score EN COURS des matchs de tournoi (live) dans
+   * l'arbre bracket persistant (MongoDB), pour qu'il soit consultable en
+   * direct par le back-office ET les joueurs. Léger : ne touche que les
+   * matchs RUNNING rattachés à un tournoi, et l'écriture est ignorée si le
+   * score n'a pas changé.
+   */
+  async syncTournamentLiveScores(): Promise<void> {
+    const running = await MatchModel.find({
+      status: MatchStatus.RUNNING,
+      tournament: { $ne: null },
+      liveTableId: { $ne: null },
+    }).select('_id tournament liveTableId').lean();
+    if (running.length === 0) return;
+
+    // Index tableId → scores {A,B} depuis les sessions live en mémoire.
+    const sessions = liveGameService.snapshotSessions();
+    const scoreByTable = new Map<string, { A: number; B: number }>();
+    for (const s of sessions) scoreByTable.set(s.tableId, s.scores);
+
+    const { tournamentService } = await import('../tournaments/tournament.service.js');
+    for (const m of running) {
+      const tableId = String((m as any).liveTableId);
+      const sc = scoreByTable.get(tableId);
+      if (!sc) continue;
+      try {
+        await tournamentService.updateLiveScore({
+          tournamentId: String((m as any).tournament),
+          matchId: String((m as any)._id),
+          scoreA: sc.A, scoreB: sc.B,
+        });
+      } catch { /* résilience */ }
+    }
   }
 
   /**

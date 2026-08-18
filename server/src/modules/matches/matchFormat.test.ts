@@ -1,6 +1,6 @@
 // Tests unitaires : catalog économique + queue en mémoire.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MatchFormat, verifyEconomics, getMatchFormatRules, MATCH_FORMAT_CATALOG } from './matchFormat.js';
+import { MatchFormat, verifyEconomics, getMatchFormatRules, effectiveHouseRake, MATCH_FORMAT_CATALOG } from './matchFormat.js';
 
 describe('MatchFormatCatalog', () => {
   it('couvre les 3 formats', () => {
@@ -37,5 +37,26 @@ describe('MatchFormatCatalog', () => {
 
   it('lève sur un format inconnu', () => {
     expect(() => getMatchFormatRules('unknown' as MatchFormat)).toThrow();
+  });
+
+  // v16 — mise/gain configurables : le rake effectif = rake catalogue + delta.
+  describe('effectiveHouseRake (v16)', () => {
+    it('retrouve exactement le rake du catalogue aux valeurs par défaut', () => {
+      for (const format of Object.values(MatchFormat)) {
+        const r = getMatchFormatRules(format);
+        const rake = effectiveHouseRake(r.houseRake, r.buyInPerPlayer, r.prizePerWinner, r.buyInPerPlayer, r.prizePerWinner, r.humansPerMatch, r.winnersPerMatch);
+        expect(rake).toBe(r.houseRake);
+      }
+    });
+
+    it('ajoute le delta de mise (Duo : +50 de mise × 2 humains → rake 50+100=150)', () => {
+      const r = getMatchFormatRules(MatchFormat.DUO_STEEL); // base 50, humans 2, winners 1
+      expect(effectiveHouseRake(r.houseRake, r.buyInPerPlayer + 50, r.prizePerWinner, r.buyInPerPlayer, r.prizePerWinner, r.humansPerMatch, r.winnersPerMatch)).toBe(150);
+    });
+
+    it('retranche un gain plus généreux (Royal : +100 de gain × 2 vainqueurs → rake 100-200=-100)', () => {
+      const r = getMatchFormatRules(MatchFormat.ROYAL_SQUARE); // base 100, humans 4, winners 2
+      expect(effectiveHouseRake(r.houseRake, r.buyInPerPlayer, r.prizePerWinner + 100, r.buyInPerPlayer, r.prizePerWinner, r.humansPerMatch, r.winnersPerMatch)).toBe(-100);
+    });
   });
 });

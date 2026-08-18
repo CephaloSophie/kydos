@@ -92,18 +92,22 @@ export class ApiClient {
   deleteRobot(id: string) { return this.call<{ ok: boolean }>(`/robots/${id}`, { method: 'DELETE' }); }
 
   // --- Matchmaking (v14) --------------------------------------------------
-  /** Inscrit le joueur en file d'attente pour un format. Renvoie 'queued' ou 'matched' avec l'id de match. */
-  enqueueMatch(format: string, robotIds: string[] = []) {
+  /** Inscrit le joueur en file. v16 — `variantId` (variante précise) prioritaire ; `format` en repli. */
+  enqueueMatch(format: string, robotIds: string[] = [], variantId?: string) {
     return this.call<{ status: 'queued' | 'matched'; matchId?: string; queuePosition?: number }>('/matches/enqueue', {
-      method: 'POST', body: JSON.stringify({ format, robotIds }),
+      method: 'POST', body: JSON.stringify({ format, variantId, robotIds }),
     });
   }
-  /** Annule l'inscription en file pour un format (remboursement). */
-  cancelMatchQueue(format: string) {
-    return this.call<{ refunded: number }>('/matches/cancel', { method: 'POST', body: JSON.stringify({ format }) });
+  /** Annule l'inscription en file (remboursement). v16 — par variante si fournie. */
+  cancelMatchQueue(format: string, variantId?: string) {
+    return this.call<{ refunded: number }>('/matches/cancel', { method: 'POST', body: JSON.stringify({ format, variantId }) });
   }
   /** Tailles de chaque file (Duo d'acier, Alliance hybride, Carrée royale). */
   matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }
+  /** v16 — Liste dynamique des MATCH RAPIDE (config back-office). */
+  listMatchFormats() {
+    return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number; minLevel?: number; maxLevel?: number | null }> }>('/matches/formats');
+  }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }
   /** Détail complet d'un match (participants avec robots populés). */
@@ -121,6 +125,8 @@ export class ApiClient {
   }
   /** Détail complet d'un tournoi. */
   getTournament(id: string) { return this.call<{ tournament: unknown }>(`/tournaments/${id}`); }
+  /** v16 — Statut ACTIF du joueur dans un tournoi live (écran d'attente / rejoindre). */
+  getMyTournament() { return this.call<{ active: TournamentActive | null }>('/tournaments/mine'); }
   /** Inscription au tournoi (débit du buy-in, verrous 1/robot/jour). */
   joinTournament(id: string, robotIds: string[] = []) {
     return this.call<{ joined: true }>(`/tournaments/${id}/join`, { method: 'POST', body: JSON.stringify({ robotIds }) });
@@ -306,6 +312,34 @@ export interface ServerWallet {
   canClaimToday: boolean;
   lastClaimDay: string | null;
   transactions: ServerWalletTransaction[];
+}
+
+/** v16 — Match attendu (adversaire en cours de désignation) avec score live. */
+export interface AwaitedTournamentMatch {
+  matchId: string | null;
+  roundIndex: number;
+  matchIndex: number;
+  slotAName: string;
+  slotBName: string;
+  scoreA: number | null;
+  scoreB: number | null;
+  winner: 'A' | 'B' | null;
+  tableId: string | null;
+}
+
+/** v16 — Statut actif du joueur dans un tournoi live. */
+export interface TournamentActive {
+  tournamentId: string;
+  name: string;
+  format: string;
+  color: string;
+  icon: string;
+  state: 'champion' | 'playing' | 'waiting' | 'pending' | 'eliminated' | 'none';
+  roundIndex: number | null;
+  roundLabel: string;
+  myMatchId: string | null;
+  myTableId: string | null;
+  awaiting: AwaitedTournamentMatch[];
 }
 
 /** Forme serveur d'un robot (serializer listByOwner). */

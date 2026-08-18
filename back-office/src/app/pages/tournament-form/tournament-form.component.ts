@@ -73,6 +73,59 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
           </div>
         </div>
 
+        <h3 style="margin: 20px 0 12px">Paramètres de jeu</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin: -6px 0 12px">
+          Appliqués à chaque match du tournoi (nombre de manches, score cible, etc.).
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre de manches</label>
+            <select [(ngModel)]="form.gameConfig.manches">
+              <option [ngValue]="1">1 manche</option>
+              <option [ngValue]="2">2 manches</option>
+              <option [ngValue]="4">4 manches</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Score cible / manche</label>
+            <input type="number" [(ngModel)]="form.gameConfig.baseTarget" min="100" step="100" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Score cible du grand label</label>
+            <input type="number" [(ngModel)]="form.gameConfig.labelTarget" min="100" step="100" />
+          </div>
+          <div class="form-group">
+            <label>Temps par tour (ms)</label>
+            <input type="number" [(ngModel)]="form.gameConfig.turnTimeoutMs" min="3000" step="1000" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Délai entre plis (ms)</label>
+            <input type="number" [(ngModel)]="form.gameConfig.trickDelayMs" min="0" step="100" />
+          </div>
+          <div class="form-group">
+            <label>Thème du tapis</label>
+            <select [(ngModel)]="form.gameConfig.feltTheme">
+              <option value="classic">Classic</option>
+              <option value="cosmos">Cosmos</option>
+              <option value="olympus">Olympus</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
+            <input type="checkbox" [(ngModel)]="form.gameConfig.allowSpectators" id="spec" />
+            <label for="spec" style="margin: 0">Autoriser les spectateurs</label>
+          </div>
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
+            <input type="checkbox" [(ngModel)]="form.gameConfig.signals.reflexion" id="sig1" />
+            <label for="sig1" style="margin: 0">Signal réflexion</label>
+          </div>
+        </div>
+
         <h3 style="margin: 20px 0 12px">Prix par position</h3>
         <div class="prizes-grid">
           @for (pp of prizes; track pp.position) {
@@ -184,6 +237,17 @@ export class TournamentFormComponent implements OnInit {
     description: '',
     color: '#e6c46a',
     icon: '♦',
+    gameConfig: {
+      manches: 2,
+      baseTarget: 1500,
+      labelTarget: 2000,
+      turnTimeoutMs: 15000,
+      trickDelayMs: 900,
+      speed: 1,
+      feltTheme: 'classic',
+      allowSpectators: true,
+      signals: { reflexion: true, repeatSuit: true },
+    },
   };
 
   prizes: { position: number; prize: number; occupants: number }[] = [];
@@ -212,6 +276,20 @@ export class TournamentFormComponent implements OnInit {
           description: t.description,
           color: t.color,
           icon: t.icon,
+          gameConfig: {
+            manches: t.gameConfig?.manches ?? 2,
+            baseTarget: t.gameConfig?.baseTarget ?? 1500,
+            labelTarget: t.gameConfig?.labelTarget ?? 2000,
+            turnTimeoutMs: t.gameConfig?.turnTimeoutMs ?? 15000,
+            trickDelayMs: t.gameConfig?.trickDelayMs ?? 900,
+            speed: t.gameConfig?.speed ?? 1,
+            feltTheme: t.gameConfig?.feltTheme ?? 'classic',
+            allowSpectators: t.gameConfig?.allowSpectators !== false,
+            signals: {
+              reflexion: t.gameConfig?.signals?.reflexion !== false,
+              repeatSuit: t.gameConfig?.signals?.repeatSuit !== false,
+            },
+          },
         };
         if (t.prizesByPosition.length) {
           this.generatePositions();
