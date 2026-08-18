@@ -24,17 +24,31 @@ function parseFormat(raw: unknown): MatchFormat {
   return s;
 }
 
+/**
+ * v16 — Résout l'identifiant de VARIANTE de match rapide depuis le body :
+ * `variantId` explicite en priorité ; sinon on retombe sur la 1ʳᵉ variante du
+ * `format` fourni (rétrocompatibilité). Lève si rien de valide.
+ */
+async function resolveVariantId(body: any): Promise<string> {
+  if (body?.variantId) return String(body.variantId);
+  const format = parseFormat(body?.format);
+  const { matchFormatConfigService } = await import('../matches/matchFormatConfig.service.js');
+  const raw: any = await matchFormatConfigService.getRaw(format);
+  if (!raw?._id) throw badRequest('Aucune variante de match rapide pour ce format.');
+  return String(raw._id);
+}
+
 export class MatchmakingController {
   async enqueue(request: AuthenticatedRequest, response: Response) {
-    const format = parseFormat(request.body?.format);
+    const variantId = await resolveVariantId(request.body);
     const robotIds: string[] = Array.isArray(request.body?.robotIds) ? request.body.robotIds : [];
-    const result = await matchmakingService.enqueue({ userId: request.userId!, format, robotIds });
+    const result = await matchmakingService.enqueue({ userId: request.userId!, variantId, robotIds });
     response.json(result);
   }
 
   async cancel(request: AuthenticatedRequest, response: Response) {
-    const format = parseFormat(request.body?.format);
-    response.json(await matchmakingService.cancel(request.userId!, format));
+    const variantId = await resolveVariantId(request.body);
+    response.json(await matchmakingService.cancel(request.userId!, variantId));
   }
 
   async queues(_request: AuthenticatedRequest, response: Response) {
@@ -55,7 +69,7 @@ export class MatchmakingController {
     const list = await matchFormatConfigService.list(true, level);
     response.json({
       formats: list.map((c: any) => ({
-        format: c.format, label: c.label, subtitle: c.subtitle,
+        id: String(c._id), format: c.format, label: c.label, subtitle: c.subtitle,
         buyIn: c.buyInPerPlayer, prize: c.prizePerWinner,
         manches: c.manches, baseTarget: c.baseTarget, labelTarget: c.labelTarget,
         color: c.color, icon: c.icon, order: c.order,

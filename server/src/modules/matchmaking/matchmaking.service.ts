@@ -15,7 +15,7 @@
  * ========================================================================== */
 import { Types } from 'mongoose';
 import { MatchFormat, getMatchFormatRules } from '../matches/matchFormat.js';
-import { matchFormatConfigService } from '../matches/matchFormatConfig.service.js';
+import { matchFormatConfigService, type EffectiveMatchConfig } from '../matches/matchFormatConfig.service.js';
 import { MatchModel, MatchStatus } from '../matches/match.model.js';
 import { walletService } from '../wallet/wallet.service.js';
 import { RobotModel } from '../robot/robot.model.js';
@@ -26,7 +26,8 @@ import type { MatchmakingTicket } from './queue.js';
 
 export interface EnqueueRequest {
   userId: string;
-  format: MatchFormat;
+  /** v16 - VARIANTE de match rapide (MatchFormatConfig._id) : cle de file. */
+  variantId: string;
   robotIds: string[];   // vide pour ROYAL_SQUARE, 1 pour HYBRID_ALLIANCE, 2 pour DUO_STEEL
 }
 
@@ -38,21 +39,22 @@ export interface EnqueueResult {
 
 export class MatchmakingService {
   /**
-   * Inscrit un joueur en file d'attente. Si la file atteint l'effectif requis,
-   * un match est créé immédiatement et son id est renvoyé.
+   * Inscrit un joueur dans la file d'une VARIANTE de match rapide. Chaque
+   * variante a SA PROPRE file (cle = variantId), sa mise, son gain, ses regles
+   * de jeu. Si la file atteint l'effectif requis, un match est cree aussitot.
    */
   async enqueue(req: EnqueueRequest): Promise<EnqueueResult> {
-    const rules = getMatchFormatRules(req.format);
+    const eff = await matchFormatConfigService.getEffectiveById(req.variantId);
 
-    // Vérifications d'éligibilité — v14.5 : robotIds = [co-équipiers..., remplaçant?]
-    const expected = rules.robotsPerPlayer + (rules.requiresSubstitute ? 1 : 0);
+    // Verifications d'eligibilite - v14.5 : robotIds = [coequipiers..., remplacant?]
+    const expected = eff.robotsPerPlayer + (eff.requiresSubstitute ? 1 : 0);
     if (req.robotIds.length !== expected) {
-      throw badRequest(rules.requiresSubstitute
-        ? `Ce format exige ${rules.robotsPerPlayer} co\u00e9quipier(s) + 1 rempla\u00e7ant.`
-        : `Ce format exige ${rules.robotsPerPlayer} robot(s) par joueur.`);
+      throw badRequest(eff.requiresSubstitute
+        ? `Ce format exige ${eff.robotsPerPlayer} coequipier(s) + 1 remplacant.`
+        : `Ce format exige ${eff.robotsPerPlayer} robot(s) par joueur.`);
     }
     const uniqueRobots = new Set(req.robotIds);
-    if (uniqueRobots.size !== req.robotIds.length) throw badRequest('Les robots doivent être distincts.');
+    if (uniqueRobots.size !== req.robotIds.length) throw badRequest('Les robots doivent etre distincts.');
 
     // Robots appartiennent-ils au joueur ?
     if (req.robotIds.length > 0) {
@@ -60,54 +62,46 @@ export class MatchmakingService {
       if (owned !== req.robotIds.length) throw badRequest('Un robot au moins ne vous appartient pas.');
     }
 
-    // L'utilisateur est-il déjà en file pour ce format ?
+    // L'utilisateur est-il deja dans la file de CETTE variante ?
     const queue = getMatchmakingQueue();
-    const already = await queue.size(req.format);
-    const existing = await queue.peek(req.format);
+    const already = await queue.size(req.variantId);
+    const existing = await queue.peek(req.variantId);
     const alreadyIndex = existing.findIndex((t) => t.userId === req.userId);
     if (alreadyIndex >= 0) {
-      // Idempotence : ne pas re-débiter, ne pas ré-inscrire, mais renvoyer
-      // le même contrat que si tout venait de se faire. Le client sait alors
-      // qu'il est en file et bascule sur l'écran waiting sans erreur.
       return { status: 'queued', queuePosition: alreadyIndex + 1 };
     }
 
-    // Débit de la mise (tout ou rien). v16 — mise configurable (back-office).
-    const eff = await matchFormatConfigService.getEffective(req.format);
+    // Debit de la mise de la variante (tout ou rien).
     await walletService.stake(req.userId, eff.buyInPerPlayer);
 
-    // Ajout à la file. Le ticket transporte les robots dans l'ordre
-    // [coéquipier(s)…, remplaçant?]. Le buildParticipants les affectera.
     const ticket: MatchmakingTicket = { userId: req.userId, robotIds: req.robotIds, enqueuedAt: Date.now() };
-    await queue.push(req.format, ticket);
+    await queue.push(req.variantId, ticket);
 
-    // Essai d'appariement.
-    const matched = await this.#tryMatch(req.format);
+    const matched = await this.#tryMatch(req.variantId, eff);
     if (matched) return { status: 'matched', matchId: matched };
     return { status: 'queued', queuePosition: already + 1 };
   }
 
-  /** Annule une inscription en file (remboursement). Sans effet si le match est déjà lancé. */
-  async cancel(userId: string, format: MatchFormat): Promise<{ refunded: number }> {
+  /** Annule une inscription (remboursement). Sans effet si le match est deja lance. */
+  async cancel(userId: string, variantId: string): Promise<{ refunded: number }> {
     const queue = getMatchmakingQueue();
-    const removed = await queue.remove(format, userId);
-    if (!removed) throw notFound('Aucune inscription en file pour ce format.');
-    // v16 — remboursement de la mise configurée.
-    const eff = await matchFormatConfigService.getEffective(format);
+    const removed = await queue.remove(variantId, userId);
+    if (!removed) throw notFound('Aucune inscription en file pour ce match rapide.');
+    const eff = await matchFormatConfigService.getEffectiveById(variantId);
     await walletService.credit(userId, eff.buyInPerPlayer, undefined, 'refund');
     return { refunded: eff.buyInPerPlayer };
   }
 
-  /** Extrait les N joueurs de tête et crée un Match, si l'effectif est atteint. */
-  async #tryMatch(format: MatchFormat): Promise<string | null> {
-    const rules = getMatchFormatRules(format);
+    /** Extrait les N joueurs de tête et crée un Match pour la variante donnée. */
+  async #tryMatch(variantId: string, eff: EffectiveMatchConfig): Promise<string | null> {
+    const format = eff.format;
     const queue = getMatchmakingQueue();
-    if ((await queue.size(format)) < rules.humansPerMatch) return null;
+    if ((await queue.size(variantId)) < eff.humansPerMatch) return null;
 
-    const tickets = await queue.pop(format, rules.humansPerMatch);
-    if (tickets.length < rules.humansPerMatch) {
+    const tickets = await queue.pop(variantId, eff.humansPerMatch);
+    if (tickets.length < eff.humansPerMatch) {
       // Concurrence : quelqu'un est passé avant nous. On re-push nos tickets.
-      for (const t of tickets) await queue.push(format, t);
+      for (const t of tickets) await queue.push(variantId, t);
       return null;
     }
 
@@ -115,6 +109,7 @@ export class MatchmakingService {
     const participants = this.#buildParticipants(format, tickets);
     const match = await MatchModel.create({
       format,
+      formatConfig: eff.id,          // v16 — variante d'origine (mise/gain/règles)
       status: MatchStatus.PAIRING,
       participants,
       queuedAt: new Date(),
@@ -126,20 +121,19 @@ export class MatchmakingService {
     //   - DUO_STEEL (headless) : joué en synchrone dans un worker background.
     //   - HYBRID_ALLIANCE / ROYAL_SQUARE : provisionne une Table éphémère et
     //     laisse liveGameService démarrer dès que les joueurs se connectent.
-    if (rules.isHeadless) {
-      void this.#runHeadlessInBackground(matchId, format);
+    if (eff.isHeadless) {
+      void this.#runHeadlessInBackground(matchId, eff);
     } else {
       // Fire-and-forget aussi pour ne pas bloquer la réponse HTTP.
-      void this.#provisionLiveTableInBackground(matchId, format);
+      void this.#provisionLiveTableInBackground(matchId, eff);
     }
 
     return matchId;
   }
 
   /** Lance le runner headless en arrière-plan (import dynamique pour éviter les cycles). */
-  async #runHeadlessInBackground(matchId: string, format: MatchFormat): Promise<void> {
+  async #runHeadlessInBackground(matchId: string, eff: EffectiveMatchConfig): Promise<void> {
     try {
-      const eff = await matchFormatConfigService.getEffective(format);   // v16 — réglages configurables
       const { matchHeadlessRunner } = await import('../matches/match.headlessRunner.js');
       await matchHeadlessRunner.run(matchId, {
         manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
@@ -152,9 +146,8 @@ export class MatchmakingService {
   }
 
   /** Provisionne la Table éphémère et met le Match en RUNNING (les joueurs peuvent rejoindre). */
-  async #provisionLiveTableInBackground(matchId: string, format: MatchFormat): Promise<void> {
+  async #provisionLiveTableInBackground(matchId: string, eff: EffectiveMatchConfig): Promise<void> {
     try {
-      const eff = await matchFormatConfigService.getEffective(format);   // v16 — réglages de jeu configurables
       const { matchLiveService } = await import('../matches/match.liveRunner.js');
       await matchLiveService.provision(matchId, {
         manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
@@ -212,11 +205,15 @@ export class MatchmakingService {
     return p;
   }
 
-  /** Retourne la taille de chaque file (debug / affichage utilisateur). */
-  async queueSizes(): Promise<Record<MatchFormat, number>> {
+  /**
+   * Taille de chaque file, keyée par VARIANTE active (v16). Clé = variantId.
+   * (Le débit/affichage détaillé se fait via GET /matches/formats.)
+   */
+  async queueSizes(): Promise<Record<string, number>> {
     const queue = getMatchmakingQueue();
-    const out = {} as Record<MatchFormat, number>;
-    for (const format of Object.values(MatchFormat)) out[format] = await queue.size(format);
+    const variants = await matchFormatConfigService.list(true);
+    const out: Record<string, number> = {};
+    for (const v of variants) out[String(v._id)] = await queue.size(String(v._id));
     return out;
   }
 }

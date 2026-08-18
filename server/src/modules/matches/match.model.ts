@@ -45,6 +45,13 @@ const MatchSchema = new Schema(
     format: { type: String, enum: Object.values(MatchFormat), required: true, index: true },
     status: { type: String, enum: Object.values(MatchStatus), default: MatchStatus.QUEUED, index: true },
 
+    /**
+     * v16 — Variante de MATCH RAPIDE (MatchFormatConfig) dont ce match est
+     * issu : sa mise/gain/manches/score sont ceux appliqués et versés. `null`
+     * pour un match de tournoi (économie gérée par le tournoi) ou legacy.
+     */
+    formatConfig: { type: Schema.Types.ObjectId, ref: 'MatchFormatConfig', default: null, index: true },
+
     participants: { type: [ParticipantSchema], default: [] },
 
     /** Tournoi parent (null pour un match libre). */

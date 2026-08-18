@@ -5,14 +5,19 @@
  * d'un format (effectif, nombre de robots, headless…). Cette collection stocke
  * les paramètres ÉDITABLES par le back-office : mise (buy-in), gain, nombre de
  * manches, score cible, ainsi que l'habillage d'affichage (label, couleur,
- * icône, ordre, actif). Un document par format (clé unique `format`).
+ * icône, ordre, actif).
+ *
+ * v16 — PLUSIEURS VARIANTES par format sont autorisées (ex. deux « Duo d'acier »
+ * à mises/niveaux différents). Chaque document = une variante identifiée par
+ * son `_id`, qui sert de CLÉ DE FILE de matchmaking. `format` (non unique) donne
+ * les règles STRUCTURELLES (effectif, headless…).
  * ========================================================================== */
 import mongoose, { Schema, model, type InferSchemaType } from 'mongoose';
 import { MatchFormat } from './matchFormat.js';
 
 const MatchFormatConfigSchema = new Schema(
   {
-    format: { type: String, enum: Object.values(MatchFormat), required: true, unique: true, index: true },
+    format: { type: String, enum: Object.values(MatchFormat), required: true, index: true },
     label: { type: String, required: true },
     subtitle: { type: String, default: '' },
     /** Mise prélevée à chaque joueur (jetons). */

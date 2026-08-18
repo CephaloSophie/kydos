@@ -16,6 +16,7 @@ const DISPLAY_DEFAULTS: Record<MatchFormat, { color: string; icon: string; subti
 };
 
 export interface EffectiveMatchConfig {
+  id: string | null;               // _id de la variante (null si fallback catalogue)
   format: MatchFormat;
   label: string;
   subtitle: string;
@@ -49,11 +50,15 @@ export function isLevelEligible(level: number, minLevel: number, maxLevel: numbe
 }
 
 export class MatchFormatConfigService {
-  /** Crée les documents manquants à partir du catalogue (idempotent). */
+  /**
+   * Seed initial : crée UNE variante par défaut par format SI la collection est
+   * vide (idempotent). Avec le multi-variantes (v16), on ne re-seed pas format
+   * par format — sinon on recréerait des doublons à chaque appel.
+   */
   async ensureSeeded(): Promise<void> {
+    const count = await MatchFormatConfigModel.estimatedDocumentCount();
+    if (count > 0) return;
     for (const format of Object.values(MatchFormat)) {
-      const exists = await MatchFormatConfigModel.exists({ format });
-      if (exists) continue;
       const rules = MATCH_FORMAT_CATALOG[format];
       const d = DISPLAY_DEFAULTS[format];
       await MatchFormatConfigModel.create({
@@ -69,10 +74,15 @@ export class MatchFormatConfigService {
     }
   }
 
-  /** Config éditable brute d'un format (document persisté, seedé si absent). */
+  /** Variante brute par _id. */
+  async getById(variantId: string): Promise<any> {
+    return MatchFormatConfigModel.findById(variantId).lean();
+  }
+
+  /** Config éditable brute — 1ʳᵉ variante d'un format (fallback/compat). */
   async getRaw(format: MatchFormat): Promise<any> {
     await this.ensureSeeded();
-    return MatchFormatConfigModel.findOne({ format }).lean();
+    return MatchFormatConfigModel.findOne({ format }).sort({ order: 1 }).lean();
   }
 
   /**
@@ -92,10 +102,9 @@ export class MatchFormatConfigService {
     return MatchFormatConfigModel.find(filter).sort({ order: 1 }).lean();
   }
 
-  /** Règles EFFECTIVES : structure du catalogue + économie/jeu de la config. */
-  async getEffective(format: MatchFormat): Promise<EffectiveMatchConfig> {
+  /** Construit les règles EFFECTIVES à partir d'une variante + son format. */
+  buildEffective(format: MatchFormat, cfg: any): EffectiveMatchConfig {
     const structural: MatchFormatRules = getMatchFormatRules(format);
-    const cfg: any = await this.getRaw(format);
     const buyInPerPlayer = cfg?.buyInPerPlayer ?? structural.buyInPerPlayer;
     const prizePerWinner = cfg?.prizePerWinner ?? structural.prizePerWinner;
     // Rake recalculé pour rester cohérent si mise/gain ont changé (part du rake
@@ -108,6 +117,7 @@ export class MatchFormatConfigService {
     );
     const d = DISPLAY_DEFAULTS[format];
     return {
+      id: cfg?._id ? String(cfg._id) : null,
       format,
       label: cfg?.label ?? structural.label,
       subtitle: cfg?.subtitle ?? d.subtitle,
@@ -129,6 +139,19 @@ export class MatchFormatConfigService {
       winnersPerMatch: structural.winnersPerMatch,
       isHeadless: structural.isHeadless,
     };
+  }
+
+  /** Règles EFFECTIVES d'une VARIANTE précise (par _id). Lève si introuvable. */
+  async getEffectiveById(variantId: string): Promise<EffectiveMatchConfig> {
+    const cfg: any = await this.getById(variantId);
+    if (!cfg) throw new Error(`Variante de match introuvable : ${variantId}`);
+    return this.buildEffective(cfg.format as MatchFormat, cfg);
+  }
+
+  /** Règles EFFECTIVES — 1ʳᵉ variante d'un format (fallback/compat). */
+  async getEffective(format: MatchFormat): Promise<EffectiveMatchConfig> {
+    const cfg: any = await this.getRaw(format);
+    return this.buildEffective(format, cfg);
   }
 }
 

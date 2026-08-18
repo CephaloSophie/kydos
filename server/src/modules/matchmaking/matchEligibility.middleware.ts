@@ -22,10 +22,15 @@ async function levelOf(userId: string): Promise<number> {
 
 export async function requireMatchEligibility(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
   try {
-    const format = req.body?.format as MatchFormat;
-    if (!format || !Object.values(MatchFormat).includes(format)) throw badRequest('Format de match invalide.');
-
-    const eff = await matchFormatConfigService.getEffective(format);
+    // v16 — variante explicite en priorité ; sinon 1ʳᵉ variante du format.
+    let eff;
+    if (req.body?.variantId) {
+      eff = await matchFormatConfigService.getEffectiveById(String(req.body.variantId));
+    } else {
+      const format = req.body?.format as MatchFormat;
+      if (!format || !Object.values(MatchFormat).includes(format)) throw badRequest('Match rapide invalide.');
+      eff = await matchFormatConfigService.getEffective(format);
+    }
     if (!eff.active) throw forbidden('Ce match rapide n’est pas disponible actuellement.');
 
     const level = await levelOf(req.userId!);

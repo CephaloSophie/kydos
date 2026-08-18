@@ -269,7 +269,10 @@ export class MatchLiveService {
     if (!(match as any).tournament) {
       try {
         const { matchFormatConfigService } = await import('./matchFormatConfig.service.js');
-        const eff = await matchFormatConfigService.getEffective(format);
+        // v16 — variante d'origine si connue (mise/gain propres), sinon 1ʳᵉ du format.
+        const eff = (match as any).formatConfig
+          ? await matchFormatConfigService.getEffectiveById(String((match as any).formatConfig))
+          : await matchFormatConfigService.getEffective(format);
         prizePerWinner = eff.prizePerWinner;
         houseRake = eff.houseRake;
       } catch { /* fallback catalogue */ }
