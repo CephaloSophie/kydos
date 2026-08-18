@@ -34,7 +34,7 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
     },
   }, dot, label) as HTMLButtonElement;
 
-  // current = { kind: 'match', match } | { kind: 'tournament' }
+  // current = { kind: 'match', match } | { kind: 'tournament', active }
   let current: any = null;
 
   const rejoin = async () => {
@@ -50,7 +50,58 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
       router.go(`table?online=${tableId}`);
     } catch { router.go(`matchmaking?format=${format}`); }
   };
-  chip.addEventListener('click', () => void rejoin());
+
+  /* ── Popup (v16) : timer + « Rejoindre » / « Fermer » ──────────────────── */
+  let popupTicker: ReturnType<typeof setInterval> | null = null;
+  const overlay = h('div', { style: {
+    display: 'none', position: 'fixed', inset: '0', zIndex: '10000',
+    background: 'rgba(0,0,0,.55)', alignItems: 'center', justifyContent: 'center', padding: '24px',
+  } });
+  const closePopup = () => {
+    overlay.style.display = 'none'; overlay.innerHTML = '';
+    if (popupTicker) { clearInterval(popupTicker); popupTicker = null; }
+  };
+  // « Fermer » ne fait QUE masquer le message (n'annule aucune partie).
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closePopup(); });
+
+  const openPopup = () => {
+    overlay.innerHTML = '';
+    if (popupTicker) { clearInterval(popupTicker); popupTicker = null; }
+    const isTournament = current?.kind === 'tournament';
+    const a = isTournament ? current.active : null;
+    const title = isTournament ? `Tournoi${a?.roundLabel ? ' · ' + a.roundLabel : ''}` : 'Match rapide en cours';
+    const subtitle = isTournament
+      ? (a?.state === 'waiting' ? 'Votre adversaire se qualifie…' : a?.state === 'pending' ? 'Votre match démarre bientôt.' : 'Votre match est en cours.')
+      : 'Rejoignez votre table de match.';
+
+    const timer = h('div', { class: 'mono', style: { fontSize: '38px', fontWeight: '800', color: 'var(--c-gold)', textAlign: 'center', margin: '6px 0' } });
+    const showTimer = isTournament && a?.state === 'pending' && a?.startsAt;
+    if (showTimer) {
+      const paint = () => {
+        const left = Math.max(0, Math.ceil((new Date(a.startsAt).getTime() - Date.now()) / 1000));
+        timer.textContent = left > 0 ? String(left) : 'GO';
+      };
+      paint(); popupTicker = setInterval(paint, 1000);
+    }
+
+    const card = h('div', { style: {
+      width: '100%', maxWidth: '320px', background: '#0d1626', borderRadius: 'var(--r-lg)',
+      border: '1px solid rgba(230,196,106,.35)', padding: '20px', boxShadow: '0 12px 40px rgba(0,0,0,.5)',
+    } },
+      h('div', { class: 'row gap-2', style: { alignItems: 'center', justifyContent: 'center' } },
+        h('span', { class: 'live-chip__dot' }),
+        h('div', { class: 'title', style: { fontSize: '16px', color: '#fff' } }, title)),
+      showTimer ? timer : h('div', { style: { height: '8px' } }),
+      h('div', { style: { fontSize: '12px', color: 'var(--c-text-mute)', textAlign: 'center', marginBottom: '16px' } }, subtitle),
+      h('div', { class: 'row gap-2' },
+        h('button', { class: 'btn', style: { flex: '1', background: 'var(--c-gold)', color: '#1a0f00', fontWeight: '700' },
+          onClick: () => { closePopup(); void rejoin(); } }, '▶ Rejoindre'),
+        h('button', { class: 'btn btn--ghost', style: { flex: '1' }, onClick: () => closePopup() }, 'Fermer')),
+    );
+    overlay.append(card);
+    overlay.style.display = 'flex';
+  };
+  chip.addEventListener('click', () => openPopup());
 
   const refresh = async () => {
     // Masquée sur les écrans de jeu / login.
@@ -68,7 +119,7 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
       }
       const { active } = await api.getMyTournament();
       if (active && (active.state === 'playing' || active.state === 'waiting' || active.state === 'pending')) {
-        current = { kind: 'tournament' };
+        current = { kind: 'tournament', active };
         chip.style.display = 'inline-flex';
         return;
       }
@@ -78,6 +129,7 @@ export function mountLiveMatchIndicator(ctx: AppContext): void {
   };
 
   document.body.appendChild(chip);
+  document.body.appendChild(overlay);
   void refresh();
   setInterval(() => void refresh(), 5000);
 }

@@ -80,6 +80,9 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     const accent = usWon ? 'var(--c-success)' : themWon ? 'var(--c-danger)' : 'var(--c-gold)';
     const title = info.winner ? (usWon ? 'Victoire de NOUS' : "Victoire d'EUX") : 'Partie nulle';
 
+    // Conteneur du bouton « Arbre du tournoi » (rempli plus bas si tournoi).
+    const tournamentSlot = h('div', { class: 'col', style: { width: '100%' } });
+
     const card = h('div', { class: 'col center gap-3', style: {
       padding: '26px 30px', borderRadius: 'var(--r-2xl)', minWidth: '320px',
       background: 'linear-gradient(180deg, rgba(16,22,36,.98), rgba(9,13,22,.98))',
@@ -100,12 +103,30 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       h('div', { class: 'row gap-2', style: { marginTop: '6px' } },
         info.gameId ? Button('📊 Statistiques', { variant: 'secondary', size: 'sm', onClick: () => { overlay.remove(); onlineSocket.disconnect(); router.go(`gamestats?id=${info.gameId}`); } }) : null,
         info.gameId ? Button('▶ Rejouer', { variant: 'ghost', size: 'sm', onClick: () => { overlay.remove(); onlineSocket.disconnect(); router.go(`replay?id=${info.gameId}`); } }) : null),
+      // v16 — emplacement du bouton « Arbre du tournoi », injecté après coup si
+      // ce match appartient à un tournoi LIVE (vainqueur OU éliminé).
+      tournamentSlot,
       Button('Quitter la table', { size: 'sm', block: true, onClick: () => { overlay.remove(); leaveTable(); } }));
 
     const overlay = h('div', { class: 'center', style: {
       position: 'absolute', inset: '0', zIndex: '30', background: 'rgba(4,7,14,.72)', backdropFilter: 'blur(5px)',
     } }, card);
     root.append(overlay);
+
+    // v16 — si ce match en ligne est un match de TOURNOI encore LIVE, on propose
+    // d'aller à l'arbre pour choisir un match à regarder ou quitter. Vaut pour
+    // le vainqueur (état waiting/pending/champion) comme pour le perdant
+    // (éliminé) tant que le tournoi n'est pas terminé.
+    void (async () => {
+      try {
+        const { active } = await api.getMyTournament();
+        if (!active || !active.tournamentId) return;
+        tournamentSlot.append(
+          Button(`${active.icon || '♦'} Arbre du tournoi`, { variant: 'secondary', size: 'sm', block: true, onClick: () => {
+            overlay.remove(); onlineSocket.disconnect(); router.go(`tournament?id=${active.tournamentId}`);
+          } }));
+      } catch { /* pas un tournoi ou hors-ligne : on n'ajoute rien */ }
+    })();
   };
 
   const onlineSocket = new TableSocket();

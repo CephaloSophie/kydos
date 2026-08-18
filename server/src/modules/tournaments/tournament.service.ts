@@ -51,9 +51,27 @@ export class TournamentService {
       'participants.userId': new Types.ObjectId(userId),
     }).select('name format color icon bracketTree').lean();
 
+    // Repli : tournoi LIVE où le joueur est éliminé/champion (plus engagé mais
+    // il peut encore consulter l'arbre et regarder les autres matchs). On le
+    // renvoie SEULEMENT si aucun engagement actif n'est trouvé.
+    let fallback: any | null = null;
+
     for (const t of tournaments as any[]) {
       const status = computeUserTournamentStatus(t.bracketTree, userId);
-      if (status.state === 'none' || status.state === 'eliminated' || status.state === 'champion') continue;
+      if (status.state === 'none') continue;
+      if (status.state === 'eliminated' || status.state === 'champion') {
+        if (!fallback) {
+          const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
+          fallback = {
+            tournamentId: String(t._id),
+            name: t.name, format: t.format, color: t.color, icon: t.icon,
+            state: status.state,
+            roundIndex: status.roundIndex, roundLabel,
+            startsAt: null, myMatchId: null, myTableId: null, awaiting: [],
+          };
+        }
+        continue;
+      }
 
       // Table live des matchs attendus / du mien, pour spectate / rejoindre.
       const matchIds = [
@@ -84,7 +102,7 @@ export class TournamentService {
         })),
       };
     }
-    return null;
+    return fallback;
   }
 
   /** Détail d'un tournoi (draft visible seulement à son créateur). */
