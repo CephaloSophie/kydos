@@ -42,6 +42,8 @@ export default defineConfig({
           'src/modules/matches/matchFormatConfig.test.ts',
           // v14.14 : Carrée royale en tournoi (bracket sur équipes de 2).
           'src/modules/tournaments/royal-bracket.test.ts',
+          // v16 : statut du joueur dans un tournoi live (waiting/playing/…).
+          'src/modules/tournaments/userStatus.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',

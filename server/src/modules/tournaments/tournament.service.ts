@@ -18,6 +18,8 @@ import { RobotModel } from '../robot/robot.model.js';
 import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
 import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions, formTeamSeeds } from './bracket.js';
+import { computeUserTournamentStatus } from './userStatus.js';
+import { MatchModel } from '../matches/match.model.js';
 
 export class TournamentService {
   /**
@@ -34,6 +36,54 @@ export class TournamentService {
       query.$or = [{ maxLevel: null }, { maxLevel: { $gte: userLevel } }];
     }
     return TournamentModel.find(query).sort({ startAt: 1 }).lean();
+  }
+
+  /**
+   * v16 — Statut ACTIF du joueur dans un tournoi LIVE : en train de jouer,
+   * en attente de son prochain match (adversaire pas encore connu), etc.
+   * Enrichit les matchs attendus avec leur table live (pour le mode
+   * spectateur). Renvoie `null` si le joueur n'est engagé dans aucun tournoi
+   * live en cours de progression.
+   */
+  async getMyActive(userId: string): Promise<any | null> {
+    const tournaments = await TournamentModel.find({
+      status: TournamentStatus.LIVE,
+      'participants.userId': new Types.ObjectId(userId),
+    }).select('name format color icon bracketTree').lean();
+
+    for (const t of tournaments as any[]) {
+      const status = computeUserTournamentStatus(t.bracketTree, userId);
+      if (status.state === 'none' || status.state === 'eliminated' || status.state === 'champion') continue;
+
+      // Table live des matchs attendus / du mien, pour spectate / rejoindre.
+      const matchIds = [
+        ...status.awaiting.map((a) => a.matchId).filter(Boolean),
+        status.myMatchId,
+      ].filter(Boolean) as string[];
+      const tableByMatch = new Map<string, string>();
+      if (matchIds.length) {
+        const matches = await MatchModel.find({ _id: { $in: matchIds } }).select('liveTableId').lean();
+        for (const m of matches as any[]) {
+          if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
+        }
+      }
+      const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
+
+      return {
+        tournamentId: String(t._id),
+        name: t.name, format: t.format, color: t.color, icon: t.icon,
+        state: status.state,
+        roundIndex: status.roundIndex,
+        roundLabel,
+        myMatchId: status.myMatchId,
+        myTableId: status.myMatchId ? tableByMatch.get(status.myMatchId) ?? null : null,
+        awaiting: status.awaiting.map((a) => ({
+          ...a,
+          tableId: a.matchId ? tableByMatch.get(a.matchId) ?? null : null,
+        })),
+      };
+    }
+    return null;
   }
 
   /** Détail d'un tournoi (draft visible seulement à son créateur). */

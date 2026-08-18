@@ -5,6 +5,8 @@ import { tournamentController } from './tournament.controller.js';
 
 export const tournamentRouter = Router();
 tournamentRouter.get('/tournaments', requireAuthentication, asyncHandler((req, res) => tournamentController.list(req, res)));
+// v16 — statut actif du joueur (avant :id pour éviter la capture de route).
+tournamentRouter.get('/tournaments/mine', requireAuthentication, asyncHandler((req, res) => tournamentController.mine(req, res)));
 // v14.12 — preview-economics AVANT :id pour éviter le conflit de matching.
 tournamentRouter.post('/tournaments/preview-economics', requireAuthentication, asyncHandler((req, res) => tournamentController.previewEconomics(req, res)));
 tournamentRouter.post('/tournaments', requireAuthentication, asyncHandler((req, res) => tournamentController.create(req, res)));
