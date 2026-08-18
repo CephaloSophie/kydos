@@ -23,12 +23,28 @@ const DEFAULTS = [
   { format: 'royal_square', label: 'Carrée royale', subtitle: 'Quatre humains, deux équipes, une couronne.', buyInPerPlayer: 100, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#b0384a', icon: '♥', minLevel: 0, maxLevel: null, active: true, order: 2 },
 ];
 
+let legacyIndexChecked = false;
+
+/** v16 — Supprime l'ancien index UNIQUE `format_1` (bloque le multi-variantes). */
+async function dropLegacyUniqueIndex(Model: any) {
+  if (legacyIndexChecked) return;
+  legacyIndexChecked = true;
+  try {
+    const indexes = await Model.collection.indexes();
+    if (indexes.find((i: any) => i.name === 'format_1' && i.unique)) {
+      await Model.collection.dropIndex('format_1');
+    }
+  } catch { /* absent : rien à faire */ }
+}
+
 async function ensureSeeded() {
   const Model = mongoose.model('MatchFormatConfig');
-  for (const d of DEFAULTS) {
-    const exists = await Model.exists({ format: d.format });
-    if (!exists) await Model.create(d);
-  }
+  await dropLegacyUniqueIndex(Model);
+  // Seed initial uniquement si la collection est vide (sinon on préserve les
+  // variantes existantes créées par l'admin).
+  const count = await Model.estimatedDocumentCount();
+  if (count > 0) return;
+  for (const d of DEFAULTS) await Model.create(d);
 }
 
 /** Net maison EFFECTIF d'un match = rake catalogue + delta mise/gain. */

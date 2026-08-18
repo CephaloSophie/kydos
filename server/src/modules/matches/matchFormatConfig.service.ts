@@ -49,13 +49,31 @@ export function isLevelEligible(level: number, minLevel: number, maxLevel: numbe
   return level >= (minLevel ?? 0) && (maxLevel == null || level <= maxLevel);
 }
 
+let legacyIndexChecked = false;
+
 export class MatchFormatConfigService {
+  /**
+   * v16 — Supprime (une fois par process) l'ancien index UNIQUE `format_1` :
+   * il empêchait plusieurs variantes d'un même format. Mongoose recrée ensuite
+   * un index non-unique. Silencieux si l'index est absent (nouvelle base).
+   */
+  async #dropLegacyUniqueIndex(): Promise<void> {
+    if (legacyIndexChecked) return;
+    legacyIndexChecked = true;
+    try {
+      const indexes = await MatchFormatConfigModel.collection.indexes();
+      const legacy = indexes.find((i: any) => i.name === 'format_1' && i.unique);
+      if (legacy) await MatchFormatConfigModel.collection.dropIndex('format_1');
+    } catch { /* index absent ou collection inexistante : rien à faire */ }
+  }
+
   /**
    * Seed initial : crée UNE variante par défaut par format SI la collection est
    * vide (idempotent). Avec le multi-variantes (v16), on ne re-seed pas format
    * par format — sinon on recréerait des doublons à chaque appel.
    */
   async ensureSeeded(): Promise<void> {
+    await this.#dropLegacyUniqueIndex();
     const count = await MatchFormatConfigModel.estimatedDocumentCount();
     if (count > 0) return;
     for (const format of Object.values(MatchFormat)) {
