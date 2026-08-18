@@ -30,7 +30,15 @@ export class MatchFormatService {
     return this.http.get<{ formats: MatchFormatConfig[] }>(this.apiUrl);
   }
 
-  update(format: string, data: Partial<MatchFormatConfig>) {
-    return this.http.put<{ format: MatchFormatConfig }>(`${this.apiUrl}/${format}`, data);
+  create(data: { format: string } & Partial<Omit<MatchFormatConfig, 'format'>>) {
+    return this.http.post<{ format: MatchFormatConfig }>(this.apiUrl, data);
+  }
+
+  update(id: string, data: Partial<MatchFormatConfig>) {
+    return this.http.put<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}`, data);
+  }
+
+  delete(id: string) {
+    return this.http.delete<{ deleted: boolean }>(`${this.apiUrl}/${id}`);
   }
 }

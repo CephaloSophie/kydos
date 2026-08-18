@@ -53,8 +53,20 @@ const FORMATS: Record<string, FormatInfo> = {
 
 export function MatchEnrollScreen(ctx: AppContext): HTMLElement {
   const { router, api, session } = ctx;
-  const format = (new URLSearchParams(location.hash.split('?')[1] ?? '').get('format') ?? 'duo_steel');
-  const info = FORMATS[format] ?? FORMATS.duo_steel;
+  const params = new URLSearchParams(location.hash.split('?')[1] ?? '');
+  const format = (params.get('format') ?? 'duo_steel');
+  const variantId = params.get('variant') ?? undefined;   // v16 — variante précise
+  const base = FORMATS[format] ?? FORMATS.duo_steel;
+  // v16 — l'économie/le titre viennent de la variante (query), sinon du catalogue.
+  const qBuyIn = Number(params.get('buyIn'));
+  const qPrize = Number(params.get('prize'));
+  const qLabel = params.get('label');
+  const info = {
+    ...base,
+    buyIn: Number.isFinite(qBuyIn) && qBuyIn >= 0 ? qBuyIn : base.buyIn,
+    prize: Number.isFinite(qPrize) && qPrize >= 0 ? qPrize : base.prize,
+    label: qLabel ? decodeURIComponent(qLabel) : base.label,
+  };
 
   // Sélections courantes : tableau des ids co-équipiers (dans l'ordre), + le
   // remplaçant à part. On concatène à l'enqueue.
@@ -180,7 +192,7 @@ export function MatchEnrollScreen(ctx: AppContext): HTMLElement {
       const robotIds = substitute ? [...teammateIds, substitute] : teammateIds;
       statusEl.textContent = 'Inscription en cours…';
       try {
-        await api.enqueueMatch(info.id, robotIds);
+        await api.enqueueMatch(info.id, robotIds, variantId);
         await session.refreshWallet();
         router.go(`matchmaking?format=${info.id}`);
       } catch (e) {

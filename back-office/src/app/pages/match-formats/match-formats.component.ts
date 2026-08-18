@@ -16,11 +16,18 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
       <button class="btn btn-secondary" (click)="load()">↻ Actualiser</button>
     </div>
 
-    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px">
-      Ces formats sont proposés dans « Compétitions » de l'application. La mise, le gain,
-      le nombre de manches et le score cible sont appliqués à chaque match. Les formats
-      inactifs n'apparaissent pas côté joueur.
+    <p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 12px">
+      Ces variantes sont proposées dans « Compétitions » de l'application. La mise, le gain,
+      le nombre de manches, le score cible et le niveau requis sont appliqués à chaque match.
+      Plusieurs variantes par format sont possibles (chacune sa propre file d'attente). Les
+      variantes inactives n'apparaissent pas côté joueur.
     </p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px">
+      <span style="font-size:12px; color:var(--text-muted); align-self:center">+ Nouvelle variante :</span>
+      <button class="btn btn-secondary btn-sm" (click)="create('duo_steel')">Duo d'acier</button>
+      <button class="btn btn-secondary btn-sm" (click)="create('hybrid_alliance')">Alliance hybride</button>
+      <button class="btn btn-secondary btn-sm" (click)="create('royal_square')">Carrée royale</button>
+    </div>
 
     @if (loading) {
       <div class="empty-state">Chargement…</div>
@@ -29,7 +36,10 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
         @for (f of formats; track f.format) {
           <div class="card mf-card" [style.border-top]="'3px solid ' + f.color">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center">
-              <h3>{{ f.icon }} {{ f.label }}</h3>
+              <div>
+                <h3 style="margin:0">{{ f.icon }} {{ f.label }}</h3>
+                <span style="font-size:11px; color:var(--text-muted)">{{ formatLabel(f.format) }}</span>
+              </div>
               <span class="badge" [class.active]="f.active" [class.inactive]="!f.active">
                 {{ f.active ? 'Actif' : 'Inactif' }}
               </span>
@@ -101,6 +111,7 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
 
             <div style="margin-top: 12px; display:flex; gap:8px; align-items:center">
               <button class="btn btn-primary" (click)="save(f)" [disabled]="f._saving">Enregistrer</button>
+              <button class="btn btn-danger btn-sm" (click)="remove(f)">Supprimer</button>
               @if (f._msg) { <span style="font-size:12px; color: var(--text-muted)">{{ f._msg }}</span> }
             </div>
           </div>
@@ -143,11 +154,25 @@ export class MatchFormatsComponent implements OnInit {
 
   recalc(_f: MatchFormatConfig) { /* net recomputed via netOf() in template */ }
 
-  save(f: MatchFormatConfig & { _saving?: boolean; _msg?: string }) {
+  save(f: MatchFormatConfig & { _id?: string; _saving?: boolean; _msg?: string }) {
+    if (!f._id) { this.create(f.format); return; }
     f._saving = true; f._msg = '';
-    this.svc.update(f.format, f).subscribe({
+    this.svc.update(f._id, f).subscribe({
       next: () => { f._saving = false; f._msg = '✓ Enregistré'; setTimeout(() => (f._msg = ''), 2500); },
       error: (err: any) => { f._saving = false; f._msg = '✗ ' + (err.error?.error || 'Erreur'); },
     });
+  }
+
+  create(format: string) {
+    this.svc.create({ format }).subscribe({ next: () => this.load() });
+  }
+
+  remove(f: MatchFormatConfig & { _id?: string }) {
+    if (!f._id || !confirm(`Supprimer « ${f.label} » ?`)) return;
+    this.svc.delete(f._id).subscribe({ next: () => this.load() });
+  }
+
+  formatLabel(format: string): string {
+    return { duo_steel: 'Duo d\'acier', hybrid_alliance: 'Alliance hybride', royal_square: 'Carrée royale' }[format] || format;
   }
 }

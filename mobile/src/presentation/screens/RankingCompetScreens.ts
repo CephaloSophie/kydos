@@ -63,6 +63,8 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
   /** Description d'un format d'inscription (miroir du catalog serveur). */
   interface FormatCard {
     id: 'duo_steel' | 'hybrid_alliance' | 'royal_square';
+    /** v16 — variante précise (MatchFormatConfig._id) ; absent pour le repli statique. */
+    variantId?: string;
     label: string;
     glyph: string;
     tag: string;
@@ -108,12 +110,14 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
       // On ne connaît pas l'user_id en file côté client ; on tente l'enqueue :
       // si le serveur détecte "déjà en file", il renvoie queued (idempotent v14.7).
     } catch { /* pas grave */ }
-    router.go(`enroll?format=${f.id}`);
+    // v16 \u2014 on transporte la variante choisie + son \u00e9conomie jusqu'\u00e0 l'\u00e9cran.
+    const v = f.variantId ? `&variant=${f.variantId}` : '';
+    router.go(`enroll?format=${f.id}${v}&buyIn=${f.buyIn}&prize=${f.prize}&label=${encodeURIComponent(f.label)}`);
   };
 
   const cancel = async (f: FormatCard) => {
     try {
-      await api.cancelMatchQueue(f.id);
+      await api.cancelMatchQueue(f.id, f.variantId);
       await ctx.session.refreshWallet();
       statusEl.textContent = `\u2713 Inscription annul\u00e9e, buy-in rembours\u00e9.`;
     } catch (e) {
@@ -195,6 +199,7 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
           const color = f.color || '#3f6ea1';
           return {
             id: f.format as FormatCard['id'],
+            variantId: (f as any).id,
             label: f.label, glyph: f.icon || s.glyph, tag: s.tag,
             accent: `linear-gradient(160deg, ${color} 0%, ${color}bb 100%)`,
             subtitle: f.subtitle, buyIn: f.buyIn, prize: f.prize,

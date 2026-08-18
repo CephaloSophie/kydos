@@ -106,14 +106,15 @@ npx ng serve --proxy-config proxy.conf.json</pre>
       <!-- Match rapide -->
       <section class="card">
         <div class="card-header"><h3>⚡ Match rapide</h3></div>
-        <p>Configure les 3 formats de « Match rapide » proposés dans Compétitions : <strong>mise</strong>, <strong>gain</strong>, <strong>nombre de manches</strong>, <strong>score cible</strong>, habillage et activation.</p>
+        <p>Configure les « Match rapide » proposés dans Compétitions : <strong>mise</strong>, <strong>gain</strong>, <strong>nombre de manches</strong>, <strong>score cible</strong>, habillage, niveaux et activation.</p>
         <ul>
+          <li><strong>Plusieurs variantes par format</strong> : « + Nouvelle variante » crée une offre (titre, mise, niveau propres). Chaque variante a sa propre file d'attente côté serveur. Bouton « Supprimer » pour retirer une variante.</li>
           <li>Le <em>net kydos / match</em> se recalcule en direct (rake catalogue + delta mise/gain).</li>
-          <li><strong>Niveau requis (min)</strong> et <strong>niveau max</strong> : critères d'accès. Un joueur hors de la plage ne voit pas le format et le serveur refuse l'inscription (middleware d'éligibilité).</li>
-          <li>Un format inactif n'apparaît pas côté joueur.</li>
-          <li>L'app mobile récupère les formats <em>éligibles</em> dynamiquement (carrousel horizontal) et n'en affiche que les 10 premiers.</li>
+          <li><strong>Niveau requis (min)</strong> et <strong>niveau max</strong> : critères d'accès. Un joueur hors de la plage ne voit pas la variante et le serveur refuse l'inscription (middleware d'éligibilité).</li>
+          <li>Une variante inactive n'apparaît pas côté joueur.</li>
+          <li>L'app mobile récupère les variantes <em>éligibles</em> dynamiquement (carrousel horizontal) et n'en affiche que les 10 premières.</li>
         </ul>
-        <p class="muted mono">GET/PUT /admin/match-formats · GET /matches/formats (mobile, filtré par niveau)</p>
+        <p class="muted mono">GET/POST/PUT/DELETE /admin/match-formats · GET /matches/formats (mobile, filtré par niveau)</p>
       </section>
 
       <!-- Comptabilité -->

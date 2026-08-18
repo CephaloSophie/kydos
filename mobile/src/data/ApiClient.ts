@@ -92,15 +92,15 @@ export class ApiClient {
   deleteRobot(id: string) { return this.call<{ ok: boolean }>(`/robots/${id}`, { method: 'DELETE' }); }
 
   // --- Matchmaking (v14) --------------------------------------------------
-  /** Inscrit le joueur en file d'attente pour un format. Renvoie 'queued' ou 'matched' avec l'id de match. */
-  enqueueMatch(format: string, robotIds: string[] = []) {
+  /** Inscrit le joueur en file. v16 — `variantId` (variante précise) prioritaire ; `format` en repli. */
+  enqueueMatch(format: string, robotIds: string[] = [], variantId?: string) {
     return this.call<{ status: 'queued' | 'matched'; matchId?: string; queuePosition?: number }>('/matches/enqueue', {
-      method: 'POST', body: JSON.stringify({ format, robotIds }),
+      method: 'POST', body: JSON.stringify({ format, variantId, robotIds }),
     });
   }
-  /** Annule l'inscription en file pour un format (remboursement). */
-  cancelMatchQueue(format: string) {
-    return this.call<{ refunded: number }>('/matches/cancel', { method: 'POST', body: JSON.stringify({ format }) });
+  /** Annule l'inscription en file (remboursement). v16 — par variante si fournie. */
+  cancelMatchQueue(format: string, variantId?: string) {
+    return this.call<{ refunded: number }>('/matches/cancel', { method: 'POST', body: JSON.stringify({ format, variantId }) });
   }
   /** Tailles de chaque file (Duo d'acier, Alliance hybride, Carrée royale). */
   matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }

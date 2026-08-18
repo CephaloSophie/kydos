@@ -50,17 +50,52 @@ router.get('/', async (_req, res) => {
   }
 });
 
-router.put('/:format', async (req: AdminRequest, res) => {
+const num = (v: any, min: number, max: number, cur: number) => {
+  const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
+};
+
+const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
+
+// v16 — Créer une NOUVELLE variante d'un format (mise/niveau/titre propres).
+router.post('/', async (req: AdminRequest, res) => {
   try {
-    await ensureSeeded();
     const Model = mongoose.model('MatchFormatConfig');
-    const cfg = await Model.findOne({ format: req.params.format }) as any;
-    if (!cfg) { res.status(404).json({ error: 'Format inconnu' }); return; }
+    const { format } = req.body;
+    if (!VALID_FORMATS.includes(format)) { res.status(400).json({ error: 'Format invalide' }); return; }
+    const base = DEFAULTS.find(d => d.format === format)!;
+    const count = await Model.countDocuments({ format });
+    const b = req.body;
+    const cfg = await Model.create({
+      format,
+      label: b.label ? String(b.label) : `${base.label} #${count + 1}`,
+      subtitle: b.subtitle !== undefined ? String(b.subtitle) : base.subtitle,
+      buyInPerPlayer: num(b.buyInPerPlayer, 0, 1_000_000, base.buyInPerPlayer),
+      prizePerWinner: num(b.prizePerWinner, 0, 1_000_000, base.prizePerWinner),
+      manches: [1, 2, 4].includes(Number(b.manches)) ? Number(b.manches) : base.manches,
+      baseTarget: num(b.baseTarget, 100, 100_000, base.baseTarget),
+      labelTarget: num(b.labelTarget, 100, 100_000, base.labelTarget),
+      color: b.color ? String(b.color) : base.color,
+      icon: b.icon ? String(b.icon) : base.icon,
+      minLevel: num(b.minLevel, 0, 9999, 0),
+      maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
+      active: b.active !== false,
+      order: num(b.order, 0, 999, count),
+    });
+    await logAudit(req.adminId!, 'matchFormat.create', String(cfg._id), { after: { format, label: cfg.label, buyInPerPlayer: cfg.buyInPerPlayer } });
+    res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Modifier une variante par son _id.
+router.put('/:id', async (req: AdminRequest, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const cfg = await Model.findById(req.params.id) as any;
+    if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
 
     const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, active, order } = req.body;
-    const num = (v: any, min: number, max: number, cur: number) => {
-      const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
-    };
     if (label !== undefined) cfg.label = String(label);
     if (subtitle !== undefined) cfg.subtitle = String(subtitle);
     if (buyInPerPlayer !== undefined) cfg.buyInPerPlayer = num(buyInPerPlayer, 0, 1_000_000, cfg.buyInPerPlayer);
@@ -76,10 +111,24 @@ router.put('/:format', async (req: AdminRequest, res) => {
     if (order !== undefined) cfg.order = num(order, 0, 999, cfg.order);
     await cfg.save();
 
-    await logAudit(req.adminId!, 'matchFormat.update', req.params.format, {
-      after: { buyInPerPlayer: cfg.buyInPerPlayer, prizePerWinner: cfg.prizePerWinner, manches: cfg.manches, baseTarget: cfg.baseTarget, active: cfg.active },
+    await logAudit(req.adminId!, 'matchFormat.update', String(cfg._id), {
+      after: { buyInPerPlayer: cfg.buyInPerPlayer, prizePerWinner: cfg.prizePerWinner, manches: cfg.manches, minLevel: cfg.minLevel, active: cfg.active },
     });
     res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Supprimer une variante.
+router.delete('/:id', async (req: AdminRequest, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const cfg = await Model.findById(req.params.id) as any;
+    if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+    await Model.deleteOne({ _id: cfg._id });
+    await logAudit(req.adminId!, 'matchFormat.delete', String(cfg._id), { before: { format: cfg.format, label: cfg.label } });
+    res.json({ deleted: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
