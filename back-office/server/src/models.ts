@@ -341,6 +341,8 @@ const MatchFormatConfigSchema = new Schema(
     labelTarget: { type: Number, default: 2000 },
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },
+    minLevel: { type: Number, default: 0, min: 0 },
+    maxLevel: { type: Number, default: null },
     active: { type: Boolean, default: true, index: true },
     order: { type: Number, default: 0 },
   },

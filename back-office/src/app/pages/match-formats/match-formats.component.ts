@@ -69,6 +69,16 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
             </div>
             <div class="form-row">
               <div class="form-group">
+                <label>Niveau requis (min)</label>
+                <input type="number" [(ngModel)]="f.minLevel" min="0" />
+              </div>
+              <div class="form-group">
+                <label>Niveau max (vide = aucun)</label>
+                <input type="number" [(ngModel)]="f.maxLevel" min="0" placeholder="∞" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
                 <label>Couleur</label>
                 <input type="color" [(ngModel)]="f.color" />
               </div>

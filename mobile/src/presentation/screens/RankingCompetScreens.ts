@@ -188,7 +188,9 @@ export function CompetScreen(ctx: AppContext): HTMLElement {
     try {
       const { formats } = await api.listMatchFormats();
       if (formats?.length) {
-        cards = formats.map((f) => {
+        // Le serveur ne renvoie que les formats ÉLIGIBLES au niveau du joueur.
+        // Sécurité d'affichage : on plafonne à 10 cartes côté client.
+        cards = formats.slice(0, 10).map((f) => {
           const s = STRUCT[f.format] ?? { glyph: '♦', tag: '', robotsPerPlayer: 0, isHeadless: false };
           const color = f.color || '#3f6ea1';
           return {

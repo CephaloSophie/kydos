@@ -46,15 +46,20 @@ export class MatchmakingController {
    * mise, gain, manches, score cible, habillage. Le mobile la rend dans un
    * carrousel horizontal (nombre variable selon les formats actifs).
    */
-  async formats(_request: AuthenticatedRequest, response: Response) {
+  async formats(request: AuthenticatedRequest, response: Response) {
     const { matchFormatConfigService } = await import('../matches/matchFormatConfig.service.js');
-    const list = await matchFormatConfigService.list(true);
+    // Filtre par niveau du joueur : on ne renvoie QUE les formats éligibles.
+    const { UserModel } = await import('../user/user.model.js');
+    const u: any = await UserModel.findById(request.userId!).select('level').lean();
+    const level = u?.level ?? 0;
+    const list = await matchFormatConfigService.list(true, level);
     response.json({
       formats: list.map((c: any) => ({
         format: c.format, label: c.label, subtitle: c.subtitle,
         buyIn: c.buyInPerPlayer, prize: c.prizePerWinner,
         manches: c.manches, baseTarget: c.baseTarget, labelTarget: c.labelTarget,
         color: c.color, icon: c.icon, order: c.order,
+        minLevel: c.minLevel ?? 0, maxLevel: c.maxLevel ?? null,
       })),
     });
   }

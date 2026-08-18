@@ -26,6 +26,9 @@ const MatchFormatConfigSchema = new Schema(
     /** Habillage carte (mobile). */
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },
+    /** v16 — Critère d'accès : niveau requis (min) et plafond (max, null = aucun). */
+    minLevel: { type: Number, default: 0, min: 0 },
+    maxLevel: { type: Number, default: null },
     /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel. */
     active: { type: Boolean, default: true, index: true },
     order: { type: Number, default: 0 },

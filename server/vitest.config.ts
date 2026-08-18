@@ -37,6 +37,8 @@ export default defineConfig({
           // v14.14 : bracket avancé (scénarios complets, idempotence multi-round)
           // et filtre mode du gameQuery service (avec stubs Mongoose).
           'src/modules/tournaments/bracket-advance.test.ts',
+          // v16 : éligibilité par niveau des MATCH RAPIDE (fonction pure).
+          'src/modules/matches/matchEligibility.test.ts',
           // v14.14 : Carrée royale en tournoi (bracket sur équipes de 2).
           'src/modules/tournaments/royal-bracket.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',

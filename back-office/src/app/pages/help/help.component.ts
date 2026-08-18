@@ -109,10 +109,11 @@ npx ng serve --proxy-config proxy.conf.json</pre>
         <p>Configure les 3 formats de « Match rapide » proposés dans Compétitions : <strong>mise</strong>, <strong>gain</strong>, <strong>nombre de manches</strong>, <strong>score cible</strong>, habillage et activation.</p>
         <ul>
           <li>Le <em>net kydos / match</em> se recalcule en direct (rake catalogue + delta mise/gain).</li>
+          <li><strong>Niveau requis (min)</strong> et <strong>niveau max</strong> : critères d'accès. Un joueur hors de la plage ne voit pas le format et le serveur refuse l'inscription (middleware d'éligibilité).</li>
           <li>Un format inactif n'apparaît pas côté joueur.</li>
-          <li>L'app mobile récupère ces réglages dynamiquement (carrousel horizontal).</li>
+          <li>L'app mobile récupère les formats <em>éligibles</em> dynamiquement (carrousel horizontal) et n'en affiche que les 10 premiers.</li>
         </ul>
-        <p class="muted mono">GET/PUT /admin/match-formats · GET /matches/formats (mobile)</p>
+        <p class="muted mono">GET/PUT /admin/match-formats · GET /matches/formats (mobile, filtré par niveau)</p>
       </section>
 
       <!-- Comptabilité -->

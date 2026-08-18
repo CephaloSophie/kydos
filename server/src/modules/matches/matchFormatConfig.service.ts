@@ -29,12 +29,23 @@ export interface EffectiveMatchConfig {
   icon: string;
   active: boolean;
   order: number;
+  minLevel: number;
+  maxLevel: number | null;
   // Champs structurels (non éditables) repris du catalogue.
   humansPerMatch: number;
   robotsPerPlayer: number;
   requiresSubstitute: boolean;
   winnersPerMatch: number;
   isHeadless: boolean;
+}
+
+/**
+ * v16 — Prédicat PUR d'éligibilité par niveau : le joueur doit avoir un niveau
+ * ≥ minLevel et ≤ maxLevel (maxLevel null = pas de plafond). Réutilisé par le
+ * middleware d'inscription et le filtrage d'affichage.
+ */
+export function isLevelEligible(level: number, minLevel: number, maxLevel: number | null): boolean {
+  return level >= (minLevel ?? 0) && (maxLevel == null || level <= maxLevel);
 }
 
 export class MatchFormatConfigService {
@@ -53,6 +64,7 @@ export class MatchFormatConfigService {
         prizePerWinner: rules.prizePerWinner,
         manches: 2, baseTarget: 1500, labelTarget: 2000,
         color: d.color, icon: d.icon, active: true, order: d.order,
+        minLevel: 0, maxLevel: null,
       });
     }
   }
@@ -63,10 +75,20 @@ export class MatchFormatConfigService {
     return MatchFormatConfigModel.findOne({ format }).lean();
   }
 
-  /** Liste des configs (toutes, ou actives seulement), triées par `order`. */
-  async list(activeOnly = false): Promise<any[]> {
+  /**
+   * Liste des configs, triées par `order`.
+   * - `activeOnly` : ne garde que les formats actifs.
+   * - `userLevel`  : ne garde que ceux ÉLIGIBLES au niveau du joueur
+   *   (minLevel ≤ level ≤ maxLevel|∞). Sert au filtrage d'affichage mobile.
+   */
+  async list(activeOnly = false, userLevel?: number): Promise<any[]> {
     await this.ensureSeeded();
-    const filter = activeOnly ? { active: true } : {};
+    const filter: any = {};
+    if (activeOnly) filter.active = true;
+    if (typeof userLevel === 'number') {
+      filter.minLevel = { $lte: userLevel };
+      filter.$or = [{ maxLevel: null }, { maxLevel: { $gte: userLevel } }];
+    }
     return MatchFormatConfigModel.find(filter).sort({ order: 1 }).lean();
   }
 
@@ -99,6 +121,8 @@ export class MatchFormatConfigService {
       icon: cfg?.icon ?? d.icon,
       active: cfg?.active ?? true,
       order: cfg?.order ?? d.order,
+      minLevel: cfg?.minLevel ?? 0,
+      maxLevel: cfg?.maxLevel ?? null,
       humansPerMatch: structural.humansPerMatch,
       robotsPerPlayer: structural.robotsPerPlayer,
       requiresSubstitute: structural.requiresSubstitute,

@@ -13,6 +13,8 @@ export interface MatchFormatConfig {
   labelTarget: number;
   color: string;
   icon: string;
+  minLevel: number;
+  maxLevel: number | null;
   active: boolean;
   order: number;
   houseNet?: number;

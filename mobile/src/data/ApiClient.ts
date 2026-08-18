@@ -106,7 +106,7 @@ export class ApiClient {
   matchQueues() { return this.call<{ sizes: Record<string, number> }>('/matches/queues'); }
   /** v16 — Liste dynamique des MATCH RAPIDE (config back-office). */
   listMatchFormats() {
-    return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number }> }>('/matches/formats');
+    return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number; minLevel?: number; maxLevel?: number | null }> }>('/matches/formats');
   }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }

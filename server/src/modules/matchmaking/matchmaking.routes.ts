@@ -2,9 +2,11 @@ import { Router } from 'express';
 import { requireAuthentication } from '../../shared/authentication.js';
 import { asyncHandler } from '../../core/asyncHandler.js';
 import { matchmakingController } from './matchmaking.controller.js';
+import { requireMatchEligibility } from './matchEligibility.middleware.js';
 
 export const matchmakingRouter = Router();
-matchmakingRouter.post('/matches/enqueue', requireAuthentication, asyncHandler((req, res) => matchmakingController.enqueue(req, res)));
+// v16 — la garde d'éligibilité (niveau, format actif) précède l'inscription.
+matchmakingRouter.post('/matches/enqueue', requireAuthentication, asyncHandler(requireMatchEligibility), asyncHandler((req, res) => matchmakingController.enqueue(req, res)));
 matchmakingRouter.post('/matches/cancel', requireAuthentication, asyncHandler((req, res) => matchmakingController.cancel(req, res)));
 matchmakingRouter.get('/matches/queues', requireAuthentication, asyncHandler((req, res) => matchmakingController.queues(req, res)));
 matchmakingRouter.get('/matches/formats', requireAuthentication, asyncHandler((req, res) => matchmakingController.formats(req, res)));
