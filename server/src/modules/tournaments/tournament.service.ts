@@ -106,11 +106,31 @@ export class TournamentService {
     if (!doc) throw notFound('Tournoi introuvable.');
     if (doc.status === TournamentStatus.DRAFT && String(doc.createdBy) !== String(requesterId)) throw notFound('Tournoi introuvable.');
     if (doc.status === TournamentStatus.UPCOMING) throw badRequest('Le tournoi n\u2019a pas encore commenc\u00e9.');
+
+    const bracket = doc.bracketTree || { rounds: [], lastCompletedRound: 0 };
+    // v16 \u2014 enrichit chaque match EN COURS avec sa table live (pour spectateur).
+    const liveMatchIds: string[] = [];
+    for (const r of bracket.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.matchId && !m.winner) liveMatchIds.push(String(m.matchId));
+      }
+    }
+    if (liveMatchIds.length) {
+      const matches = await MatchModel.find({ _id: { $in: liveMatchIds } }).select('liveTableId').lean();
+      const tableByMatch = new Map<string, string>();
+      for (const m of matches as any[]) if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
+      for (const r of bracket.rounds ?? []) {
+        for (const m of r.matches ?? []) {
+          if (m.matchId && !m.winner) (m as any).tableId = tableByMatch.get(String(m.matchId)) ?? null;
+        }
+      }
+    }
+
     return {
       tournamentId: String(doc._id),
       name: doc.name, format: doc.format, capacity: doc.capacity,
       status: doc.status, color: doc.color, icon: doc.icon,
-      bracket: doc.bracketTree || { rounds: [], lastCompletedRound: 0 },
+      bracket,
       participants: doc.participants,
       winners: doc.winners,
     };
