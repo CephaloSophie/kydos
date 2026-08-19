@@ -28,7 +28,7 @@ export interface Tournament {
   createdBy: string;
   participants: TournamentParticipant[];
   bracketTree: BracketTree;
-  winners: string[];
+  winners: TournamentWinner[];
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
@@ -49,16 +49,24 @@ export interface TournamentGameConfig {
   signals: { reflexion: boolean; repeatSuit: boolean };
 }
 
+/**
+ * Participant enrichi renvoyé par GET /admin/tournaments/:id.
+ * Les noms d'utilisateur et de robot sont résolus côté serveur pour éviter
+ * l'affichage d'ObjectIds bruts dans l'IHM.
+ */
 export interface TournamentParticipant {
   userId: string;
-  robotIds: string[];
-  substituteRobotId: string | null;
+  username: string | null;
+  robots: { id: string; name: string }[];
+  substituteRobot: { id: string; name: string } | null;
   seedIndex: number | null;
   eliminatedAtRound: number | null;
   finalPosition: number | null;
   prizeAwarded: number;
   joinedAt: string;
 }
+
+export interface TournamentWinner { userId: string; username: string | null }
 
 export interface BracketTree {
   rounds: BracketRound[];
@@ -72,10 +80,14 @@ export interface BracketRound {
   matches: BracketMatch[];
 }
 
+/** État visuel unifié d'un match du bracket, calculé côté serveur. */
+export type BracketMatchState = 'pending' | 'ready' | 'countdown' | 'live' | 'finished';
+
 export interface BracketMatch {
   matchIndex: number;
   matchId: string | null;
   gameId: string | null;
+  liveTableId: string | null;
   slotA: BracketSlot;
   slotB: BracketSlot;
   winner: 'A' | 'B' | null;
@@ -83,12 +95,23 @@ export interface BracketMatch {
   scoreB: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  scheduledStartAt: string | null;
+  state: BracketMatchState;
 }
 
+/**
+ * Un slot représente une équipe : 1 joueur (formats 1v1) ou 2 coéquipiers
+ * (Carrée royale). Les usernames sont résolus par le serveur ; displayName*
+ * reste disponible comme repli si l'utilisateur n'existe plus.
+ */
 export interface BracketSlot {
   userId: string | null;
+  username: string | null;
   seedIndex: number | null;
+  userId2: string | null;
+  username2: string | null;
   displayName: string;
+  displayName2: string;
 }
 
 export interface RoundPrize {

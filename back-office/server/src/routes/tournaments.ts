@@ -89,15 +89,144 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * Retourne un tournoi entièrement enrichi pour la vue Détail : usernames et
+ * noms de robots (participants + slots du bracket), état de chaque match du
+ * bracket (statut, table live, partie associée, scores serveur, dates) et
+ * gagnants nommés. Conçu comme LA source unique de vérité de la page —
+ * l'IHM n'a plus besoin d'appels supplémentaires.
+ */
 router.get('/:id', async (req, res) => {
   try {
     const TournamentModel = mongoose.model('Tournament');
-    const tournament = await TournamentModel.findById(req.params.id).lean();
+    const UserModel = mongoose.model('User');
+    const RobotModel = mongoose.model('Robot');
+    const MatchModel = mongoose.model('Match');
+
+    const tournament: any = await TournamentModel.findById(req.params.id).lean();
     if (!tournament) {
       res.status(404).json({ error: 'Tournoi non trouvé' });
       return;
     }
-    res.json({ tournament });
+
+    // 1) Résolution centralisée des noms (users + robots) en 2 requêtes.
+    const userIds = new Set<string>();
+    const robotIds = new Set<string>();
+    for (const p of tournament.participants ?? []) {
+      if (p.userId) userIds.add(String(p.userId));
+      for (const r of p.robotIds ?? []) robotIds.add(String(r));
+      if (p.substituteRobotId) robotIds.add(String(p.substituteRobotId));
+    }
+    for (const w of tournament.winners ?? []) userIds.add(String(w));
+    for (const r of tournament.bracketTree?.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.slotA?.userId) userIds.add(String(m.slotA.userId));
+        if (m.slotA?.userId2) userIds.add(String(m.slotA.userId2));
+        if (m.slotB?.userId) userIds.add(String(m.slotB.userId));
+        if (m.slotB?.userId2) userIds.add(String(m.slotB.userId2));
+      }
+    }
+    const [users, robots] = await Promise.all([
+      UserModel.find({ _id: { $in: [...userIds] } }).select('username').lean(),
+      RobotModel.find({ _id: { $in: [...robotIds] } }).select('name owner').lean(),
+    ]);
+    const userName = new Map<string, string>();
+    for (const u of users as any[]) userName.set(String(u._id), u.username);
+    const robotById = new Map<string, { name: string; owner: string }>();
+    for (const r of robots as any[]) robotById.set(String(r._id), { name: r.name, owner: String(r.owner ?? '') });
+
+    // 2) Enrichissement des participants (usernames + noms de robots).
+    const participants = (tournament.participants ?? []).map((p: any) => ({
+      userId: String(p.userId ?? ''),
+      username: userName.get(String(p.userId ?? '')) ?? null,
+      seedIndex: p.seedIndex ?? null,
+      eliminatedAtRound: p.eliminatedAtRound ?? null,
+      finalPosition: p.finalPosition ?? null,
+      prizeAwarded: p.prizeAwarded ?? 0,
+      joinedAt: p.joinedAt,
+      robots: (p.robotIds ?? []).map((rid: any) => {
+        const r = robotById.get(String(rid));
+        return { id: String(rid), name: r?.name ?? '(robot supprimé)' };
+      }),
+      substituteRobot: p.substituteRobotId
+        ? { id: String(p.substituteRobotId), name: robotById.get(String(p.substituteRobotId))?.name ?? '(robot supprimé)' }
+        : null,
+    }));
+
+    // 3) Enrichissement du bracket : noms sur chaque slot + état du match.
+    const bracketMatchIds: string[] = [];
+    for (const r of tournament.bracketTree?.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.matchId) bracketMatchIds.push(String(m.matchId));
+      }
+    }
+    const matchDocs = bracketMatchIds.length
+      ? await MatchModel.find({ _id: { $in: bracketMatchIds } })
+          .select('status liveTableId game scoreTeamA scoreTeamB winnerTeam startedAt finishedAt')
+          .lean()
+      : [];
+    const matchById = new Map<string, any>();
+    for (const m of matchDocs as any[]) matchById.set(String(m._id), m);
+
+    const resolveSlot = (s: any) => ({
+      userId: s?.userId ? String(s.userId) : null,
+      username: s?.userId ? userName.get(String(s.userId)) ?? s?.displayName ?? null : null,
+      seedIndex: s?.seedIndex ?? null,
+      // Carrée royale : coéquipier.
+      userId2: s?.userId2 ? String(s.userId2) : null,
+      username2: s?.userId2 ? userName.get(String(s.userId2)) ?? s?.displayName2 ?? null : null,
+      displayName: s?.displayName ?? '',
+      displayName2: s?.displayName2 ?? '',
+    });
+
+    const bracketTree = {
+      builtAt: tournament.bracketTree?.builtAt ?? null,
+      lastCompletedRound: tournament.bracketTree?.lastCompletedRound ?? 0,
+      rounds: (tournament.bracketTree?.rounds ?? []).map((round: any) => ({
+        roundIndex: round.roundIndex,
+        label: round.label || `Round ${round.roundIndex}`,
+        matches: (round.matches ?? []).map((m: any) => {
+          const md = m.matchId ? matchById.get(String(m.matchId)) : null;
+          // Statut visuel unique consommé par l'IHM.
+          const state = m.winner
+            ? 'finished'
+            : md?.status === 'running'
+              ? 'live'
+              : m.scheduledStartAt && new Date(m.scheduledStartAt).getTime() > Date.now()
+                ? 'countdown'
+                : (m.slotA?.userId && m.slotB?.userId) ? 'ready' : 'pending';
+          return {
+            matchIndex: m.matchIndex,
+            matchId: m.matchId ? String(m.matchId) : null,
+            gameId: m.gameId ? String(m.gameId) : (md?.game ? String(md.game) : null),
+            liveTableId: md?.liveTableId ? String(md.liveTableId) : null,
+            slotA: resolveSlot(m.slotA),
+            slotB: resolveSlot(m.slotB),
+            winner: m.winner ?? null,
+            scoreA: m.scoreA ?? md?.scoreTeamA ?? null,
+            scoreB: m.scoreB ?? md?.scoreTeamB ?? null,
+            startedAt: m.startedAt ?? md?.startedAt ?? null,
+            finishedAt: m.finishedAt ?? md?.finishedAt ?? null,
+            scheduledStartAt: m.scheduledStartAt ?? null,
+            state,
+          };
+        }),
+      })),
+    };
+
+    const winners = (tournament.winners ?? []).map((w: any) => ({
+      userId: String(w),
+      username: userName.get(String(w)) ?? null,
+    }));
+
+    res.json({
+      tournament: {
+        ...tournament,
+        participants,
+        winners,
+        bracketTree,
+      },
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
