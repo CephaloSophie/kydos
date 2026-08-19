@@ -44,6 +44,10 @@ export default defineConfig({
           'src/modules/tournaments/royal-bracket.test.ts',
           // v16 : statut du joueur dans un tournoi live (waiting/playing/…).
           'src/modules/tournaments/userStatus.test.ts',
+          // v16 : composition pure de l'engagement joueur dans un tournoi LIVE.
+          'src/modules/tournaments/activeEngagement.test.ts',
+          // v16 : lecture pure de autoRejoinSec (MatchFormatConfig).
+          'src/modules/matchmaking/matchmaking.autoRejoin.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',

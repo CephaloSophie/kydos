@@ -19,6 +19,7 @@ import { houseAccountingService } from '../houseAccounting/houseAccounting.servi
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
 import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions, formTeamSeeds } from './bracket.js';
 import { computeUserTournamentStatus } from './userStatus.js';
+import { buildActiveResponse, buildFallbackResponse } from './activeEngagement.js';
 import { MatchModel } from '../matches/match.model.js';
 
 export class TournamentService {
@@ -57,20 +58,10 @@ export class TournamentService {
     let fallback: any | null = null;
 
     for (const t of tournaments as any[]) {
-      const autoRejoinSec = Number.isFinite(t.gameConfig?.autoRejoinSec) ? Number(t.gameConfig.autoRejoinSec) : 5;
       const status = computeUserTournamentStatus(t.bracketTree, userId);
       if (status.state === 'none') continue;
       if (status.state === 'eliminated' || status.state === 'champion') {
-        if (!fallback) {
-          const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
-          fallback = {
-            tournamentId: String(t._id),
-            name: t.name, format: t.format, color: t.color, icon: t.icon,
-            state: status.state,
-            roundIndex: status.roundIndex, roundLabel,
-            startsAt: null, myMatchId: null, myTableId: null, awaiting: [], autoRejoinSec,
-          };
-        }
+        if (!fallback) fallback = buildFallbackResponse(t, status);
         continue;
       }
 
@@ -86,23 +77,7 @@ export class TournamentService {
           if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
         }
       }
-      const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
-
-      return {
-        tournamentId: String(t._id),
-        name: t.name, format: t.format, color: t.color, icon: t.icon,
-        state: status.state,
-        roundIndex: status.roundIndex,
-        roundLabel,
-        startsAt: status.startsAt,   // v16 — compte à rebours (état 'pending')
-        myMatchId: status.myMatchId,
-        myTableId: status.myMatchId ? tableByMatch.get(status.myMatchId) ?? null : null,
-        awaiting: status.awaiting.map((a) => ({
-          ...a,
-          tableId: a.matchId ? tableByMatch.get(a.matchId) ?? null : null,
-        })),
-        autoRejoinSec,
-      };
+      return buildActiveResponse(t, status, tableByMatch);
     }
     return fallback;
   }

@@ -2,73 +2,11 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
+import { sanitizeGameConfig, computeEconomics, buildTournamentDetail } from '../tournamentDetail.js';
 
 const TOURNAMENT_CAPACITIES = [4, 8, 16, 32, 64, 128];
 const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
 const VALID_STATUSES = ['draft', 'upcoming', 'live', 'finished', 'cancelled'];
-
-function occupantsAtPosition(capacity: number, position: number): number {
-  if (position === 1 || position === 2) return 1;
-  let rank = 3;
-  let losers = 2;
-  while (losers <= capacity / 2) {
-    if (rank === position) return losers;
-    rank += losers;
-    losers *= 2;
-  }
-  return 0;
-}
-
-/**
- * Économie d'un tournoi (prix par position).
- *
- * Carrée royale (royal_square) : le bracket se joue en ÉQUIPES de 2 humains,
- * donc `capacity/2` feuilles, et chaque rang final est occupé par 2 humains
- * par équipe. On applique alors leaves = capacity/2 et teamSize = 2.
- * Les autres formats (1 vs 1) : leaves = capacity, teamSize = 1.
- */
-function computeEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[], format?: string) {
-  const isRoyal = format === 'royal_square';
-  const leaves = isRoyal ? capacity / 2 : capacity;
-  const teamSize = isRoyal ? 2 : 1;
-  const totalCollected = capacity * entryFee;
-  let totalPaid = 0;
-  const breakdown = prizesByPosition.map(pp => {
-    const occupants = occupantsAtPosition(leaves, pp.position) * teamSize;
-    const totalPaidAtThisPosition = occupants * pp.prize;
-    totalPaid += totalPaidAtThisPosition;
-    return { position: pp.position, occupants, prizePerOccupant: pp.prize, totalPaidAtThisPosition };
-  });
-  return { totalCollected, totalPaid, houseNet: totalCollected - totalPaid, breakdown };
-}
-
-/**
- * Normalise la config de jeu d'un tournoi (v16). Applique bornes et valeurs
- * par défaut pour tout paramètre accepté par la table / la session de jeu.
- */
-function sanitizeGameConfig(raw: any): any {
-  const g = raw || {};
-  const clamp = (v: any, min: number, max: number, def: number) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-  };
-  return {
-    manches: [1, 2, 4].includes(Number(g.manches)) ? Number(g.manches) : 2,
-    baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
-    labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
-    roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),
-    autoRejoinSec: clamp(g.autoRejoinSec, 0, 60, 5),
-    trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
-    speed: clamp(g.speed, 0.5, 4, 1),
-    turnTimeoutMs: clamp(g.turnTimeoutMs, 3000, 120000, 15000),
-    allowSpectators: g.allowSpectators !== false,
-    feltTheme: ['classic', 'cosmos', 'olympus'].includes(g.feltTheme) ? g.feltTheme : 'classic',
-    signals: {
-      reflexion: g.signals?.reflexion !== false,
-      repeatSuit: g.signals?.repeatSuit !== false,
-    },
-  };
-}
 
 const router = Router();
 
@@ -135,25 +73,7 @@ router.get('/:id', async (req, res) => {
     const robotById = new Map<string, { name: string; owner: string }>();
     for (const r of robots as any[]) robotById.set(String(r._id), { name: r.name, owner: String(r.owner ?? '') });
 
-    // 2) Enrichissement des participants (usernames + noms de robots).
-    const participants = (tournament.participants ?? []).map((p: any) => ({
-      userId: String(p.userId ?? ''),
-      username: userName.get(String(p.userId ?? '')) ?? null,
-      seedIndex: p.seedIndex ?? null,
-      eliminatedAtRound: p.eliminatedAtRound ?? null,
-      finalPosition: p.finalPosition ?? null,
-      prizeAwarded: p.prizeAwarded ?? 0,
-      joinedAt: p.joinedAt,
-      robots: (p.robotIds ?? []).map((rid: any) => {
-        const r = robotById.get(String(rid));
-        return { id: String(rid), name: r?.name ?? '(robot supprimé)' };
-      }),
-      substituteRobot: p.substituteRobotId
-        ? { id: String(p.substituteRobotId), name: robotById.get(String(p.substituteRobotId))?.name ?? '(robot supprimé)' }
-        : null,
-    }));
-
-    // 3) Enrichissement du bracket : noms sur chaque slot + état du match.
+    // 2) Résolution des matchs rattachés (statut, table live, scores serveur).
     const bracketMatchIds: string[] = [];
     for (const r of tournament.bracketTree?.rounds ?? []) {
       for (const m of r.matches ?? []) {
@@ -168,65 +88,10 @@ router.get('/:id', async (req, res) => {
     const matchById = new Map<string, any>();
     for (const m of matchDocs as any[]) matchById.set(String(m._id), m);
 
-    const resolveSlot = (s: any) => ({
-      userId: s?.userId ? String(s.userId) : null,
-      username: s?.userId ? userName.get(String(s.userId)) ?? s?.displayName ?? null : null,
-      seedIndex: s?.seedIndex ?? null,
-      // Carrée royale : coéquipier.
-      userId2: s?.userId2 ? String(s.userId2) : null,
-      username2: s?.userId2 ? userName.get(String(s.userId2)) ?? s?.displayName2 ?? null : null,
-      displayName: s?.displayName ?? '',
-      displayName2: s?.displayName2 ?? '',
-    });
+    // 3) Composition pure — pas d'I/O ici.
+    const detail = buildTournamentDetail(tournament, userName, robotById, matchById);
 
-    const bracketTree = {
-      builtAt: tournament.bracketTree?.builtAt ?? null,
-      lastCompletedRound: tournament.bracketTree?.lastCompletedRound ?? 0,
-      rounds: (tournament.bracketTree?.rounds ?? []).map((round: any) => ({
-        roundIndex: round.roundIndex,
-        label: round.label || `Round ${round.roundIndex}`,
-        matches: (round.matches ?? []).map((m: any) => {
-          const md = m.matchId ? matchById.get(String(m.matchId)) : null;
-          // Statut visuel unique consommé par l'IHM.
-          const state = m.winner
-            ? 'finished'
-            : md?.status === 'running'
-              ? 'live'
-              : m.scheduledStartAt && new Date(m.scheduledStartAt).getTime() > Date.now()
-                ? 'countdown'
-                : (m.slotA?.userId && m.slotB?.userId) ? 'ready' : 'pending';
-          return {
-            matchIndex: m.matchIndex,
-            matchId: m.matchId ? String(m.matchId) : null,
-            gameId: m.gameId ? String(m.gameId) : (md?.game ? String(md.game) : null),
-            liveTableId: md?.liveTableId ? String(md.liveTableId) : null,
-            slotA: resolveSlot(m.slotA),
-            slotB: resolveSlot(m.slotB),
-            winner: m.winner ?? null,
-            scoreA: m.scoreA ?? md?.scoreTeamA ?? null,
-            scoreB: m.scoreB ?? md?.scoreTeamB ?? null,
-            startedAt: m.startedAt ?? md?.startedAt ?? null,
-            finishedAt: m.finishedAt ?? md?.finishedAt ?? null,
-            scheduledStartAt: m.scheduledStartAt ?? null,
-            state,
-          };
-        }),
-      })),
-    };
-
-    const winners = (tournament.winners ?? []).map((w: any) => ({
-      userId: String(w),
-      username: userName.get(String(w)) ?? null,
-    }));
-
-    res.json({
-      tournament: {
-        ...tournament,
-        participants,
-        winners,
-        bracketTree,
-      },
-    });
+    res.json({ tournament: { ...tournament, ...detail } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
