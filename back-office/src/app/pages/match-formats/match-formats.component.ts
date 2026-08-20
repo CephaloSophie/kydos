@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatchFormatService, type MatchFormatConfig } from '../../services/match-format.service';
 import { TableThemeService, type TableTheme } from '../../services/table-theme.service';
 
@@ -11,7 +12,7 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
  */
 @Component({
   selector: 'app-match-formats',
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, RouterLink],
   template: `
     <div class="page-header">
       <h1>Match rapide</h1>
@@ -31,11 +32,30 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
       <button class="btn btn-secondary btn-sm" (click)="create('royal_square')">Carrée royale</button>
     </div>
 
+    <!-- Barre de recherche + filtres -->
+    <div class="filters">
+      <input class="search" type="text" [(ngModel)]="search" placeholder="🔎 Rechercher (libellé, sous-titre)…" />
+      <select [(ngModel)]="filterFormat">
+        <option value="all">Tous les formats</option>
+        <option value="duo_steel">Duo d'acier</option>
+        <option value="hybrid_alliance">Alliance hybride</option>
+        <option value="royal_square">Carrée royale</option>
+      </select>
+      <select [(ngModel)]="filterActive">
+        <option value="all">Tous les états</option>
+        <option value="active">Actifs</option>
+        <option value="inactive">Inactifs</option>
+      </select>
+      <span class="count">{{ filteredFormats().length }} / {{ formats.length }}</span>
+    </div>
+
     @if (loading) {
       <div class="empty-state">Chargement…</div>
+    } @else if (!filteredFormats().length) {
+      <div class="empty-state">Aucune variante ne correspond aux filtres.</div>
     } @else {
       <div class="mf-grid">
-        @for (f of formats; track f.format) {
+        @for (f of filteredFormats(); track f._id || f.format) {
           <div class="card mf-card" [style.border-top]="'3px solid ' + f.color">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center">
               <div>
@@ -149,8 +169,11 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
               </span>
             </div>
 
-            <div style="margin-top: 12px; display:flex; gap:8px; align-items:center">
+            <div style="margin-top: 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
               <button class="btn btn-primary" (click)="save(f)" [disabled]="f._saving">Enregistrer</button>
+              @if (f._id) {
+                <a class="btn btn-secondary btn-sm" [routerLink]="['/match-formats', f._id]">📊 Visualiser</a>
+              }
               <button class="btn btn-danger btn-sm" (click)="remove(f)">Supprimer</button>
               @if (f._msg) { <span style="font-size:12px; color: var(--text-muted)">{{ f._msg }}</span> }
             </div>
@@ -163,12 +186,18 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
     .mf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
     .mf-card .form-group { margin-bottom: 10px; }
     .theme-swatch { height: 34px; margin-top: 6px; border-radius: 8px; border: 6px solid #6b3a1a; }
+    .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .filters .search { flex: 1; min-width: 220px; }
+    .filters .count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
   `],
 })
 export class MatchFormatsComponent implements OnInit {
   formats: (MatchFormatConfig & { _saving?: boolean; _msg?: string })[] = [];
   themes: TableTheme[] = [];
   loading = true;
+  search = '';
+  filterFormat = 'all';
+  filterActive = 'all';
 
   // Structure + catalogue pour le net EFFECTIF (miroir serveur : rake + delta).
   private structure: Record<string, { h: number; w: number; base: number; buyIn: number; prize: number }> = {
@@ -182,6 +211,18 @@ export class MatchFormatsComponent implements OnInit {
   ngOnInit() {
     this.load();
     this.themeSvc.list().subscribe((res) => { this.themes = res.themes.filter((t) => t.active); });
+  }
+
+  /** Applique recherche (libellé/sous-titre) + filtres format/état. */
+  filteredFormats() {
+    const q = this.search.trim().toLowerCase();
+    return this.formats.filter((f) => {
+      if (this.filterFormat !== 'all' && f.format !== this.filterFormat) return false;
+      if (this.filterActive === 'active' && !f.active) return false;
+      if (this.filterActive === 'inactive' && f.active) return false;
+      if (q && !((f.label || '').toLowerCase().includes(q) || (f.subtitle || '').toLowerCase().includes(q))) return false;
+      return true;
+    });
   }
 
   themeOf(f: MatchFormatConfig): TableTheme | null {
