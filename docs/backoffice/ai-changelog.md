@@ -4,6 +4,29 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
 
 ---
 
+## v18 — Thèmes de table, enchère d'ouverture, gestion & visualisation Match rapide
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demandes** : (C) l'enchère d'ouverture configurée (80) doit s'appliquer au popup d'enchères ; (A) un module de thèmes de table au back-office, réutilisables et réellement appliqués aux tournois/compétitions ; (B) refonte de la gestion Match rapide (recherche/filtres, visualisation par variante avec historique + stats) et enrichissement du suivi par partie.
+
+### C. Enchère d'ouverture appliquée au HUD
+- Cause racine : `table-pixi/hud/bidMath` codait l'échelle 90→180 en dur.
+- `EngineView` expose `minBid`/`maxBid` ; l'échelle du HUD est construite dynamiquement. +4 tests.
+
+### A. Bibliothèque de thèmes de table
+- Entité RÉUTILISABLE `TableTheme` (feutre + bordure + accent), 6 presets intégrés non supprimables ; résolution PURE des couleurs (`resolveThemeColors`, dérive felt2 + nuances de rail + accent2). 9 tests.
+- Module back-office « Thèmes de table » (CRUD, aperçu fidèle du dégradé/rail).
+- Sélection du thème à la création (tournoi + variante Match rapide) et application RÉELLE au rendu : couleurs résolues posées sur la table live → mobile via `themeOverrides` de PixiTable.
+
+### B. Gestion & visualisation Match rapide
+- Suivi enrichi par partie : `Game` rattaché à sa variante/tournoi + `durationMs`, contrats tenus/chutés, moyenne, plis (`gameTracking.ts` pur, 5 tests).
+- Agrégats par variante (`matchAnalytics.ts` pur, 5 tests) + endpoint `/:id/analytics`.
+- Liste avec recherche + filtres (format, état) ; page de visualisation par variante : cartes de stats (victoires, scores/manches/durée moyens, capot/belote, réussite des contrats) + historique des parties.
+
+**Tests** : core 72, table-pixi 19, serveur 200, back-office server 43.
+
+---
+
 ## v17 — Table de belote entièrement configurable + score de progression (manches)
 
 **Branche** : `claude/back-office-angular-mhtcd8`
