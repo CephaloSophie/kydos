@@ -61,7 +61,14 @@ export interface GameConfigInput {
   roundCountdownSec?: unknown; autoRejoinSec?: unknown;
   trickDelayMs?: unknown; speed?: unknown; turnTimeoutMs?: unknown;
   allowSpectators?: unknown; feltTheme?: unknown;
+  // v18 — thème de table (id de la bibliothèque back-office).
+  tableThemeId?: unknown;
   signals?: { reflexion?: unknown; repeatSuit?: unknown };
+}
+
+/** Valide un ObjectId hex 24 ; null sinon. */
+function asObjectId(v: unknown): string | null {
+  return typeof v === 'string' && /^[0-9a-fA-F]{24}$/.test(v) ? v : null;
 }
 
 const clamp = (v: unknown, min: number, max: number, def: number): number => {
@@ -80,6 +87,8 @@ export function sanitizeGameConfig(raw: GameConfigInput | null | undefined) {
     openingBidMin: clamp(g.openingBidMin, 80, 180, 90),
     countBelote: g.countBelote !== false,
     clockwise: g.clockwise === true,
+    // v18 — thème de table (null = défaut).
+    tableThemeId: asObjectId(g.tableThemeId),
     roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),
     autoRejoinSec: clamp(g.autoRejoinSec, 0, 60, 5),
     trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),

@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatchFormatService, type MatchFormatConfig } from '../../services/match-format.service';
+import { TableThemeService, type TableTheme } from '../../services/table-theme.service';
 
 /**
  * Gestion des MATCH RAPIDE de la section Compétitions : mise, gain, nombre de
@@ -9,7 +11,7 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
  */
 @Component({
   selector: 'app-match-formats',
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   template: `
     <div class="page-header">
       <h1>Match rapide</h1>
@@ -120,6 +122,21 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
                 <label [for]="'belote-' + f.format" style="margin:0">Compter la belote (+20)</label>
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Thème de la table</label>
+                <select [(ngModel)]="f.tableThemeId">
+                  <option [ngValue]="null">— Défaut —</option>
+                  @for (th of themes; track th._id) {
+                    <option [ngValue]="th._id">{{ th.name }}</option>
+                  }
+                </select>
+                @if (themeOf(f); as th) {
+                  <div class="theme-swatch" [style.background]="themeGradient(th)" [style.borderColor]="th.colors?.rail || th.railColor"></div>
+                }
+              </div>
+              <div class="form-group"></div>
+            </div>
             <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
               <input type="checkbox" [(ngModel)]="f.active" [id]="'a-' + f.format" />
               <label [for]="'a-' + f.format" style="margin:0">Proposé aux joueurs</label>
@@ -145,10 +162,12 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
   styles: [`
     .mf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
     .mf-card .form-group { margin-bottom: 10px; }
+    .theme-swatch { height: 34px; margin-top: 6px; border-radius: 8px; border: 6px solid #6b3a1a; }
   `],
 })
 export class MatchFormatsComponent implements OnInit {
   formats: (MatchFormatConfig & { _saving?: boolean; _msg?: string })[] = [];
+  themes: TableTheme[] = [];
   loading = true;
 
   // Structure + catalogue pour le net EFFECTIF (miroir serveur : rake + delta).
@@ -158,9 +177,21 @@ export class MatchFormatsComponent implements OnInit {
     royal_square: { h: 4, w: 2, base: 100, buyIn: 100, prize: 150 },
   };
 
-  constructor(private svc: MatchFormatService) {}
+  constructor(private svc: MatchFormatService, private themeSvc: TableThemeService) {}
 
-  ngOnInit() { this.load(); }
+  ngOnInit() {
+    this.load();
+    this.themeSvc.list().subscribe((res) => { this.themes = res.themes.filter((t) => t.active); });
+  }
+
+  themeOf(f: MatchFormatConfig): TableTheme | null {
+    return this.themes.find((t) => t._id === f.tableThemeId) ?? null;
+  }
+  themeGradient(t: TableTheme): string {
+    const c1 = t.colors?.felt1 || t.feltColor;
+    const c2 = t.colors?.felt2 || t.feltEdgeColor || t.feltColor;
+    return `radial-gradient(120% 100% at 50% 42%, ${c1}, ${c2} 75%)`;
+  }
 
   load() {
     this.loading = true;

@@ -52,6 +52,8 @@ export interface TournamentGameConfig {
   turnTimeoutMs: number;
   allowSpectators: boolean;
   feltTheme: string;
+  /** v18 — thème de table (id de la bibliothèque), null = défaut. */
+  tableThemeId: string | null;
   signals: { reflexion: boolean; repeatSuit: boolean };
 }
 

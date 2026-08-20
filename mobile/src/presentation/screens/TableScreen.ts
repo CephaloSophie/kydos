@@ -254,6 +254,18 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   // lancée pour le type de table (local = entraînement ; en ligne, le kind du
   // lobby affinera). Coupée à la sortie d'écran (navigation quelconque).
   let melodyKind: string = onlineId ? 'default' : 'local';
+  // v18 — override de thème (couleurs résolues du thème back-office), reçu via
+  // la config de table du lobby. Converti hex string → hex number pour Pixi.
+  let themeOverrides: Record<string, number> | undefined;
+  const hexToNum = (s: string | null | undefined): number | null =>
+    (typeof s === 'string' && /^#?[0-9a-fA-F]{6}$/.test(s)) ? parseInt(s.replace('#', ''), 16) : null;
+  const buildThemeOverrides = (colors: any): Record<string, number> | undefined => {
+    if (!colors) return undefined;
+    const keys = ['felt1', 'felt2', 'rail', 'railHi', 'railLo', 'railInner', 'accent', 'accent2'] as const;
+    const out: Record<string, number> = {};
+    for (const k of keys) { const n = hexToNum(colors[k]); if (n != null) out[k] = n; }
+    return Object.keys(out).length ? out : undefined;
+  };
   root.addEventListener('pointerdown', () => {
     soundService.unlock();
     soundService.playMelodyForTable(melodyKind);
@@ -390,6 +402,8 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       // v14.7 — Thème visuel de la table calé sur son kind : hybride (jaune),
       // acier (bleu), royal (rouge), le reste tombe sur 'local' (vert).
       theme: melodyKind,
+      // v18 — surcharge par le thème back-office choisi (feutre + bordure).
+      themeOverrides,
       opponentCards: 'back', showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: () => { onlineSocket.disconnect(); reactRoot?.unmount(); router.go('online'); },
     }));
@@ -428,7 +442,12 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
     onlineSocket.connect(onlineId, {
       // La mélodie suit le TYPE de la table (hybride/acier/royal), reçu du lobby.
-      onLobby: (lobby) => { melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind); },
+      onLobby: (lobby) => {
+        melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind);
+        // v18 — applique le thème de table choisi (couleurs feutre + bordure).
+        const ov = buildThemeOverrides(lobby.config?.themeColors);
+        if (ov) { themeOverrides = ov; if (lastOnlineState) renderOnline(lastOnlineState); }
+      },
       onGame: (state) => { gotState = true; waiting.style.display = 'none'; renderOnline(state); },
       onSpectators: (count) => { spectatorCount.textContent = `${count}`; },
       onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { soundService.playEffect('emote'); emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },

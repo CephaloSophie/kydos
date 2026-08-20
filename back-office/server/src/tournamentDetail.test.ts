@@ -27,6 +27,7 @@ describe('sanitizeGameConfig', () => {
       openingBidMin: 90,
       countBelote: true,
       clockwise: false,
+      tableThemeId: null,
       roundCountdownSec: 10,
       autoRejoinSec: 5,
       trickDelayMs: 900,
@@ -66,6 +67,12 @@ describe('sanitizeGameConfig', () => {
     expect(sanitizeGameConfig({ countBelote: false }).countBelote).toBe(false);
     expect(sanitizeGameConfig({ clockwise: true }).clockwise).toBe(true);
     expect(sanitizeGameConfig({ clockwise: 'yes' as any }).clockwise).toBe(false); // seul true booléen active
+  });
+
+  it('v18 — tableThemeId : ObjectId hex valide accepté, sinon null', () => {
+    expect(sanitizeGameConfig({ tableThemeId: '507f1f77bcf86cd799439011' }).tableThemeId).toBe('507f1f77bcf86cd799439011');
+    expect(sanitizeGameConfig({ tableThemeId: 'pas-un-id' }).tableThemeId).toBeNull();
+    expect(sanitizeGameConfig({}).tableThemeId).toBeNull();
   });
 
   it('borne roundCountdownSec entre 0 et 300', () => {

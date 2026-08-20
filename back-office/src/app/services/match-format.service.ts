@@ -19,6 +19,7 @@ export interface MatchFormatConfig {
   openingBidMin?: number;
   countBelote?: boolean;
   clockwise?: boolean;
+  tableThemeId?: string | null;
   active: boolean;
   order: number;
   houseNet?: number;

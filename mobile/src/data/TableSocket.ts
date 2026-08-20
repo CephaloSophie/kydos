@@ -41,6 +41,14 @@ export interface LiveLobbyState {
   seats: { index: number; kind: string; name: string; team: 'A' | 'B'; userId: string | null; robotId: string | null; ownerId: string | null }[];
   owner: string;
   visibility: 'public' | 'private';
+  /** v18 — config de la table, dont le thème résolu (couleurs). */
+  config?: {
+    themeColors?: {
+      felt1: string | null; felt2: string | null;
+      rail: string | null; railHi: string | null; railLo: string | null; railInner: string | null;
+      accent: string | null; accent2: string | null;
+    } | null;
+  };
 }
 
 export interface TableSocketHandlers {
