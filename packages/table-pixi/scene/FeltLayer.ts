@@ -47,7 +47,10 @@ export class FeltLayer extends Container {
     const feltR = viewW > 1200 ? 22 : viewW > 860 ? 16 : 10;
     const w = Math.max(2, Math.round(rect.w + pad * 2));
     const h = Math.max(2, Math.round(rect.h + pad * 2));
-    const key = `${t.name}:${w}x${h}`;
+    // v18 — la clé de cache doit inclure les COULEURS effectives, pas seulement
+    // le nom : un thème dynamique (overrides) garde le même nom mais change les
+    // couleurs → sans ça, le feutre/rail n'étaient jamais repeints.
+    const key = `${t.name}:${t.felt1}:${t.felt2}:${t.rail}:${t.railHi}:${t.railLo}:${t.railInner}:${w}x${h}`;
     if (key !== this.key) {
       this.key = key;
       const old = this.bg.texture;

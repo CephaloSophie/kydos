@@ -94,9 +94,13 @@ export class MatchLiveService {
       ?? match.participants[0]?.userId;
 
     // v18 — thème de table : résolu en couleurs concrètes et posé sur la config
-    // pour que le mobile l'affiche directement (feutre + bordure).
+    // pour que le mobile l'affiche directement (feutre + bordure). On ne pose
+    // les couleurs QUE si un thème a été explicitement choisi ; sinon on laisse
+    // `null` pour que le mobile garde le thème par défaut de son `kind`
+    // (acier/hybride/royal).
+    const chosenThemeId = configOverride?.tableThemeId ?? null;
     const { tableThemeService } = await import('../tableTheme/tableTheme.service.js');
-    const themeColors = await tableThemeService.resolveColorsById(configOverride?.tableThemeId ?? null);
+    const themeColors = chosenThemeId ? await tableThemeService.resolveColorsById(chosenThemeId) : null;
 
     const table = await TableModel.create({
       status: 'lobby',
