@@ -364,6 +364,10 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const renderOnline = (state: LiveGameState) => {
     lastOnlineState = state;
     const v = state.view;
+    // v18 — le thème de table voyage AVEC l'état de jeu (seul canal reçu par un
+    // joueur qui rejoint une table déjà en cours). On applique dès réception.
+    const tc = (v as unknown as { themeColors?: any }).themeColors;
+    if (tc) { const ov = buildThemeOverrides(tc); if (ov) themeOverrides = ov; }
     const seat = state.mySeat ?? null;
     currentMySeat = seat;
     playDetected(v, (seat ?? null) as Seat | null);

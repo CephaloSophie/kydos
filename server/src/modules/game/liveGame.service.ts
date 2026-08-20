@@ -31,6 +31,8 @@ interface LiveGame {
   engine: GameEngine;
   /** v17 — barème résolu de la table (utilisé pour instancier les cerveaux). */
   rules: ContreeRules;
+  /** v18 — couleurs du thème de table (envoyées au client avec l'état). */
+  themeColors: Record<string, string> | null;
   participants: PersistenceParticipant[];
   robotBrains: (RobotAlgorithm | null)[];
   robots: (RobotConfig | null)[];
@@ -149,9 +151,16 @@ export class LiveGameService {
     const sessionDocument = await SessionModel.create({ table: tableId, status: 'running' });
     await TableModel.findByIdAndUpdate(tableId, { $set: { activeSession: sessionDocument._id } });
 
+    // v18 — thème de table (couleurs résolues) posé au provisionnement.
+    const tc = (tableDocument.config?.themeColors ?? null) as any;
+    const themeColors = tc && tc.felt1
+      ? { felt1: tc.felt1, felt2: tc.felt2, rail: tc.rail, railHi: tc.railHi, railLo: tc.railLo, railInner: tc.railInner, accent: tc.accent, accent2: tc.accent2 }
+      : null;
+
     this.games.set(tableId, {
       engine,
       rules: contreeRules,
+      themeColors,
       participants,
       robotBrains,
       robots,
@@ -283,7 +292,10 @@ export class LiveGameService {
     server.to(`table:${tableId}`).emit('table:spectators', { count: spectatorCount });
     for (const socket of sockets) {
       const seat = this.seatOfUser(liveGame, socket.data.userId);
-      const commonView = { ...view, handCounts, playerNames, players };
+      // v18 — themeColors voyage AVEC l'état de jeu : c'est le seul canal reçu
+      // par un joueur qui rejoint une table déjà en cours (le lobby n'est pas
+      // renvoyé au subscribe), donc le thème s'applique dès la 1ʳᵉ frame.
+      const commonView = { ...view, handCounts, playerNames, players, themeColors: liveGame.themeColors };
       if (seat != null) {
         socket.emit('table:game', { view: commonView, summary, myHand: engine.handOf(seat), legal: engine.legalCards(seat), mySeat: seat, logs: liveGame.logs.slice(-80) });
       } else {
