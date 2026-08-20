@@ -383,6 +383,9 @@ export class TournamentService {
     winnerUserId: string;         // pour retrouver quel slot est gagnant
     scoreA: number;
     scoreB: number;
+    // v17 — manches gagnées (best-of-N) : score de progression figé au final.
+    manchesA?: number;
+    manchesB?: number;
     gameId: string | null;
   }): Promise<void> {
     const t = await TournamentModel.findById(input.tournamentId);
@@ -405,6 +408,8 @@ export class TournamentService {
       winner,
       scoreA: input.scoreA,
       scoreB: input.scoreB,
+      manchesA: input.manchesA ?? null,
+      manchesB: input.manchesB ?? null,
       gameId: input.gameId,
       matchId: input.matchId,
       finishedAt: new Date(),
@@ -446,7 +451,12 @@ export class TournamentService {
    * séparé) et par les joueurs — sans dépendance Redis supplémentaire.
    * No-op si le match a déjà un vainqueur (score final déjà figé).
    */
-  async updateLiveScore(input: { tournamentId: string; matchId: string; scoreA: number; scoreB: number }): Promise<void> {
+  async updateLiveScore(input: {
+    tournamentId: string; matchId: string;
+    scoreA: number; scoreB: number;
+    // v17 — manches gagnées (score de progression monotone).
+    manchesA?: number; manchesB?: number;
+  }): Promise<void> {
     const t = await TournamentModel.findById(input.tournamentId);
     if (!t || t.status !== TournamentStatus.LIVE) return;
     const tree = (t as any).bracketTree;
@@ -455,9 +465,14 @@ export class TournamentService {
     if (!found) return;
     const bm = tree.rounds[found.roundIndex - 1].matches[found.matchIndex];
     if (!bm || bm.winner) return;                      // déjà terminé → score figé
-    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB) return;  // inchangé
+    const mA = input.manchesA ?? bm.manchesA ?? 0;
+    const mB = input.manchesB ?? bm.manchesB ?? 0;
+    // Inchangé (points ET manches) → pas d'écriture.
+    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB && bm.manchesA === mA && bm.manchesB === mB) return;
     bm.scoreA = input.scoreA;
     bm.scoreB = input.scoreB;
+    bm.manchesA = mA;
+    bm.manchesB = mB;
     if (!bm.startedAt) bm.startedAt = new Date();
     (t as any).markModified?.('bracketTree');
     await t.save();

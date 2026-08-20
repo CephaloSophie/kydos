@@ -16,6 +16,9 @@ export interface MatchFormatConfig {
   minLevel: number;
   maxLevel: number | null;
   autoRejoinSec?: number;
+  openingBidMin?: number;
+  countBelote?: boolean;
+  clockwise?: boolean;
   active: boolean;
   order: number;
   houseNet?: number;

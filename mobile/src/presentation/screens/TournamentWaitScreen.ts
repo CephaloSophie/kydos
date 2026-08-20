@@ -116,8 +116,12 @@ export function TournamentWaitScreen(ctx: AppContext): HTMLElement {
                   h('span', { class: 'mono', style: { fontSize: '10px', color: m.winner == null ? 'var(--c-success)' : 'var(--c-text-mute)' } },
                     m.winner == null ? 'EN DIRECT' : 'TERMINÉ')),
                 h('div', { style: { fontSize: '13px', marginTop: '4px' } }, `${m.slotAName}  vs  ${m.slotBName}`)),
+              // Score de progression = MANCHES gagnées (monotone). Tant qu'aucune
+              // manche n'est jouée, on affiche « · » plutôt qu'un « 0 » trompeur.
               h('div', { class: 'mono', style: { fontSize: '18px', color: 'var(--c-gold)', fontWeight: '700' } },
-                `${m.scoreA ?? 0} — ${m.scoreB ?? 0}`)),
+                (m.manchesA == null && m.manchesB == null)
+                  ? '·'
+                  : `${m.manchesA ?? 0} — ${m.manchesB ?? 0}`)),
             m.tableId
               ? h('div', { style: { marginTop: '10px' } },
                   h('button', { class: 'btn btn--sm btn--ghost', onClick: () => spectate(m.tableId!) }, '👁 Regarder en spectateur'))

@@ -120,6 +120,9 @@ const BracketMatchSchema = new Schema(
     winner: { type: String, enum: ['A', 'B', null], default: null },
     scoreA: { type: Number, default: null },
     scoreB: { type: Number, default: null },
+    // v17 — manches gagnées (best-of-N), score de progression MONOTONE.
+    manchesA: { type: Number, default: null },
+    manchesB: { type: Number, default: null },
     startedAt: { type: Date, default: null },
     finishedAt: { type: Date, default: null },
     // v16 — instant planifié de démarrage (compte à rebours avant création).
@@ -159,6 +162,10 @@ const TournamentGameConfigSchema = new Schema(
     manches: { type: Number, enum: [1, 2, 4], default: 2 },
     baseTarget: { type: Number, default: 1500 },   // score cible d'une manche standard
     labelTarget: { type: Number, default: 2000 },  // score cible du grand label
+    // v17 — règles de belote configurables (voir TableConfigSchema).
+    openingBidMin: { type: Number, default: 90 },  // score initial des enchères (minBid)
+    countBelote: { type: Boolean, default: true }, // belote comptée dans le score ?
+    clockwise: { type: Boolean, default: false },  // sens du jeu (true = horaire)
     // v16 — compte à rebours (s) avant le démarrage de chaque match/round.
     roundCountdownSec: { type: Number, default: 10 },
     // v16 — délai (s) avant la redirection auto du joueur depuis la popup LIVE.

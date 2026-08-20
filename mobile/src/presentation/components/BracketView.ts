@@ -14,7 +14,10 @@ import { h } from '../../core/dom';
 interface Slot { userId: string | null; displayName: string; userId2?: string | null; displayName2?: string }
 interface BMatch {
   matchIndex: number; matchId: string | null; gameId: string | null; tableId?: string | null;
-  slotA: Slot; slotB: Slot; winner: 'A' | 'B' | null; scoreA: number | null; scoreB: number | null;
+  slotA: Slot; slotB: Slot; winner: 'A' | 'B' | null;
+  scoreA: number | null; scoreB: number | null;
+  // v17 — manches gagnées (best-of-N) : score de progression MONOTONE.
+  manchesA?: number | null; manchesB?: number | null;
 }
 interface BRound { roundIndex: number; label: string; matches: BMatch[] }
 export interface BracketData {
@@ -35,10 +38,20 @@ export function BracketView(data: BracketData, handlers: Handlers = {}): HTMLEle
     const done = !!m.winner;
     const live = !m.winner && (!!m.tableId || m.scoreA != null || m.scoreB != null);
 
+    // Score de progression affiché = MANCHES gagnées (monotone, ne repart
+    // jamais de 0 entre deux manches). Repli sur '' si non renseigné, pour ne
+    // jamais afficher un « 0 » trompeur sur un match à venir / en préparation.
+    const manchesOf = (side: 'A' | 'B'): string => {
+      const v = side === 'A' ? m.manchesA : m.manchesB;
+      if (v != null) return String(v);
+      if (m.winner) return m.winner === side ? '✓' : '';
+      return '';
+    };
+
     const slotRow = (s: Slot, side: 'A' | 'B') => {
       const isWinner = m.winner === side;
       const isLoser = m.winner != null && !isWinner;
-      const score = side === 'A' ? m.scoreA : m.scoreB;
+      const score = manchesOf(side);
       return h('div', { class: 'row between', style: {
         alignItems: 'center', padding: '5px 8px',
         background: isWinner ? `${color}22` : 'transparent',
@@ -51,7 +64,7 @@ export function BracketView(data: BracketData, handlers: Handlers = {}): HTMLEle
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1', minWidth: '0',
         } }, slotName(s)),
         h('span', { class: 'mono', style: { fontSize: '11px', fontWeight: '700', marginLeft: '6px', color: isWinner ? color : 'var(--c-text-mute)' } },
-          score != null ? String(score) : ''),
+          score),
       );
     };
 

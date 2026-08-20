@@ -24,6 +24,9 @@ describe('sanitizeGameConfig', () => {
       manches: 2,
       baseTarget: 1500,
       labelTarget: 2000,
+      openingBidMin: 90,
+      countBelote: true,
+      clockwise: false,
       roundCountdownSec: 10,
       autoRejoinSec: 5,
       trickDelayMs: 900,
@@ -44,6 +47,25 @@ describe('sanitizeGameConfig', () => {
     expect(sanitizeGameConfig({ autoRejoinSec: -10 }).autoRejoinSec).toBe(0);
     expect(sanitizeGameConfig({ autoRejoinSec: 1000 }).autoRejoinSec).toBe(60);
     expect(sanitizeGameConfig({ autoRejoinSec: 7 }).autoRejoinSec).toBe(7);
+  });
+
+  it('v17 — règles de belote : défauts', () => {
+    const g = sanitizeGameConfig({});
+    expect(g.openingBidMin).toBe(90);
+    expect(g.countBelote).toBe(true);
+    expect(g.clockwise).toBe(false);
+  });
+
+  it('v17 — openingBidMin borné entre 80 et 180', () => {
+    expect(sanitizeGameConfig({ openingBidMin: 10 }).openingBidMin).toBe(80);
+    expect(sanitizeGameConfig({ openingBidMin: 999 }).openingBidMin).toBe(180);
+    expect(sanitizeGameConfig({ openingBidMin: 100 }).openingBidMin).toBe(100);
+  });
+
+  it('v17 — countBelote / clockwise : false explicite respecté, sinon défaut', () => {
+    expect(sanitizeGameConfig({ countBelote: false }).countBelote).toBe(false);
+    expect(sanitizeGameConfig({ clockwise: true }).clockwise).toBe(true);
+    expect(sanitizeGameConfig({ clockwise: 'yes' as any }).clockwise).toBe(false); // seul true booléen active
   });
 
   it('borne roundCountdownSec entre 0 et 300', () => {

@@ -62,8 +62,8 @@ describe('buildActiveResponse', () => {
     const status: UserTournamentStatus = {
       state: 'waiting', roundIndex: 1, myMatchId: null, startsAt: null,
       awaiting: [
-        { matchId: 'm-other', roundIndex: 1, matchIndex: 0, slotAName: 'alice', slotBName: 'bob', scoreA: 500, scoreB: 400, winner: null },
-        { matchId: null,      roundIndex: 1, matchIndex: 1, slotAName: 'TBD',   slotBName: 'TBD', scoreA: null, scoreB: null, winner: null },
+        { matchId: 'm-other', roundIndex: 1, matchIndex: 0, slotAName: 'alice', slotBName: 'bob', scoreA: 500, scoreB: 400, manchesA: 1, manchesB: 0, winner: null },
+        { matchId: null,      roundIndex: 1, matchIndex: 1, slotAName: 'TBD',   slotBName: 'TBD', scoreA: null, scoreB: null, manchesA: null, manchesB: null, winner: null },
       ],
     };
     const out = buildActiveResponse(baseTournament, status, new Map([['m-other', 'table-2']]));
@@ -93,7 +93,7 @@ describe('buildActiveResponse', () => {
   it('awaiting.matchId inconnu de la table → tableId = null (pas d\'exception)', () => {
     const status: UserTournamentStatus = {
       state: 'waiting', roundIndex: 1, myMatchId: null, startsAt: null,
-      awaiting: [{ matchId: 'm-inconnu', roundIndex: 1, matchIndex: 0, slotAName: 'x', slotBName: 'y', scoreA: null, scoreB: null, winner: null }],
+      awaiting: [{ matchId: 'm-inconnu', roundIndex: 1, matchIndex: 0, slotAName: 'x', slotBName: 'y', scoreA: null, scoreB: null, manchesA: null, manchesB: null, winner: null }],
     };
     const out = buildActiveResponse(baseTournament, status, new Map());
     expect(out.awaiting[0].tableId).toBeNull();

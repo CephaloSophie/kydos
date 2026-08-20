@@ -39,6 +39,12 @@ export interface TournamentGameConfig {
   manches: number;
   baseTarget: number;
   labelTarget: number;
+  /** v17 — score initial des enchères (minBid, multiple de 10). */
+  openingBidMin: number;
+  /** v17 — belote (Roi+Dame d'atout) comptée dans le score ? */
+  countBelote: boolean;
+  /** v17 — sens du jeu (false = antihoraire, true = horaire). */
+  clockwise: boolean;
   roundCountdownSec: number;
   autoRejoinSec: number;
   trickDelayMs: number;
@@ -91,8 +97,12 @@ export interface BracketMatch {
   slotA: BracketSlot;
   slotB: BracketSlot;
   winner: 'A' | 'B' | null;
+  /** Points de la manche courante/dernière (peut repartir de 0 entre manches). */
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   startedAt: string | null;
   finishedAt: string | null;
   scheduledStartAt: string | null;

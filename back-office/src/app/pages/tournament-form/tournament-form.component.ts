@@ -136,6 +136,29 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
           </div>
         </div>
 
+        <h3 style="margin: 20px 0 12px">Règles de belote</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Score initial des enchères</label>
+            <input type="number" [(ngModel)]="form.gameConfig.openingBidMin" min="80" max="180" step="10" />
+            <small class="hint">Enchère minimale d'ouverture (multiple de 10, 80–180).</small>
+          </div>
+          <div class="form-group">
+            <label>Sens du jeu</label>
+            <select [(ngModel)]="form.gameConfig.clockwise">
+              <option [ngValue]="false">Antihoraire (standard)</option>
+              <option [ngValue]="true">Horaire</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
+            <input type="checkbox" [(ngModel)]="form.gameConfig.countBelote" id="belote" />
+            <label for="belote" style="margin: 0">Compter la belote dans le score (+20)</label>
+          </div>
+          <div class="form-group"></div>
+        </div>
+
         <h3 style="margin: 20px 0 12px">Prix par position</h3>
         <div class="prizes-grid">
           @for (pp of prizes; track pp.position) {
@@ -251,6 +274,9 @@ export class TournamentFormComponent implements OnInit {
       manches: 2,
       baseTarget: 1500,
       labelTarget: 2000,
+      openingBidMin: 90,
+      countBelote: true,
+      clockwise: false,
       roundCountdownSec: 10,
       autoRejoinSec: 5,
       turnTimeoutMs: 15000,
@@ -292,6 +318,9 @@ export class TournamentFormComponent implements OnInit {
             manches: t.gameConfig?.manches ?? 2,
             baseTarget: t.gameConfig?.baseTarget ?? 1500,
             labelTarget: t.gameConfig?.labelTarget ?? 2000,
+            openingBidMin: t.gameConfig?.openingBidMin ?? 90,
+            countBelote: t.gameConfig?.countBelote !== false,
+            clockwise: t.gameConfig?.clockwise === true,
             roundCountdownSec: t.gameConfig?.roundCountdownSec ?? 10,
             autoRejoinSec: t.gameConfig?.autoRejoinSec ?? 5,
             turnTimeoutMs: t.gameConfig?.turnTimeoutMs ?? 15000,

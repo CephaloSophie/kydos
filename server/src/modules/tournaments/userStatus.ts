@@ -20,6 +20,9 @@ export interface AwaitedMatch {
   slotBName: string;
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   winner: 'A' | 'B' | null;
 }
 
@@ -52,7 +55,9 @@ function toAwaited(m: BracketMatch, roundIndex: number): AwaitedMatch {
     matchIndex: m.matchIndex,
     slotAName: m.slotA.displayName || '—',
     slotBName: m.slotB.displayName || '—',
-    scoreA: m.scoreA, scoreB: m.scoreB, winner: m.winner,
+    scoreA: m.scoreA, scoreB: m.scoreB,
+    manchesA: (m as any).manchesA ?? null, manchesB: (m as any).manchesB ?? null,
+    winner: m.winner,
   };
 }
 

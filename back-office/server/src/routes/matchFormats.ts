@@ -18,9 +18,9 @@ const STRUCTURE: Record<string, { humansPerMatch: number; winnersPerMatch: numbe
 
 /** Valeurs par défaut (reprises du catalogue serveur) si la collection est vide. */
 const DEFAULTS = [
-  { format: 'duo_steel', label: 'Duo d’acier', subtitle: 'Un affrontement 100 % en coulisses.', buyInPerPlayer: 200, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#3f6ea1', icon: '♦', minLevel: 0, maxLevel: null, active: true, order: 0 },
-  { format: 'hybrid_alliance', label: 'Alliance hybride', subtitle: 'Vous + votre robot, tous ensemble.', buyInPerPlayer: 150, prizePerWinner: 225, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#c99c3f', icon: '♠', minLevel: 0, maxLevel: null, active: true, order: 1 },
-  { format: 'royal_square', label: 'Carrée royale', subtitle: 'Quatre humains, deux équipes, une couronne.', buyInPerPlayer: 100, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#b0384a', icon: '♥', minLevel: 0, maxLevel: null, active: true, order: 2 },
+  { format: 'duo_steel', label: 'Duo d’acier', subtitle: 'Un affrontement 100 % en coulisses.', buyInPerPlayer: 200, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#3f6ea1', icon: '♦', minLevel: 0, maxLevel: null, active: true, order: 0 },
+  { format: 'hybrid_alliance', label: 'Alliance hybride', subtitle: 'Vous + votre robot, tous ensemble.', buyInPerPlayer: 150, prizePerWinner: 225, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#c99c3f', icon: '♠', minLevel: 0, maxLevel: null, active: true, order: 1 },
+  { format: 'royal_square', label: 'Carrée royale', subtitle: 'Quatre humains, deux équipes, une couronne.', buyInPerPlayer: 100, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#b0384a', icon: '♥', minLevel: 0, maxLevel: null, active: true, order: 2 },
 ];
 
 let legacyIndexChecked = false;
@@ -95,6 +95,10 @@ router.post('/', async (req: AdminRequest, res) => {
       minLevel: num(b.minLevel, 0, 9999, 0),
       maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
       autoRejoinSec: num(b.autoRejoinSec, 0, 60, 5),
+      // v17 — règles de belote configurables.
+      openingBidMin: num(b.openingBidMin, 80, 180, 90),
+      countBelote: b.countBelote !== false,
+      clockwise: b.clockwise === true,
       active: b.active !== false,
       order: num(b.order, 0, 999, count),
     });
@@ -112,7 +116,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     const cfg = await Model.findById(req.params.id) as any;
     if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
 
-    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, active, order } = req.body;
+    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, openingBidMin, countBelote, clockwise, active, order } = req.body;
     if (label !== undefined) cfg.label = String(label);
     if (subtitle !== undefined) cfg.subtitle = String(subtitle);
     if (buyInPerPlayer !== undefined) cfg.buyInPerPlayer = num(buyInPerPlayer, 0, 1_000_000, cfg.buyInPerPlayer);
@@ -125,6 +129,9 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (minLevel !== undefined) cfg.minLevel = num(minLevel, 0, 9999, cfg.minLevel);
     if (maxLevel !== undefined) cfg.maxLevel = (maxLevel === null || maxLevel === '') ? null : num(maxLevel, 0, 9999, cfg.maxLevel ?? 0);
     if (autoRejoinSec !== undefined) cfg.autoRejoinSec = num(autoRejoinSec, 0, 60, cfg.autoRejoinSec ?? 5);
+    if (openingBidMin !== undefined) cfg.openingBidMin = num(openingBidMin, 80, 180, cfg.openingBidMin ?? 90);
+    if (countBelote !== undefined) cfg.countBelote = !!countBelote;
+    if (clockwise !== undefined) cfg.clockwise = !!clockwise;
     if (active !== undefined) cfg.active = !!active;
     if (order !== undefined) cfg.order = num(order, 0, 999, cfg.order);
     await cfg.save();

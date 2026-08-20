@@ -36,6 +36,7 @@ export interface RawBracketMatch {
   slotA?: RawSlot; slotB?: RawSlot;
   winner?: 'A' | 'B' | null;
   scoreA?: number | null; scoreB?: number | null;
+  manchesA?: number | null; manchesB?: number | null;
   startedAt?: Date | string | null;
   finishedAt?: Date | string | null;
   scheduledStartAt?: Date | string | null;
@@ -55,6 +56,8 @@ export interface MatchDoc {
 
 export interface GameConfigInput {
   manches?: unknown; baseTarget?: unknown; labelTarget?: unknown;
+  // v17 — règles de belote configurables.
+  openingBidMin?: unknown; countBelote?: unknown; clockwise?: unknown;
   roundCountdownSec?: unknown; autoRejoinSec?: unknown;
   trickDelayMs?: unknown; speed?: unknown; turnTimeoutMs?: unknown;
   allowSpectators?: unknown; feltTheme?: unknown;
@@ -72,6 +75,11 @@ export function sanitizeGameConfig(raw: GameConfigInput | null | undefined) {
     manches: [1, 2, 4].includes(Number(g.manches)) ? Number(g.manches) : 2,
     baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
     labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
+    // v17 — règles de belote : score initial des enchères (multiple de 10,
+    // entre 80 et 180), belote comptée ou non, sens du jeu.
+    openingBidMin: clamp(g.openingBidMin, 80, 180, 90),
+    countBelote: g.countBelote !== false,
+    clockwise: g.clockwise === true,
     roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),
     autoRejoinSec: clamp(g.autoRejoinSec, 0, 60, 5),
     trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
@@ -281,6 +289,9 @@ export function buildTournamentDetail(
           winner: m.winner ?? null,
           scoreA: m.scoreA ?? md?.scoreTeamA ?? null,
           scoreB: m.scoreB ?? md?.scoreTeamB ?? null,
+          // v17 — manches gagnées (score de progression monotone).
+          manchesA: m.manchesA ?? null,
+          manchesB: m.manchesB ?? null,
           startedAt: m.startedAt ?? md?.startedAt ?? null,
           finishedAt: m.finishedAt ?? md?.finishedAt ?? null,
           scheduledStartAt: m.scheduledStartAt ?? null,

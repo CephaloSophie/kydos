@@ -77,6 +77,9 @@ import type { Tournament, TournamentStatus, BracketMatch, BracketMatchState, Bra
               <div class="info-item"><span class="info-label">Nombre de manches</span><span>{{ g.manches }}</span></div>
               <div class="info-item"><span class="info-label">Score cible</span><span>{{ g.baseTarget }}</span></div>
               <div class="info-item"><span class="info-label">Score du label</span><span>{{ g.labelTarget }}</span></div>
+              <div class="info-item"><span class="info-label">Score initial des enchères</span><span>{{ g.openingBidMin }}</span></div>
+              <div class="info-item"><span class="info-label">Belote comptée</span><span>{{ g.countBelote ? 'Oui (+20)' : 'Non' }}</span></div>
+              <div class="info-item"><span class="info-label">Sens du jeu</span><span>{{ g.clockwise ? 'Horaire' : 'Antihoraire' }}</span></div>
               <div class="info-item"><span class="info-label">Compte à rebours / round</span><span>{{ g.roundCountdownSec }} s</span></div>
               <div class="info-item"><span class="info-label">Redirection auto popup LIVE</span><span>{{ g.autoRejoinSec }} s</span></div>
               <div class="info-item"><span class="info-label">Timeout par tour</span><span>{{ g.turnTimeoutMs }} ms</span></div>
@@ -181,14 +184,18 @@ import type { Tournament, TournamentStatus, BracketMatch, BracketMatchState, Bra
                   <div class="bracket-match" [attr.data-state]="m.state">
                     <div class="bracket-slot" [class.winner]="m.winner === 'A'" [class.loser]="m.winner === 'B'">
                       <span class="slot-name" [title]="slotTooltip(m.slotA)">{{ slotName(m.slotA) }}</span>
-                      <span class="slot-score">{{ m.scoreA != null ? m.scoreA : '' }}</span>
+                      <span class="slot-score">{{ manchesLabel(m, 'A') }}</span>
                     </div>
                     <div class="bracket-slot" [class.winner]="m.winner === 'B'" [class.loser]="m.winner === 'A'">
                       <span class="slot-name" [title]="slotTooltip(m.slotB)">{{ slotName(m.slotB) }}</span>
-                      <span class="slot-score">{{ m.scoreB != null ? m.scoreB : '' }}</span>
+                      <span class="slot-score">{{ manchesLabel(m, 'B') }}</span>
                     </div>
                     <div class="bracket-meta">
                       <span class="state-tag" [attr.data-state]="m.state">{{ stateLabel(m.state) }}</span>
+                      <!-- Points de la manche courante (secondaire), quand ils existent. -->
+                      @if (m.scoreA != null || m.scoreB != null) {
+                        <span class="muted" title="Points de la manche courante">pts {{ m.scoreA ?? 0 }}–{{ m.scoreB ?? 0 }}</span>
+                      }
                       @if (m.state === 'countdown' && m.scheduledStartAt) {
                         <span class="muted">démarre {{ m.scheduledStartAt | date:'HH:mm:ss' }}</span>
                       }
@@ -309,6 +316,20 @@ export class TournamentDetailComponent implements OnInit {
     const b = s?.username2 || s?.displayName2;
     if (!a && !b) return '—';
     return b ? `${a || '?'} & ${b}` : (a || '?');
+  }
+
+  /**
+   * Manches gagnées d'un camp affichées dans l'arbre (score de progression
+   * MONOTONE, best-of-N). Vide tant que le match n'a pas démarré / marqué de
+   * manche, pour ne jamais afficher un « 0 » trompeur sur un match à venir.
+   */
+  manchesLabel(m: BracketMatch, side: 'A' | 'B'): string {
+    const v = side === 'A' ? m.manchesA : m.manchesB;
+    if (v != null) return String(v);
+    // Repli : si le moteur n'a pas encore renseigné les manches mais qu'un
+    // vainqueur existe (anciens tournois), on montre au moins le résultat.
+    if (m.winner) return m.winner === side ? '✓' : '';
+    return '';
   }
 
   /** Tooltip natif exposant les ObjectIds pour l'admin. */

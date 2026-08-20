@@ -25,6 +25,10 @@ export interface EffectiveMatchConfig {
   manches: 1 | 2 | 4;
   baseTarget: number;
   labelTarget: number;
+  // v17 — règles de belote configurables.
+  openingBidMin: number;
+  countBelote: boolean;
+  clockwise: boolean;
   houseRake: number;                 // recalculé : collecté − payé
   color: string;
   icon: string;
@@ -86,6 +90,8 @@ export class MatchFormatConfigService {
         buyInPerPlayer: rules.buyInPerPlayer,
         prizePerWinner: rules.prizePerWinner,
         manches: 2, baseTarget: 1500, labelTarget: 2000,
+        // v17 — règles de belote configurables (valeurs standard par défaut).
+        openingBidMin: 90, countBelote: true, clockwise: false,
         color: d.color, icon: d.icon, active: true, order: d.order,
         minLevel: 0, maxLevel: null,
       });
@@ -144,6 +150,9 @@ export class MatchFormatConfigService {
       manches: ([1, 2, 4].includes(cfg?.manches) ? cfg.manches : 2) as 1 | 2 | 4,
       baseTarget: cfg?.baseTarget ?? 1500,
       labelTarget: cfg?.labelTarget ?? 2000,
+      openingBidMin: cfg?.openingBidMin ?? 90,
+      countBelote: cfg?.countBelote !== false,
+      clockwise: cfg?.clockwise === true,
       houseRake,
       color: cfg?.color ?? d.color,
       icon: cfg?.icon ?? d.icon,

@@ -28,6 +28,10 @@ const MatchFormatConfigSchema = new Schema(
     manches: { type: Number, enum: [1, 2, 4], default: 2 },
     baseTarget: { type: Number, default: 1500 },
     labelTarget: { type: Number, default: 2000 },
+    /** v17 — règles de belote configurables (voir TableConfigSchema). */
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
     /** Habillage carte (mobile). */
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },

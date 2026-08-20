@@ -27,6 +27,15 @@ const TableConfigSchema = new Schema(
     /** v16 — Objectif (score cible) d'une manche standard et du grand label. */
     baseTarget: { type: Number, default: 1500 },
     labelTarget: { type: Number, default: 2000 },
+    /**
+     * v17 — Règles de belote configurables à l'instanciation de la table :
+     *   • openingBidMin : score initial pour commencer les enchères (minBid).
+     *   • countBelote   : la belote (Roi+Dame d'atout) compte-t-elle au score ?
+     *   • clockwise     : sens du jeu (false = antihoraire, true = horaire).
+     */
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     gameType: { type: String, default: 'contree' },

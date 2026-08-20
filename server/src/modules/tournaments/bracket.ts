@@ -48,8 +48,20 @@ export interface BracketMatch {
   slotA: BracketSlot;
   slotB: BracketSlot;
   winner: 'A' | 'B' | null;
+  /**
+   * Score en POINTS de la manche courante (live) ou de la dernière manche
+   * (fini). Peut « repartir de 0 » entre deux manches — ne pas s'en servir
+   * comme indicateur de progression : préférer `manchesA/manchesB`.
+   */
   scoreA: number | null;
   scoreB: number | null;
+  /**
+   * v17 — Manches gagnées par chaque camp (best-of-N). MONOTONE : ne redescend
+   * jamais, y compris entre deux manches. C'est LE score de progression d'un
+   * match affiché dans l'arbre (live comme terminé).
+   */
+  manchesA: number | null;
+  manchesB: number | null;
   startedAt: Date | null;
   finishedAt: Date | null;
   /**
@@ -224,7 +236,7 @@ export function buildInitialBracket(leafCount: number, seeds: SeedInput[]): Brac
       gameId: null,
       slotA: seedSlot(i * 2),
       slotB: seedSlot(i * 2 + 1),
-      winner: null, scoreA: null, scoreB: null,
+      winner: null, scoreA: null, scoreB: null, manchesA: null, manchesB: null,
       startedAt: null, finishedAt: null,
       nextMatchIndex: totalRounds > 1 ? parentIndex : null,
       nextSlot: totalRounds > 1 ? (i % 2 === 0 ? 'A' : 'B') : null,
@@ -244,7 +256,7 @@ export function buildInitialBracket(leafCount: number, seeds: SeedInput[]): Brac
         gameId: null,
         slotA: emptySlot(),
         slotB: emptySlot(),
-        winner: null, scoreA: null, scoreB: null,
+        winner: null, scoreA: null, scoreB: null, manchesA: null, manchesB: null,
         startedAt: null, finishedAt: null,
         nextMatchIndex: isLastRound ? null : Math.floor(i / 2),
         nextSlot: isLastRound ? null : (i % 2 === 0 ? 'A' : 'B'),
@@ -264,6 +276,9 @@ export interface AdvanceInput {
   winner: 'A' | 'B';
   scoreA: number;
   scoreB: number;
+  /** v17 — manches gagnées (best-of-N) ; optionnel pour rétrocompat. */
+  manchesA?: number | null;
+  manchesB?: number | null;
   gameId: string | null;      // ref Game archivée
   matchId?: string | null;    // ref Match (utile pour debug/lookup)
   finishedAt?: Date;
@@ -302,6 +317,8 @@ export function advanceBracket(bracket: BracketTree, input: AdvanceInput): {
   match.winner = input.winner;
   match.scoreA = input.scoreA;
   match.scoreB = input.scoreB;
+  if (input.manchesA != null) match.manchesA = input.manchesA;
+  if (input.manchesB != null) match.manchesB = input.manchesB;
   match.gameId = input.gameId;
   if (input.matchId) match.matchId = input.matchId;
   match.finishedAt = input.finishedAt ?? new Date();

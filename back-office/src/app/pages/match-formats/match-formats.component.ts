@@ -102,7 +102,23 @@ import { MatchFormatService, type MatchFormatConfig } from '../../services/match
                 <label>Redirection auto depuis la popup LIVE (s)</label>
                 <input type="number" [(ngModel)]="f.autoRejoinSec" min="0" max="60" step="1" />
               </div>
-              <div class="form-group"></div>
+              <div class="form-group">
+                <label>Score initial des enchères</label>
+                <input type="number" [(ngModel)]="f.openingBidMin" min="80" max="180" step="10" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Sens du jeu</label>
+                <select [(ngModel)]="f.clockwise">
+                  <option [ngValue]="false">Antihoraire (standard)</option>
+                  <option [ngValue]="true">Horaire</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
+                <input type="checkbox" [(ngModel)]="f.countBelote" [id]="'belote-' + f.format" />
+                <label [for]="'belote-' + f.format" style="margin:0">Compter la belote (+20)</label>
+              </div>
             </div>
             <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
               <input type="checkbox" [(ngModel)]="f.active" [id]="'a-' + f.format" />

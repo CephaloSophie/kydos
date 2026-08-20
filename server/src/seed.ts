@@ -221,6 +221,9 @@ export async function seedDatabase() {
   const cfg = (manches: 1 | 2 | 4, baseTarget: number) => ({
     manches, baseTarget, labelTarget: 2000, trickDelayMs: 900, speed: 1,
     turnTimeoutMs: 15000, allowSpectators: true, feltTheme: 'classic',
+    // v16 — compte à rebours / redirection auto ; v17 — règles de belote.
+    roundCountdownSec: 10, autoRejoinSec: 5,
+    openingBidMin: 90, countBelote: true, clockwise: false,
     signals: { reflexion: true, repeatSuit: true },
   });
   await TournamentModel.create([

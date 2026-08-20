@@ -161,6 +161,9 @@ export class ApiClient {
             winner: 'A' | 'B' | null;
             scoreA: number | null;
             scoreB: number | null;
+            manchesA?: number | null;
+            manchesB?: number | null;
+            tableId?: string | null;
             startedAt: string | null;
             finishedAt: string | null;
           }>;
@@ -323,6 +326,9 @@ export interface AwaitedTournamentMatch {
   slotBName: string;
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   winner: 'A' | 'B' | null;
   tableId: string | null;
 }

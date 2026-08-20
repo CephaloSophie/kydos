@@ -13,14 +13,14 @@
  * ========================================================================== */
 import {
   ContreeRules, createAlgorithm, GameEngine, robotFromFiche, robotAct, shouldSurcontrer,
-  type EnginePlayer, type PartieConfig, type RobotConfig, type Seat, type LogEntry,
+  resolveTableConfig,
+  type EnginePlayer, type RobotConfig, type Seat, type LogEntry,
 } from 'belote-core';
 import { RobotModel } from '../robot/robot.model.js';
 import { gamePersistenceService, type PersistenceParticipant } from './gamePersistence.service.js';
 import { createLogger } from '../../core/logger.js';
 
 const logger = createLogger('robot-match');
-const contreeRules = new ContreeRules();
 const MAX_STEPS = 5000; // garde-fou : une partie réelle reste bien en-dessous
 
 export interface RobotMatchInput {
@@ -60,11 +60,11 @@ class RobotMatchService {
       return { seat: index as Seat, name: document?.name ?? `Robot ${index + 1}`, type: 'robot', robotId };
     });
 
-    const partieConfig: PartieConfig = {
-      manches: input.manches ?? 2, baseTarget: 1500, labelTarget: 2000,
-      responseTimeMs: 0, maxPlayTimeMs: 0, clockwise: false, local: true,
-      signals: { reflexion: true, repeatSuit: true },
-    };
+    // v17 — barème + orchestration résolus (partie locale entre robots).
+    const { rulesConfig, partieConfig } = resolveTableConfig({
+      manches: input.manches ?? 2, responseTimeMs: 0, maxPlayTimeMs: 0, local: true,
+    });
+    const contreeRules = new ContreeRules(rulesConfig);
     const engine = new GameEngine(enginePlayers, partieConfig, contreeRules);
 
     const logs: LogEntry[] = [];
