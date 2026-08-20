@@ -9,6 +9,10 @@ import {
 const view = (currentBidValue: number | null, bids: Partial<Bid & { seat: Seat }>[] = []) =>
   ({ currentBidValue, bids: bids as Bid[] }) as unknown as Pick<EngineView, 'currentBidValue' | 'bids'>;
 
+// v17 — vue avec enchère d'ouverture configurée (minBid).
+const viewMin = (minBid: number, currentBidValue: number | null = null) =>
+  ({ currentBidValue, minBid, maxBid: 180, bids: [] as Bid[] }) as unknown as Pick<EngineView, 'currentBidValue' | 'bids' | 'minBid' | 'maxBid'>;
+
 describe('minBidValue / isValueAvailable', () => {
   it('empty auction: minimum is 90 and the whole ladder is available', () => {
     expect(minBidValue(view(null))).toBe(90);
@@ -108,5 +112,32 @@ describe('suivreBid', () => {
   it('is impossible above 180 (ladder exhausted)', () => {
     const v = view(180, [{ seat: 0 as Seat, action: 'bid', value: 180, suit: 'coeur', saidSuit: true }]);
     expect(suivreBid(v, 0 as Seat)).toBe(null);
+  });
+});
+
+describe('v17 — enchère d’ouverture configurable (minBid)', () => {
+  it('minBid=80 : l’enchère minimale et le premier pas partent de 80', () => {
+    expect(minBidValue(viewMin(80))).toBe(80);
+    expect(defaultStep(viewMin(80))).toBe(80);
+    expect(isValueAvailable(viewMin(80), 80)).toBe(true);
+  });
+
+  it('minBid=80 : 80 disponible, la montée d’un cran donne 90', () => {
+    const steps = availableSteps(viewMin(80));
+    expect(steps[0]).toBe(80);
+    expect(steps[1]).toBe(90);
+    expect(stepUp(viewMin(80), 80)).toBe(90);
+  });
+
+  it('minBid=100 : l’échelle démarre à 100 (80 et 90 exclus)', () => {
+    expect(minBidValue(viewMin(100))).toBe(100);
+    expect(isValueAvailable(viewMin(100), 80)).toBe(false);
+    expect(isValueAvailable(viewMin(100), 90)).toBe(false);
+    expect(isValueAvailable(viewMin(100), 100)).toBe(true);
+  });
+
+  it('sans minBid dans la vue : repli sur 90 (compat)', () => {
+    expect(minBidValue(view(null))).toBe(90);
+    expect(defaultStep(view(null))).toBe(90);
   });
 });

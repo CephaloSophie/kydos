@@ -114,6 +114,8 @@ export class GameEngine {
       dealer: this.dealer,
       firstBidderSeat: this.next(this.dealer),
       currentBidValue: this.highestBid?.value ?? null,
+      minBid: this.rules.minBid,
+      maxBid: this.rules.maxBid,
       contre: this.contre,
       contreSeats: ([0, 1, 2, 3] as Seat[]).filter((s) => this.canContre(s)),
       surcontreSeats: ([0, 1, 2, 3] as Seat[]).filter((s) => this.canSurcontre(s)),
