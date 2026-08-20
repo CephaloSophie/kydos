@@ -50,6 +50,8 @@ export default defineConfig({
           'src/modules/matchmaking/matchmaking.autoRejoin.test.ts',
           // v18 : résolution pure des couleurs de thème de table.
           'src/modules/tableTheme/tableTheme.colors.test.ts',
+          // v18 : dérivations pures du suivi enrichi d'une partie.
+          'src/modules/game/gameTracking.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',

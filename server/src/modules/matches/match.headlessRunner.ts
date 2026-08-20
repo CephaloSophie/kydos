@@ -116,6 +116,10 @@ export class MatchHeadlessRunner {
     const { gameId, winner } = await gamePersistenceService.persistFinishedGame({
       engine, tableId: null, sessionId: null, ownerId: ownerAId, teamId: null,
       visibility: 'public', mode: 'competition', participants: persistParticipants, logs, substituteSeats: new Set(),
+      // v18 — rattachement compétition (variante + tournoi éventuel).
+      match: String(match._id),
+      formatConfig: (match as any).formatConfig ? String((match as any).formatConfig) : null,
+      tournament: (match as any).tournament ? String((match as any).tournament) : null,
     });
 
     const finalManche = engine.manches[engine.manches.length - 1];

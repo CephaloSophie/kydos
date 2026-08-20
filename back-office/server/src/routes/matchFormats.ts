@@ -2,6 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
+import { aggregateVariantStats } from '../matchAnalytics.js';
 
 const router = Router();
 
@@ -69,6 +70,45 @@ router.get('/', async (_req, res) => {
 const num = (v: any, min: number, max: number, cur: number) => {
   const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
 };
+
+/**
+ * v18 — Visualisation d'une variante : détail + parties jouées + agrégats.
+ * `GET /:id/analytics?limit=50` renvoie { variant, stats, games } où `games`
+ * est l'historique récent (léger) et `stats` les pourcentages/chiffres utiles.
+ */
+router.get('/:id/analytics', async (req, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const GameModel = mongoose.model('Game');
+    const variant: any = await Model.findById(req.params.id).lean();
+    if (!variant) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    // Toutes les parties de cette variante pour les agrégats (champs légers) ;
+    // l'historique affiché est borné par `limit`.
+    const allGames: any[] = await GameModel.find({ formatConfig: variant._id })
+      .select('winner finalScoreA finalScoreB manchesWonA manchesWonB durationMs stats finishedAt participants')
+      .sort({ finishedAt: -1 })
+      .lean();
+
+    const stats = aggregateVariantStats(allGames);
+    const games = allGames.slice(0, limit).map((g) => ({
+      id: String(g._id),
+      winner: g.winner ?? null,
+      finalScoreA: g.finalScoreA ?? 0, finalScoreB: g.finalScoreB ?? 0,
+      manchesWonA: g.manchesWonA ?? 0, manchesWonB: g.manchesWonB ?? 0,
+      durationMs: g.durationMs ?? 0,
+      totalDonnes: g.stats?.totalDonnes ?? 0,
+      capotsTotal: g.stats?.capotsTotal ?? 0,
+      finishedAt: g.finishedAt,
+      players: (g.participants ?? []).filter((p: any) => p.type === 'human').map((p: any) => p.name).filter(Boolean),
+    }));
+
+    res.json({ variant: { ...variant, houseNet: houseNet(variant) }, stats, games });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
 

@@ -270,6 +270,18 @@ export class MatchLiveService {
     match.scoreTeamB = scoreB;
     await match.save();
 
+    // v18 — rattache la partie archivée à sa variante / son tournoi (le Game a
+    // été persisté par liveGame sans connaître le Match). Permet l'agrégation
+    // back-office des parties jouées sous une variante donnée.
+    await GameModel.updateOne(
+      { _id: info.gameId },
+      { $set: {
+        match: match._id,
+        formatConfig: (match as any).formatConfig ?? null,
+        tournament: (match as any).tournament ?? null,
+      } },
+    );
+
     // Économie : versement au(x) vainqueur(s), rake maison. Pour ROYAL_SQUARE,
     // il y a 2 vainqueurs (les 2 humains de l'équipe gagnante) → on crédite
     // chacun de rules.prizePerWinner. Pour HYBRID, un seul humain gagne

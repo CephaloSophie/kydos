@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { computeReward, computeGameStats, type GameEngine, type Seat } from 'belote-core';
+import { deriveExtraStats, replayDurationMs } from './gameTracking.js';
 import { GameModel } from './game.model.js';
 import { GameReplayModel } from './gameReplay.model.js';
 import { SessionModel } from './session.model.js';
@@ -41,6 +42,10 @@ export class GamePersistenceService {
     visibility: 'public' | 'private';
     mode?: 'local' | 'online' | 'competition';
     kind?: 'hybride' | 'acier' | 'royal' | 'local';
+    // v18 — rattachement compétition (pour l'agrégation back-office par variante).
+    match?: string | null;
+    formatConfig?: string | null;
+    tournament?: string | null;
     participants: PersistenceParticipant[];
     logs: unknown[];
     substituteSeats: Set<number>;
@@ -90,7 +95,11 @@ export class GamePersistenceService {
     }));
 
     // Statistiques détaillées dérivées du replay (SPEC §3.10).
-    const stats = computeGameStats(engine.toReplay());
+    const replay = engine.toReplay();
+    const stats = computeGameStats(replay);
+    // v18 — métriques enrichies (contrats tenus/chutés, moyenne, plis, durée).
+    const extra = deriveExtraStats(stats.donnes);
+    const durationMs = replayDurationMs(replay);
 
     // 3. Agrégat Game = point de commit.
     const gameDocument = await GameModel.create({
@@ -102,8 +111,13 @@ export class GamePersistenceService {
       visibility,
       mode: params.mode ?? 'online',
       kind: params.kind ?? 'local',
+      // v18 — rattachement compétition.
+      match: params.match ?? null,
+      formatConfig: params.formatConfig ?? null,
+      tournament: params.tournament ?? null,
       target: engine.view().target,
       winner,
+      durationMs,
       participants: embeddedParticipants,
       manches: embeddedManches,
       finalScoreA: stats.finalScore.A,
@@ -120,6 +134,11 @@ export class GamePersistenceService {
         capotsA: stats.capots.A, capotsB: stats.capots.B, capotsTotal: stats.capots.total,
         capotsAnnoncesA: stats.capotsAnnonces.A, capotsAnnoncesB: stats.capotsAnnonces.B, capotsAnnoncesTotal: stats.capotsAnnonces.total,
         belotesA: stats.belotes.A, belotesB: stats.belotes.B,
+        // v18 — métriques enrichies.
+        totalTricks: extra.totalTricks,
+        contractsMade: extra.contractsMade,
+        contractsFailed: extra.contractsFailed,
+        avgContract: extra.avgContract,
       },
       projection: { status: 'pending', version: 0, at: null },
     });
