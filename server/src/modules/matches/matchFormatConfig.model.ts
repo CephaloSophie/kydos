@@ -42,8 +42,12 @@ const MatchFormatConfigSchema = new Schema(
     maxLevel: { type: Number, default: null },
     /** v16 — délai (s) avant redirection auto depuis la popup LIVE. */
     autoRejoinSec: { type: Number, default: 5, min: 0 },
-    /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel. */
+    /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel.
+     *  v18 — `active` reste la source de vérité pour l'app mobile ; il est
+     *  synchronisé avec `status` (active ⇔ status === 'active'). */
     active: { type: Boolean, default: true, index: true },
+    /** v18 — cycle de vie éditorial : brouillon → prêt → publié. */
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
     order: { type: Number, default: 0 },
   },
   { timestamps: true },

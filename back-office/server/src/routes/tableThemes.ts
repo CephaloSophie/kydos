@@ -11,6 +11,7 @@ import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
 import { resolveThemeColors, normalizeHex } from '../tableThemeColors.js';
+import { resolveStatus } from '../statusSync.js';
 
 const router = Router();
 
@@ -27,7 +28,7 @@ const BUILTIN = [
 async function ensureSeeded(Model: any) {
   const count = await Model.estimatedDocumentCount();
   if (count > 0) return;
-  await Model.create(BUILTIN.map((t) => ({ ...t, builtIn: true, active: true })));
+  await Model.create(BUILTIN.map((t) => ({ ...t, builtIn: true, active: true, status: 'active' })));
 }
 
 /** Enrichit un thème avec son rendu de couleurs résolu (pour l'aperçu). */
@@ -55,6 +56,18 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Détail d'un thème (visualisation).
+router.get('/:id', async (req, res) => {
+  try {
+    const Model = mongoose.model('TableTheme');
+    const doc: any = await Model.findById(req.params.id).lean();
+    if (!doc) { res.status(404).json({ error: 'Thème introuvable' }); return; }
+    res.json({ theme: withColors(doc) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Création d'un thème personnalisé.
 router.post('/', async (req: AdminRequest, res) => {
   try {
@@ -73,7 +86,8 @@ router.post('/', async (req: AdminRequest, res) => {
       feltEdgeColor: b.feltEdgeColor ? normalizeHex(b.feltEdgeColor, '#0f3f27') : null,
       railColor: normalizeHex(b.railColor, '#6b3a1a'),
       accentColor: b.accentColor ? normalizeHex(b.accentColor, '#f0c46a') : null,
-      active: b.active !== false,
+      // v18 — statut éditorial (défaut brouillon à la création).
+      ...resolveStatus({ status: b.status, active: b.active }, { status: 'draft', active: false }),
       order: Number.isFinite(Number(b.order)) ? Number(b.order) : count,
     });
     await logAudit(req.adminId!, 'tableTheme.create', String(doc._id), { after: { name: doc.name } });
@@ -95,10 +109,36 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (b.feltEdgeColor !== undefined) doc.feltEdgeColor = b.feltEdgeColor ? normalizeHex(b.feltEdgeColor, doc.feltEdgeColor) : null;
     if (b.railColor !== undefined) doc.railColor = normalizeHex(b.railColor, doc.railColor);
     if (b.accentColor !== undefined) doc.accentColor = b.accentColor ? normalizeHex(b.accentColor, doc.accentColor) : null;
-    if (b.active !== undefined) doc.active = !!b.active;
+    // v18 — statut éditorial ⇆ active synchronisés.
+    if ((b.status !== undefined) || (b.active !== undefined)) {
+      const s = resolveStatus({ status: b.status, active: b.active }, { status: doc.status, active: doc.active });
+      doc.status = s.status; doc.active = s.active;
+    }
     if (b.order !== undefined && Number.isFinite(Number(b.order))) doc.order = Number(b.order);
     await doc.save();
     await logAudit(req.adminId!, 'tableTheme.update', String(doc._id), { after: { name: doc.name, active: doc.active } });
+    res.json({ theme: withColors(doc.toObject()) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// v18 — Cloner un thème (y compris un preset intégré) : copie personnalisable, brouillon.
+router.post('/:id/clone', async (req: AdminRequest, res) => {
+  try {
+    const Model = mongoose.model('TableTheme');
+    const src: any = await Model.findById(req.params.id).lean();
+    if (!src) { res.status(404).json({ error: 'Thème introuvable' }); return; }
+    const count = await Model.countDocuments();
+    const doc = await Model.create({
+      name: `${src.name} (copie)`,
+      key: null, builtIn: false,
+      feltColor: src.feltColor, feltEdgeColor: src.feltEdgeColor ?? null,
+      railColor: src.railColor, accentColor: src.accentColor ?? null,
+      status: 'draft', active: false,
+      order: count,
+    });
+    await logAudit(req.adminId!, 'tableTheme.clone', String(doc._id), { before: { source: String(src._id) }, after: { name: doc.name } });
     res.json({ theme: withColors(doc.toObject()) });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

@@ -94,7 +94,7 @@ export class MatchFormatConfigService {
         manches: 2, baseTarget: 1500, labelTarget: 2000,
         // v17 — règles de belote configurables (valeurs standard par défaut).
         openingBidMin: 90, countBelote: true, clockwise: false,
-        color: d.color, icon: d.icon, active: true, order: d.order,
+        color: d.color, icon: d.icon, active: true, status: 'active', order: d.order,
         minLevel: 0, maxLevel: null,
       });
     }

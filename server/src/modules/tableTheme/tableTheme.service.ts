@@ -19,7 +19,7 @@ export class TableThemeService {
         name: t.name, key: t.key, builtIn: true,
         feltColor: t.feltColor, feltEdgeColor: t.feltEdgeColor ?? null,
         railColor: t.railColor, accentColor: t.accentColor ?? null,
-        active: true, order: t.order,
+        active: true, status: 'active', order: t.order,
       })),
     );
   }

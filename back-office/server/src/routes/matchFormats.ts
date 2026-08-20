@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
 import { aggregateVariantStats } from '../matchAnalytics.js';
+import { resolveStatus } from '../statusSync.js';
 
 const router = Router();
 
@@ -141,7 +142,8 @@ router.post('/', async (req: AdminRequest, res) => {
       clockwise: b.clockwise === true,
       // v18 — thème de table.
       tableThemeId: /^[0-9a-fA-F]{24}$/.test(String(b.tableThemeId ?? '')) ? b.tableThemeId : null,
-      active: b.active !== false,
+      // v18 — statut éditorial (défaut brouillon à la création via l'interface dédiée).
+      ...resolveStatus({ status: b.status, active: b.active }, { status: 'draft', active: false }),
       order: num(b.order, 0, 999, count),
     });
     await logAudit(req.adminId!, 'matchFormat.create', String(cfg._id), { after: { format, label: cfg.label, buyInPerPlayer: cfg.buyInPerPlayer } });
@@ -175,13 +177,50 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (countBelote !== undefined) cfg.countBelote = !!countBelote;
     if (clockwise !== undefined) cfg.clockwise = !!clockwise;
     if (tableThemeId !== undefined) cfg.tableThemeId = /^[0-9a-fA-F]{24}$/.test(String(tableThemeId ?? '')) ? tableThemeId : null;
-    if (active !== undefined) cfg.active = !!active;
+    // v18 — statut éditorial ⇆ active synchronisés.
+    if ((req.body.status !== undefined) || (active !== undefined)) {
+      const s = resolveStatus({ status: req.body.status, active }, { status: cfg.status, active: cfg.active });
+      cfg.status = s.status; cfg.active = s.active;
+    }
     if (order !== undefined) cfg.order = num(order, 0, 999, cfg.order);
     await cfg.save();
 
     await logAudit(req.adminId!, 'matchFormat.update', String(cfg._id), {
       after: { buyInPerPlayer: cfg.buyInPerPlayer, prizePerWinner: cfg.prizePerWinner, manches: cfg.manches, minLevel: cfg.minLevel, active: cfg.active },
     });
+    res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// v18 — Variante brute par _id (pour l'écran d'édition dédié).
+router.get('/:id/raw', async (req, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const cfg: any = await Model.findById(req.params.id).lean();
+    if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+    res.json({ format: { ...cfg, houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// v18 — Cloner une variante : copie tous les réglages, statut brouillon.
+router.post('/:id/clone', async (req: AdminRequest, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const src: any = await Model.findById(req.params.id).lean();
+    if (!src) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+    const { _id, createdAt, updatedAt, __v, ...rest } = src;
+    const count = await Model.countDocuments({ format: src.format });
+    const cfg = await Model.create({
+      ...rest,
+      label: `${src.label} (copie)`,
+      status: 'draft', active: false,
+      order: count,
+    });
+    await logAudit(req.adminId!, 'matchFormat.clone', String(cfg._id), { before: { source: String(src._id) }, after: { label: cfg.label } });
     res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

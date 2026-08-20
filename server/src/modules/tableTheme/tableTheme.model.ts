@@ -22,6 +22,8 @@ const TableThemeSchema = new Schema(
     railColor: { type: String, required: true },       // bordure / rail
     accentColor: { type: String, default: null },      // liseré / or ; null = auto
     active: { type: Boolean, default: true, index: true },
+    /** v18 — cycle de vie éditorial : brouillon → prêt → publié. */
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
     order: { type: Number, default: 0 },
   },
   { timestamps: true },

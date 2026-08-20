@@ -21,6 +21,8 @@ export interface MatchFormatConfig {
   clockwise?: boolean;
   tableThemeId?: string | null;
   active: boolean;
+  /** v18 — cycle de vie : brouillon / prêt / publié. */
+  status?: 'draft' | 'pending' | 'active';
   order: number;
   houseNet?: number;
 }
@@ -35,12 +37,20 @@ export class MatchFormatService {
     return this.http.get<{ formats: MatchFormatConfig[] }>(this.apiUrl);
   }
 
+  get(id: string) {
+    return this.http.get<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}/raw`);
+  }
+
   create(data: { format: string } & Partial<Omit<MatchFormatConfig, 'format'>>) {
     return this.http.post<{ format: MatchFormatConfig }>(this.apiUrl, data);
   }
 
   update(id: string, data: Partial<MatchFormatConfig>) {
     return this.http.put<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}`, data);
+  }
+
+  clone(id: string) {
+    return this.http.post<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}/clone`, {});
   }
 
   delete(id: string) {
