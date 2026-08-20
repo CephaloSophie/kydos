@@ -93,6 +93,11 @@ export class MatchLiveService {
     const owner = match.participants.find((p: any) => p.isHuman)?.userId
       ?? match.participants[0]?.userId;
 
+    // v18 — thème de table : résolu en couleurs concrètes et posé sur la config
+    // pour que le mobile l'affiche directement (feutre + bordure).
+    const { tableThemeService } = await import('../tableTheme/tableTheme.service.js');
+    const themeColors = await tableThemeService.resolveColorsById(configOverride?.tableThemeId ?? null);
+
     const table = await TableModel.create({
       status: 'lobby',
       kind: FORMAT_TO_KIND[format],
@@ -110,6 +115,9 @@ export class MatchLiveService {
         openingBidMin: configOverride?.openingBidMin > 0 ? configOverride!.openingBidMin : 90,
         countBelote: configOverride?.countBelote !== false,
         clockwise: configOverride?.clockwise === true,
+        // v18 — thème de table (id + couleurs résolues).
+        tableThemeId: configOverride?.tableThemeId ?? null,
+        themeColors,
         trickDelayMs: configOverride?.trickDelayMs ?? 900,
         speed: configOverride?.speed ?? 1,
         feltTheme: configOverride?.feltTheme ?? 'classic',

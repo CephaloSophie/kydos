@@ -155,6 +155,8 @@ export class MatchmakingService {
         manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
         // v17 — règles de belote configurables de la variante.
         openingBidMin: eff.openingBidMin, countBelote: eff.countBelote, clockwise: eff.clockwise,
+        // v18 — thème de table de la variante.
+        tableThemeId: eff.tableThemeId,
       });
       // Passe le match en RUNNING dès que la table est prête. Les joueurs
       // peuvent se connecter ; liveGameService.launch se déclenchera quand

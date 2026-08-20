@@ -29,6 +29,8 @@ export interface EffectiveMatchConfig {
   openingBidMin: number;
   countBelote: boolean;
   clockwise: boolean;
+  // v18 — thème de table (bibliothèque back-office), null = défaut.
+  tableThemeId: string | null;
   houseRake: number;                 // recalculé : collecté − payé
   color: string;
   icon: string;
@@ -153,6 +155,7 @@ export class MatchFormatConfigService {
       openingBidMin: cfg?.openingBidMin ?? 90,
       countBelote: cfg?.countBelote !== false,
       clockwise: cfg?.clockwise === true,
+      tableThemeId: cfg?.tableThemeId ? String(cfg.tableThemeId) : null,
       houseRake,
       color: cfg?.color ?? d.color,
       icon: cfg?.icon ?? d.icon,

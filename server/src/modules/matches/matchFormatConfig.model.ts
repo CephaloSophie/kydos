@@ -35,6 +35,8 @@ const MatchFormatConfigSchema = new Schema(
     /** Habillage carte (mobile). */
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },
+    /** v18 — thème de table (bibliothèque back-office) appliqué au match. */
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
     /** v16 — Critère d'accès : niveau requis (min) et plafond (max, null = aucun). */
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },

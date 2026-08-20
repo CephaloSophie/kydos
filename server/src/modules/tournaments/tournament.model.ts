@@ -175,6 +175,8 @@ const TournamentGameConfigSchema = new Schema(
     turnTimeoutMs: { type: Number, default: 15000 },
     allowSpectators: { type: Boolean, default: true },
     feltTheme: { type: String, enum: ['classic', 'cosmos', 'olympus'], default: 'classic' },
+    // v18 — thème de table (bibliothèque back-office), appliqué à chaque match.
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
     signals: {
       reflexion: { type: Boolean, default: true },
       repeatSuit: { type: Boolean, default: true },

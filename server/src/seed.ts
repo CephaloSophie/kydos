@@ -279,6 +279,11 @@ export async function seedDatabase() {
   await matchFormatConfigService.ensureSeeded();
   console.log('[seed] config des 3 MATCH RAPIDE initialisee (editable au back-office)');
 
+  // -- 13. Bibliotheque de themes de table (v18) --
+  const { tableThemeService } = await import('./modules/tableTheme/tableTheme.service.js');
+  await tableThemeService.ensureSeeded();
+  console.log('[seed] 6 themes de table intgres initialises (editable au back-office)');
+
   console.log('\n[seed] termine  -  joueur : ameur / belote123 . back-office : ameur (admin)');
 }
 

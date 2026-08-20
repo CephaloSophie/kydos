@@ -19,6 +19,7 @@ export const routes: Routes = [
       { path: 'accounting', loadComponent: () => import('./pages/accounting/accounting.component').then(m => m.AccountingComponent) },
       { path: 'monitor', loadComponent: () => import('./pages/monitor/monitor.component').then(m => m.MonitorComponent) },
       { path: 'match-formats', loadComponent: () => import('./pages/match-formats/match-formats.component').then(m => m.MatchFormatsComponent) },
+      { path: 'table-themes', loadComponent: () => import('./pages/table-themes/table-themes.component').then(m => m.TableThemesComponent) },
       { path: 'help', loadComponent: () => import('./pages/help/help.component').then(m => m.HelpComponent) },
     ],
   },

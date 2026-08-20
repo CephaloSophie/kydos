@@ -16,6 +16,7 @@ import promoRoutes from './routes/promos.js';
 import monitorRoutes from './routes/monitor.js';
 import auditRoutes from './routes/audit.js';
 import matchFormatRoutes from './routes/matchFormats.js';
+import tableThemeRoutes from './routes/tableThemes.js';
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://root:toor@127.0.0.1:27017/belote15?authSource=admin';
 const PORT = parseInt(process.env.ADMIN_PORT || '3001');
@@ -41,6 +42,7 @@ app.use('/admin/promos', requireAdmin, promoRoutes);
 app.use('/admin/monitor', requireAdmin, monitorRoutes);
 app.use('/admin/audit', requireAdmin, auditRoutes);
 app.use('/admin/match-formats', requireAdmin, matchFormatRoutes);
+app.use('/admin/table-themes', requireAdmin, tableThemeRoutes);
 
 app.get('/admin/health', (_req, res) => {
   res.json({ status: 'ok', mongo: mongoose.connection.readyState === 1 });

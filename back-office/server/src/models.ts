@@ -353,12 +353,30 @@ const MatchFormatConfigSchema = new Schema(
     openingBidMin: { type: Number, default: 90 },
     countBelote: { type: Boolean, default: true },
     clockwise: { type: Boolean, default: false },
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
     active: { type: Boolean, default: true, index: true },
     order: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 mongoose.models.MatchFormatConfig ?? model('MatchFormatConfig', MatchFormatConfigSchema);
+
+/* ── Bibliothèque de thèmes de table (v18) ────────────────────────────────── */
+const TableThemeSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    key: { type: String, default: null, index: true },
+    builtIn: { type: Boolean, default: false, index: true },
+    feltColor: { type: String, required: true },
+    feltEdgeColor: { type: String, default: null },
+    railColor: { type: String, required: true },
+    accentColor: { type: String, default: null },
+    active: { type: Boolean, default: true, index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.TableTheme ?? model('TableTheme', TableThemeSchema);
 
 const PromoCodeSchema = new Schema(
   {

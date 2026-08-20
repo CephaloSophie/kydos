@@ -48,6 +48,8 @@ export default defineConfig({
           'src/modules/tournaments/activeEngagement.test.ts',
           // v16 : lecture pure de autoRejoinSec (MatchFormatConfig).
           'src/modules/matchmaking/matchmaking.autoRejoin.test.ts',
+          // v18 : résolution pure des couleurs de thème de table.
+          'src/modules/tableTheme/tableTheme.colors.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',
