@@ -162,7 +162,11 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
             <input type="checkbox" [(ngModel)]="form.gameConfig.countBelote" id="belote" />
             <label for="belote" style="margin: 0">Compter la belote dans le score (+20)</label>
           </div>
-          <div class="form-group"></div>
+          <div class="form-group">
+            <label>Coefficient de score</label>
+            <input type="number" [(ngModel)]="form.gameConfig.scoreCoefficient" min="0.1" max="100" step="0.1" />
+            <small class="hint">Multiplie le score Kýdos gagné dans ce tournoi (1 = standard).</small>
+          </div>
         </div>
 
         <h3 style="margin: 20px 0 12px">Prix par position</h3>
@@ -285,6 +289,7 @@ export class TournamentFormComponent implements OnInit {
       openingBidMin: 90,
       countBelote: true,
       clockwise: false,
+      scoreCoefficient: 1,
       roundCountdownSec: 10,
       autoRejoinSec: 5,
       turnTimeoutMs: 15000,
@@ -333,6 +338,7 @@ export class TournamentFormComponent implements OnInit {
             openingBidMin: t.gameConfig?.openingBidMin ?? 90,
             countBelote: t.gameConfig?.countBelote !== false,
             clockwise: t.gameConfig?.clockwise === true,
+            scoreCoefficient: t.gameConfig?.scoreCoefficient ?? 1,
             roundCountdownSec: t.gameConfig?.roundCountdownSec ?? 10,
             autoRejoinSec: t.gameConfig?.autoRejoinSec ?? 5,
             turnTimeoutMs: t.gameConfig?.turnTimeoutMs ?? 15000,

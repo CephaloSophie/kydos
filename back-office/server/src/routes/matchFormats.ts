@@ -140,6 +140,8 @@ router.post('/', async (req: AdminRequest, res) => {
       openingBidMin: num(b.openingBidMin, 80, 180, 90),
       countBelote: b.countBelote !== false,
       clockwise: b.clockwise === true,
+      // v19 — coefficient de score de la variante (barème Kýdos).
+      scoreCoefficient: num(b.scoreCoefficient, 0.1, 100, 1),
       // v18 — thème de table.
       tableThemeId: /^[0-9a-fA-F]{24}$/.test(String(b.tableThemeId ?? '')) ? b.tableThemeId : null,
       // v18 — statut éditorial (défaut brouillon à la création via l'interface dédiée).
@@ -160,7 +162,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     const cfg = await Model.findById(req.params.id) as any;
     if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
 
-    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, openingBidMin, countBelote, clockwise, tableThemeId, active, order } = req.body;
+    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, openingBidMin, countBelote, clockwise, scoreCoefficient, tableThemeId, active, order } = req.body;
     if (label !== undefined) cfg.label = String(label);
     if (subtitle !== undefined) cfg.subtitle = String(subtitle);
     if (buyInPerPlayer !== undefined) cfg.buyInPerPlayer = num(buyInPerPlayer, 0, 1_000_000, cfg.buyInPerPlayer);
@@ -176,6 +178,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (openingBidMin !== undefined) cfg.openingBidMin = num(openingBidMin, 80, 180, cfg.openingBidMin ?? 90);
     if (countBelote !== undefined) cfg.countBelote = !!countBelote;
     if (clockwise !== undefined) cfg.clockwise = !!clockwise;
+    if (scoreCoefficient !== undefined) cfg.scoreCoefficient = num(scoreCoefficient, 0.1, 100, cfg.scoreCoefficient ?? 1);
     if (tableThemeId !== undefined) cfg.tableThemeId = /^[0-9a-fA-F]{24}$/.test(String(tableThemeId ?? '')) ? tableThemeId : null;
     // v18 — statut éditorial ⇆ active synchronisés.
     if ((req.body.status !== undefined) || (active !== undefined)) {

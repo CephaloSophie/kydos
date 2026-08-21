@@ -289,6 +289,11 @@ export async function seedDatabase() {
   await robotAvatarService.ensureSeeded();
   console.log('[seed] 5 avatars de robots intgres initialises (editable au back-office)');
 
+  // -- 15. Modele UNIQUE de score & niveau (v19) : document singleton par defaut --
+  const { scoreConfigService } = await import('./modules/scoreConfig/scoreConfig.service.js');
+  await scoreConfigService.ensureSeeded();
+  console.log('[seed] modele de score & niveau initialise (editable au back-office)');
+
   console.log('\n[seed] termine  -  joueur : ameur / belote123 . back-office : ameur (admin)');
 }
 

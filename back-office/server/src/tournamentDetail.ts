@@ -58,6 +58,8 @@ export interface GameConfigInput {
   manches?: unknown; baseTarget?: unknown; labelTarget?: unknown;
   // v17 — règles de belote configurables.
   openingBidMin?: unknown; countBelote?: unknown; clockwise?: unknown;
+  // v19 — coefficient de score de la partie (barème Kýdos).
+  scoreCoefficient?: unknown;
   roundCountdownSec?: unknown; autoRejoinSec?: unknown;
   trickDelayMs?: unknown; speed?: unknown; turnTimeoutMs?: unknown;
   allowSpectators?: unknown; feltTheme?: unknown;
@@ -87,6 +89,8 @@ export function sanitizeGameConfig(raw: GameConfigInput | null | undefined) {
     openingBidMin: clamp(g.openingBidMin, 80, 180, 90),
     countBelote: g.countBelote !== false,
     clockwise: g.clockwise === true,
+    // v19 — coefficient de score (0.1 à 100, défaut 1).
+    scoreCoefficient: clamp(g.scoreCoefficient, 0.1, 100, 1),
     // v18 — thème de table (null = défaut).
     tableThemeId: asObjectId(g.tableThemeId),
     roundCountdownSec: clamp(g.roundCountdownSec, 0, 300, 10),

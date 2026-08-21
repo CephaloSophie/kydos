@@ -55,6 +55,8 @@ export default defineConfig({
           // v18 : déblocage des avatars par niveau.
           'src/modules/robotAvatar/robotAvatar.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
+          // v19 : classification pure du type de jeu (coefficient de score).
+          'src/modules/scoreConfig/scoreConfig.classify.test.ts',
         ],
     environment: 'node',
     testTimeout: 15000,

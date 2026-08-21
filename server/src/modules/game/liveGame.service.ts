@@ -36,6 +36,8 @@ interface LiveGame {
   themeColors: Record<string, string> | null;
   /** v18 — face d'avatar (couleurs de mascotte) par siège robot, sinon null. */
   avatarBySeat: (RobotFace | null)[];
+  /** v19 — coefficient de score de la partie (barème Kýdos). Défaut 1. */
+  scoreCoefficient: number;
   participants: PersistenceParticipant[];
   robotBrains: (RobotAlgorithm | null)[];
   robots: (RobotConfig | null)[];
@@ -175,6 +177,8 @@ export class LiveGameService {
       rules: contreeRules,
       themeColors,
       avatarBySeat,
+      // v19 — coefficient de score porté par la config de table (défaut 1).
+      scoreCoefficient: typeof cfg.scoreCoefficient === 'number' && Number.isFinite(cfg.scoreCoefficient) ? cfg.scoreCoefficient : 1,
       participants,
       robotBrains,
       robots,
@@ -480,6 +484,8 @@ export class LiveGameService {
       logs: liveGame.logs.slice(-500),
       substituteSeats: liveGame.substituteSeats,
       events: liveGame.events ?? [],
+      // v19 — coefficient de score de la partie (barème Kýdos).
+      scoreCoefficient: liveGame.scoreCoefficient,
     });
 
     await TableModel.findByIdAndUpdate(tableId, { $set: { status: 'finished', activeSession: sessionId } });

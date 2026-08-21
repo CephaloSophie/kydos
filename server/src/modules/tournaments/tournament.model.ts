@@ -166,6 +166,8 @@ const TournamentGameConfigSchema = new Schema(
     openingBidMin: { type: Number, default: 90 },  // score initial des enchères (minBid)
     countBelote: { type: Boolean, default: true }, // belote comptée dans le score ?
     clockwise: { type: Boolean, default: false },  // sens du jeu (true = horaire)
+    // v19 — coefficient de SCORE appliqué à chaque match du tournoi (défaut 1).
+    scoreCoefficient: { type: Number, default: 1 },
     // v16 — compte à rebours (s) avant le démarrage de chaque match/round.
     roundCountdownSec: { type: Number, default: 10 },
     // v16 — délai (s) avant la redirection auto du joueur depuis la popup LIVE.

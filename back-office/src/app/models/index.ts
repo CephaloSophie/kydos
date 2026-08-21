@@ -45,6 +45,8 @@ export interface TournamentGameConfig {
   countBelote: boolean;
   /** v17 — sens du jeu (false = antihoraire, true = horaire). */
   clockwise: boolean;
+  /** v19 — coefficient de score de la partie (barème Kýdos), défaut 1. */
+  scoreCoefficient: number;
   roundCountdownSec: number;
   autoRejoinSec: number;
   trickDelayMs: number;

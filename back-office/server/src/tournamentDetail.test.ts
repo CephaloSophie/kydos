@@ -27,6 +27,7 @@ describe('sanitizeGameConfig', () => {
       openingBidMin: 90,
       countBelote: true,
       clockwise: false,
+      scoreCoefficient: 1,
       tableThemeId: null,
       roundCountdownSec: 10,
       autoRejoinSec: 5,

@@ -361,3 +361,49 @@ Et pour un **robot** : rien ne s'écrit sur son document `Robot`. Sa « progress
 - `mobile/src/domain/entities/Robot.ts` — `elo`, `games`, `wins`, `winRate` (défauts locaux).
 - `mobile/src/data/RobotRepository.ts` — `toDomain` (elo=1000, games=0, wins=0 en dur).
 - `mobile/src/services/wallet.ts` — lecture wallet + fallback local.
+
+---
+
+## 11. Mise à jour v19 — Modèle UNIQUE `ScoreKydos` (centralisé, back-office)
+
+Depuis la v19, le calcul du score & du niveau — pour **joueurs ET robots** — passe
+par un **modèle unique** édité au back-office et appliqué partout. Il remplace
+l'ancien `computeReward` (couche B) dans le chemin de persistance, et redéfinit
+le niveau (fin de l'ancien `1 + floor(score/100)`).
+
+### Cœur pur (belote-core)
+`packages/core/src/scoring/scoreKydos.ts` — 100 % pur, testé :
+- `computeScoreGain(config, {isRobot, partieCoefficient, gameTypeCoefficient, tokensAccumulated})`
+  → `base(joueur|robot) × coefPartie × coefTypeJeu + tokenScorePercent % des jetons` (borné ≥ 0).
+- `buildLevelTable(config)` — échelle géométrique : incrément niveau _n_ = `firstLevelThreshold × (1+pct)^(n-1)`,
+  surcharges manuelles possibles. Défaut : 500 pts, +8 %/niveau (niveau 2 à 500, niveau 3 à 1040).
+- `levelForScore(config, score)` → `{ level, pointsInLevel, pointsToNext, ratio }`.
+- `diagnoseScoreKydos(config)` — détecte incohérences (échelle non croissante, valeurs
+  négatives, pourcentages irréalistes, coefficients ≤ 0, surcharges hors bornes, redondances).
+
+### Configuration (singleton)
+`ScoreConfig` (`server/.../scoreConfig/scoreConfig.model.ts`, miroir back-office `models.ts`),
+document unique `key:'default'`. Champs : `baseWinnerPlayer`, `baseWinnerRobot`,
+`firstLevelThreshold`, `levelUpPercent`, `maxLevel`, `tokenScorePercent`,
+`gameTypeCoefficients` (`${catégorie}:${genre}` → coef, défaut 1), `levelOverrides[]`.
+
+### Coefficient par partie/tournoi
+`scoreCoefficient` (défaut 1) ajouté à : `Table.config`, `Tournament.gameConfig`,
+`MatchFormatConfig`. Propagé jusqu'à `persistFinishedGame` via la table live / les runners.
+
+### Attribution (chemin unique et sûr)
+`gamePersistence.awardKydosScores` — pour chaque **siège gagnant** (hors mode `local`) :
+gain via `computeScoreGain`, `$inc` du score cumulé (`User.rewardPoints` / `Robot.score`),
+puis dérivation et écriture de `level` + `scoreInLevel`. Chaque écriture est isolée.
+Catégorie de jeu classée par `classifyGameCategory` (tournoi > équipe/compétition > robot > rapide).
+
+### Nouveaux champs persistés
+- `User` : `level`, `scoreInLevel` (score cumulé = `rewardPoints`).
+- `Robot` : `score`, `level`, `scoreInLevel` (comble l'absence de cumul relevée au §9-2).
+- Le niveau (`computePlayerLevel`) et le profil (`getPublicProfile`) dérivent désormais
+  du modèle (config live), corrigeant les points §9-3/§9-4.
+
+### Gestion back-office
+Route `/admin/score-config` (GET / POST preview / PUT) + page Angular « Score & niveaux » :
+édition groupée, **diagnostic en direct**, aperçu de l'échelle et exemples de gain.
+La sauvegarde est **refusée tant qu'il subsiste une erreur** de diagnostic.

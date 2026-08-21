@@ -27,3 +27,7 @@ export type { RulesConfig } from '../rules/RulesConfig';
 // Statistiques détaillées de partie (dérivées du replay) — SPEC §3.10.
 export { computeGameStats } from './GameStats';
 export type { GameStats, DonneStat } from './GameStats';
+
+// Modèle UNIQUE et central de score & niveau (barème de gain, échelle de
+// niveaux, diagnostic). Édité au back-office, appliqué partout.
+export * from './scoreKydos';

@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-import { computeReward, computeGameStats, type GameEngine, type Seat } from 'belote-core';
+import { computeGameStats, computeScoreGain, gameTypeCoefficient, levelForScore, type GameEngine, type GameKind, type Seat } from 'belote-core';
 import { deriveExtraStats, replayDurationMs } from './gameTracking.js';
+import { scoreConfigService, classifyGameCategory } from '../scoreConfig/scoreConfig.service.js';
 import { GameModel } from './game.model.js';
 import { GameReplayModel } from './gameReplay.model.js';
 import { SessionModel } from './session.model.js';
@@ -51,6 +52,11 @@ export class GamePersistenceService {
     substituteSeats: Set<number>;
     /** Piste enrichie (smileys, réflexions...) — SPEC §3.10. */
     events?: { type: string; at: number; seat: number; data: unknown }[];
+    /**
+     * v19 — Coefficient de SCORE de la partie/tournoi (défaut 1). Multiplie le
+     * score Kýdos gagné par les vainqueurs (voir belote-core `scoreKydos`).
+     */
+    scoreCoefficient?: number;
   }) {
     const { engine, tableId, sessionId, ownerId, teamId, visibility, participants, logs, substituteSeats } = params;
     const winner = engine.partieWinner ?? null;
@@ -143,30 +149,21 @@ export class GamePersistenceService {
       projection: { status: 'pending', version: 0, at: null },
     });
 
-    // 4. Session + récompenses.
+    // 4. Session + comptage des parties jouées (tous les humains).
     if (sessionId) {
       await SessionModel.findByIdAndUpdate(sessionId, { $set: { game: gameDocument._id, status: 'finished', finishedAt: new Date() } });
     }
-    const finalManche = engine.manches[engine.manches.length - 1];
     for (const participant of participants) {
-      if (participant.type !== 'human' || !participant.userId) continue;
-      const teamLetter = teamLetterOfSeat(participant.seat);
-      const opponentLetter = teamLetter === 'A' ? 'B' : 'A';
-      const reward = computeReward({
-        myScore: finalManche.cumulative[teamLetter],
-        oppScore: finalManche.cumulative[opponentLetter],
-        wonManche: finalManche.winner === teamLetter,
-        mancheTarget: finalManche.target as 1500 | 2000,
-        wonPartie: winner === teamLetter,
-        partieManches: engine.manches.length as 1 | 2 | 4,
-        advDedans: 0, capotsDeclaresRealises: 0, contreesGagnees: 0, surcontreesGagnees: 0, local: false,
-      });
-      await UserModel.findByIdAndUpdate(participant.userId, { $inc: { rewardPoints: reward.total, gamesPlayed: 1 } });
+      if (participant.type === 'human' && participant.userId) {
+        await UserModel.findByIdAndUpdate(participant.userId, { $inc: { gamesPlayed: 1 } });
+      }
     }
 
     // 4bis. ÉCONOMIE — versement des gains selon le mode (SPEC §3.9).
     //   Local (entraînement) : gratuit.
     //   Online / Compétition : payouts calculés par `payoutsByUser`.
+    // On capture aussi les jetons gagnés par joueur (bonus de score éventuel).
+    const payouts = new Map<string, number>();
     if (params.mode !== 'local') {
       // Résolution des propriétaires de robots pour le calcul des gains.
       const robotIds = participants.filter((p) => p.type === 'robot' && p.robotId).map((p) => p.robotId!) as string[];
@@ -181,11 +178,17 @@ export class GamePersistenceService {
         robotOwnerUserId: p.type === 'robot' && p.robotId ? ownerByRobot.get(p.robotId) : undefined,
       }));
       const ctx: GameEconomyContext = { mode: params.mode ?? 'online', seats: seatsEconomy, winner };
-      const payouts = payoutsByUser(ctx);
-      for (const [userId, amount] of payouts.entries()) {
+      for (const [userId, amount] of payoutsByUser(ctx).entries()) {
+        payouts.set(userId, amount);
         try { await walletService.credit(userId, amount, String(gameDocument._id), 'game_win'); }
         catch (error) { logger.warn('échec versement gain', { userId, amount, error: String(error) }); }
       }
+    }
+
+    // 4ter. SCORE KÝDOS — modèle UNIQUE (barème de gain + échelle de niveaux),
+    // appliqué aux VAINQUEURS, joueurs ET robots. Aucun score en entraînement.
+    if (params.mode !== 'local' && winner) {
+      await this.awardKydosScores({ participants, winner, gameKind: params.kind, mode: params.mode, teamId, tournament: params.tournament ?? null, scoreCoefficient: params.scoreCoefficient ?? 1, payouts });
     }
 
     // Libération du verrou « une partie à la fois » pour tous les participants (SPEC §3.8).
@@ -196,6 +199,67 @@ export class GamePersistenceService {
 
     logger.info('partie persistée (agrégat + replay froid)', { game: String(gameDocument._id), manches: embeddedManches.length, winner });
     return { gameId: String(gameDocument._id), sessionId, winner };
+  }
+
+  /**
+   * Crédite le SCORE Kýdos aux vainqueurs via le modèle UNIQUE (belote-core
+   * `scoreKydos`). Pour chaque siège gagnant :
+   *   gain = base(joueur|robot) × coefPartie × coefTypeJeu (+ bonus jetons)
+   * On incrémente le score cumulé (User.rewardPoints / Robot.score) puis on
+   * dérive et rafraîchit `level` + `scoreInLevel` avec l'échelle de niveaux.
+   * Chaque écriture est isolée (un échec sur un siège n'empêche pas les autres).
+   */
+  private async awardKydosScores(ctx: {
+    participants: PersistenceParticipant[];
+    winner: 'A' | 'B';
+    gameKind?: 'hybride' | 'acier' | 'royal' | 'local';
+    mode?: 'local' | 'online' | 'competition';
+    teamId: string | null;
+    tournament: string | null;
+    scoreCoefficient: number;
+    payouts: Map<string, number>;
+  }): Promise<void> {
+    const config = await scoreConfigService.get();
+    const humanCount = ctx.participants.filter((p) => p.type === 'human').length;
+    const category = classifyGameCategory({
+      tournament: !!ctx.tournament,
+      competition: ctx.mode === 'competition',
+      team: !!ctx.teamId,
+      humanCount,
+    });
+    const kind: GameKind = ctx.gameKind === 'acier' || ctx.gameKind === 'royal' ? ctx.gameKind : 'hybride';
+    const partieCoef = ctx.scoreCoefficient;
+    const typeCoef = gameTypeCoefficient(config, category, kind);
+
+    // Recalcule et fige le niveau à partir d'un score total (source unique).
+    const levelFields = (total: number) => {
+      const p = levelForScore(config, total);
+      return { level: p.level, scoreInLevel: p.pointsInLevel };
+    };
+
+    for (const participant of ctx.participants) {
+      if (teamLetterOfSeat(participant.seat) !== ctx.winner) continue;
+      try {
+        if (participant.type === 'human' && participant.userId) {
+          const gain = computeScoreGain(config, {
+            isRobot: false, partieCoefficient: partieCoef, gameTypeCoefficient: typeCoef,
+            tokensAccumulated: ctx.payouts.get(participant.userId) ?? 0,
+          });
+          if (gain.total <= 0) continue;
+          const doc: any = await UserModel.findByIdAndUpdate(participant.userId, { $inc: { rewardPoints: gain.total } }, { new: true }).select('rewardPoints');
+          if (doc) await UserModel.updateOne({ _id: participant.userId }, { $set: levelFields(doc.rewardPoints ?? 0) });
+        } else if (participant.type === 'robot' && participant.robotId) {
+          const gain = computeScoreGain(config, {
+            isRobot: true, partieCoefficient: partieCoef, gameTypeCoefficient: typeCoef,
+          });
+          if (gain.total <= 0) continue;
+          const doc: any = await RobotModel.findByIdAndUpdate(participant.robotId, { $inc: { score: gain.total } }, { new: true }).select('score');
+          if (doc) await RobotModel.updateOne({ _id: participant.robotId }, { $set: levelFields(doc.score ?? 0) });
+        }
+      } catch (error) {
+        logger.warn('échec attribution score Kýdos', { seat: participant.seat, error: String(error) });
+      }
+    }
   }
 }
 
