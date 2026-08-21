@@ -382,6 +382,8 @@ const TableThemeSchema = new Schema(
     feltEdgeColor: { type: String, default: null },
     railColor: { type: String, required: true },
     accentColor: { type: String, default: null },
+    cardBackColor: { type: String, default: null },
+    cardBackColor2: { type: String, default: null },
     active: { type: Boolean, default: true, index: true },
     status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
     order: { type: Number, default: 0 },

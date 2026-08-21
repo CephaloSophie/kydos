@@ -154,7 +154,7 @@ export class LiveGameService {
     // v18 — thème de table (couleurs résolues) posé au provisionnement.
     const tc = (tableDocument.config?.themeColors ?? null) as any;
     const themeColors = tc && tc.felt1
-      ? { felt1: tc.felt1, felt2: tc.felt2, rail: tc.rail, railHi: tc.railHi, railLo: tc.railLo, railInner: tc.railInner, accent: tc.accent, accent2: tc.accent2 }
+      ? { felt1: tc.felt1, felt2: tc.felt2, rail: tc.rail, railHi: tc.railHi, railLo: tc.railLo, railInner: tc.railInner, accent: tc.accent, accent2: tc.accent2, backHi: tc.backHi, backLo: tc.backLo }
       : null;
 
     this.games.set(tableId, {

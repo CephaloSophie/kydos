@@ -256,14 +256,17 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   let melodyKind: string = onlineId ? 'default' : 'local';
   // v18 — override de thème (couleurs résolues du thème back-office), reçu via
   // la config de table du lobby. Converti hex string → hex number pour Pixi.
-  let themeOverrides: Record<string, number> | undefined;
+  let themeOverrides: Record<string, number | string> | undefined;
   const hexToNum = (s: string | null | undefined): number | null =>
     (typeof s === 'string' && /^#?[0-9a-fA-F]{6}$/.test(s)) ? parseInt(s.replace('#', ''), 16) : null;
-  const buildThemeOverrides = (colors: any): Record<string, number> | undefined => {
+  const buildThemeOverrides = (colors: any): Record<string, number | string> | undefined => {
     if (!colors) return undefined;
-    const keys = ['felt1', 'felt2', 'rail', 'railHi', 'railLo', 'railInner', 'accent', 'accent2'] as const;
-    const out: Record<string, number> = {};
-    for (const k of keys) { const n = hexToNum(colors[k]); if (n != null) out[k] = n; }
+    const numKeys = ['felt1', 'felt2', 'rail', 'railHi', 'railLo', 'railInner', 'accent', 'accent2'] as const;
+    const out: Record<string, number | string> = {};
+    for (const k of numKeys) { const n = hexToNum(colors[k]); if (n != null) out[k] = n; }
+    // v18 — dos des cartes : chaînes CSS (l'atlas dessine sur un canvas 2D).
+    if (typeof colors.backHi === 'string') out.backHi = colors.backHi;
+    if (typeof colors.backLo === 'string') out.backLo = colors.backLo;
     return Object.keys(out).length ? out : undefined;
   };
   root.addEventListener('pointerdown', () => {

@@ -38,6 +38,7 @@ function withColors(doc: any) {
     colors: resolveThemeColors({
       feltColor: doc.feltColor, feltEdgeColor: doc.feltEdgeColor,
       railColor: doc.railColor, accentColor: doc.accentColor,
+      cardBackColor: doc.cardBackColor, cardBackColor2: doc.cardBackColor2,
     }),
   };
 }
@@ -86,6 +87,8 @@ router.post('/', async (req: AdminRequest, res) => {
       feltEdgeColor: b.feltEdgeColor ? normalizeHex(b.feltEdgeColor, '#0f3f27') : null,
       railColor: normalizeHex(b.railColor, '#6b3a1a'),
       accentColor: b.accentColor ? normalizeHex(b.accentColor, '#f0c46a') : null,
+      cardBackColor: b.cardBackColor ? normalizeHex(b.cardBackColor, '#6b78ea') : null,
+      cardBackColor2: b.cardBackColor2 ? normalizeHex(b.cardBackColor2, '#2a3196') : null,
       // v18 — statut éditorial (défaut brouillon à la création).
       ...resolveStatus({ status: b.status, active: b.active }, { status: 'draft', active: false }),
       order: Number.isFinite(Number(b.order)) ? Number(b.order) : count,
@@ -109,6 +112,8 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (b.feltEdgeColor !== undefined) doc.feltEdgeColor = b.feltEdgeColor ? normalizeHex(b.feltEdgeColor, doc.feltEdgeColor) : null;
     if (b.railColor !== undefined) doc.railColor = normalizeHex(b.railColor, doc.railColor);
     if (b.accentColor !== undefined) doc.accentColor = b.accentColor ? normalizeHex(b.accentColor, doc.accentColor) : null;
+    if (b.cardBackColor !== undefined) doc.cardBackColor = b.cardBackColor ? normalizeHex(b.cardBackColor, doc.cardBackColor || '#6b78ea') : null;
+    if (b.cardBackColor2 !== undefined) doc.cardBackColor2 = b.cardBackColor2 ? normalizeHex(b.cardBackColor2, doc.cardBackColor2 || '#2a3196') : null;
     // v18 — statut éditorial ⇆ active synchronisés.
     if ((b.status !== undefined) || (b.active !== undefined)) {
       const s = resolveStatus({ status: b.status, active: b.active }, { status: doc.status, active: doc.active });
@@ -135,6 +140,7 @@ router.post('/:id/clone', async (req: AdminRequest, res) => {
       key: null, builtIn: false,
       feltColor: src.feltColor, feltEdgeColor: src.feltEdgeColor ?? null,
       railColor: src.railColor, accentColor: src.accentColor ?? null,
+      cardBackColor: src.cardBackColor ?? null, cardBackColor2: src.cardBackColor2 ?? null,
       status: 'draft', active: false,
       order: count,
     });

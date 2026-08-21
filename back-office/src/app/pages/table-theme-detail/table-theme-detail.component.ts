@@ -23,6 +23,7 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
         <div class="card">
           <div class="big-preview" [style.background]="gradient()" [style.borderColor]="t.colors?.rail || t.railColor">
             <div class="accent" [style.background]="t.colors?.accent || t.accentColor"></div>
+            <div class="card-back" [style.background]="cardBackGradient()"></div>
           </div>
         </div>
         <div class="card">
@@ -34,6 +35,7 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
             <div class="sw"><span class="dot" [style.background]="t.feltEdgeColor || t.colors?.felt2"></span> Bords {{ t.feltEdgeColor || '(auto)' }}</div>
             <div class="sw"><span class="dot" [style.background]="t.railColor"></span> Bordure {{ t.railColor }}</div>
             <div class="sw"><span class="dot" [style.background]="t.accentColor || t.colors?.accent"></span> Accent {{ t.accentColor || '(auto)' }}</div>
+            <div class="sw"><span class="dot" [style.background]="cardBackGradient()"></span> Dos des cartes</div>
           </div>
         </div>
       </div>
@@ -44,7 +46,9 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
     @media (max-width: 800px) { .detail-grid { grid-template-columns: 1fr; } }
     .big-preview { height: 260px; border-radius: 16px; border: 12px solid #6b3a1a; display: flex; align-items: center; justify-content: center; }
+    .big-preview { flex-direction: column; gap: 16px; }
     .accent { width: 55%; height: 10px; border-radius: 999px; opacity: 0.85; }
+    .card-back { width: 56px; height: 78px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 6px 14px rgba(0,0,0,0.4); }
     .info-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
     .info-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); }
     .swatches { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -71,6 +75,12 @@ export class TableThemeDetailComponent implements OnInit {
     const c1 = this.t.colors?.felt1 || this.t.feltColor;
     const c2 = this.t.colors?.felt2 || this.t.feltEdgeColor || this.t.feltColor;
     return `radial-gradient(120% 100% at 50% 42%, ${c1}, ${c2} 75%)`;
+  }
+  cardBackGradient(): string {
+    if (!this.t) return '';
+    const c1 = this.t.cardBackColor || this.t.colors?.backHi || '#6b78ea';
+    const c2 = this.t.cardBackColor2 || this.t.colors?.backLo || '#2a3196';
+    return `linear-gradient(180deg, ${c1}, ${c2})`;
   }
   statusLabel(): string {
     const s = this.t?.status ?? (this.t?.active ? 'active' : 'draft');

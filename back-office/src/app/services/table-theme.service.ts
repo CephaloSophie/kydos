@@ -6,6 +6,8 @@ export interface ResolvedThemeColors {
   felt1: string; felt2: string;
   rail: string; railHi: string; railLo: string; railInner: string;
   accent: string; accent2: string;
+  /** v18 — dos des cartes (dégradé haut/bas). */
+  backHi: string; backLo: string;
 }
 
 export interface TableTheme {
@@ -17,6 +19,9 @@ export interface TableTheme {
   feltEdgeColor?: string | null;
   railColor: string;
   accentColor?: string | null;
+  /** v18 — dos des cartes (dégradé haut/bas). */
+  cardBackColor?: string | null;
+  cardBackColor2?: string | null;
   active: boolean;
   /** v18 — cycle de vie : brouillon / prêt / publié. */
   status?: 'draft' | 'pending' | 'active';

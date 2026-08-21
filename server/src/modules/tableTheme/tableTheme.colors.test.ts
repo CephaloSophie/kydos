@@ -50,6 +50,18 @@ describe('resolveThemeColors', () => {
     expect(c.felt2).toBe('#001122');
   });
 
+  it('v18 — dos des cartes : défaut indigo, bas dérivé si absent', () => {
+    const c = resolveThemeColors({ feltColor: '#1a5c3a', railColor: '#6b3a1a' });
+    expect(c.backHi).toBe('#6b78ea');           // défaut indigo
+    expect(c.backLo).not.toBe(c.backHi);        // bas dérivé (assombri)
+  });
+
+  it('v18 — dos des cartes : couleurs explicites respectées', () => {
+    const c = resolveThemeColors({ feltColor: '#1a5c3a', railColor: '#6b3a1a', cardBackColor: '#112233', cardBackColor2: '#445566' });
+    expect(c.backHi).toBe('#112233');
+    expect(c.backLo).toBe('#445566');
+  });
+
   it('couleurs invalides → replis sûrs (jamais d\'exception)', () => {
     const c = resolveThemeColors({ feltColor: 'nope', railColor: 'nope' });
     expect(c.felt1).toBe('#1a5c3a');   // fallback feutre

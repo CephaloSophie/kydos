@@ -44,6 +44,8 @@ export class TableThemeService {
         feltEdgeColor: doc.feltEdgeColor,
         railColor: doc.railColor,
         accentColor: doc.accentColor,
+        cardBackColor: doc.cardBackColor,
+        cardBackColor2: doc.cardBackColor2,
       });
     } catch {
       return this.defaultColors();

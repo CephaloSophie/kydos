@@ -54,6 +54,8 @@ const TableConfigSchema = new Schema(
       rail: { type: String, default: null }, railHi: { type: String, default: null },
       railLo: { type: String, default: null }, railInner: { type: String, default: null },
       accent: { type: String, default: null }, accent2: { type: String, default: null },
+      // v18 — dos des cartes.
+      backHi: { type: String, default: null }, backLo: { type: String, default: null },
     },
     turnTimeoutMs: { type: Number, default: 10000 },
     surcoincheWindowMs: { type: Number, default: 3500 },

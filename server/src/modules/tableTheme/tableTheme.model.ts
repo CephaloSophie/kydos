@@ -21,6 +21,9 @@ const TableThemeSchema = new Schema(
     feltEdgeColor: { type: String, default: null },    // bords (dégradé) ; null = auto
     railColor: { type: String, required: true },       // bordure / rail
     accentColor: { type: String, default: null },      // liseré / or ; null = auto
+    // v18 — dos des cartes (dégradé haut/bas) ; null = indigo par défaut.
+    cardBackColor: { type: String, default: null },
+    cardBackColor2: { type: String, default: null },
     active: { type: Boolean, default: true, index: true },
     /** v18 — cycle de vie éditorial : brouillon → prêt → publié. */
     status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },

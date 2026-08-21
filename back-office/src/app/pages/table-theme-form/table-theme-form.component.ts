@@ -34,6 +34,8 @@ import { TableThemeService } from '../../services/table-theme.service';
         <div class="color-row"><span>Tapis (bords)</span><input type="color" [(ngModel)]="t.feltEdgeColor" /><code>{{ t.feltEdgeColor }}</code></div>
         <div class="color-row"><span>Bordure (rail)</span><input type="color" [(ngModel)]="t.railColor" /><code>{{ t.railColor }}</code></div>
         <div class="color-row"><span>Accent</span><input type="color" [(ngModel)]="t.accentColor" /><code>{{ t.accentColor }}</code></div>
+        <div class="color-row"><span>Dos carte (haut)</span><input type="color" [(ngModel)]="t.cardBackColor" /><code>{{ t.cardBackColor }}</code></div>
+        <div class="color-row"><span>Dos carte (bas)</span><input type="color" [(ngModel)]="t.cardBackColor2" /><code>{{ t.cardBackColor2 }}</code></div>
         <div class="actions-bar">
           <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editId ? 'Enregistrer' : 'Créer le thème' }}</button>
           <a routerLink="/table-themes" class="btn btn-secondary">Annuler</a>
@@ -43,8 +45,9 @@ import { TableThemeService } from '../../services/table-theme.service';
       <div class="card preview-card">
         <div class="table-preview" [style.background]="gradient()" [style.borderColor]="t.railColor">
           <div class="preview-accent" [style.background]="t.accentColor"></div>
+          <div class="card-back" [style.background]="cardBackGradient()"></div>
         </div>
-        <p class="hint">Aperçu du tapis et de la bordure.</p>
+        <p class="hint">Aperçu du tapis, de la bordure et du dos des cartes.</p>
       </div>
     </div>
   `,
@@ -59,8 +62,9 @@ import { TableThemeService } from '../../services/table-theme.service';
     .color-row code { font-size: 11px; color: var(--text-muted); }
     .actions-bar { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
     .err { color: var(--danger); font-size: 13px; }
-    .table-preview { height: 200px; border-radius: 14px; border: 10px solid #6b3a1a; display: flex; align-items: center; justify-content: center; }
+    .table-preview { height: 200px; border-radius: 14px; border: 10px solid #6b3a1a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
     .preview-accent { width: 60%; height: 8px; border-radius: 999px; opacity: 0.85; }
+    .card-back { width: 46px; height: 64px; border-radius: 7px; border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 4px 10px rgba(0,0,0,0.35); }
     .hint { color: var(--text-muted); font-size: 12px; margin-top: 10px; text-align: center; }
   `],
 })
@@ -68,7 +72,7 @@ export class TableThemeFormComponent implements OnInit {
   editId: string | null = null;
   saving = false;
   error = '';
-  t: any = { name: '', status: 'draft', feltColor: '#1a5c3a', feltEdgeColor: '#0f3f27', railColor: '#6b3a1a', accentColor: '#f0c46a' };
+  t: any = { name: '', status: 'draft', feltColor: '#1a5c3a', feltEdgeColor: '#0f3f27', railColor: '#6b3a1a', accentColor: '#f0c46a', cardBackColor: '#6b78ea', cardBackColor2: '#2a3196' };
 
   constructor(private svc: TableThemeService, private router: Router, private route: ActivatedRoute) {}
 
@@ -81,6 +85,8 @@ export class TableThemeFormComponent implements OnInit {
           name: th.name, status: th.status ?? (th.active ? 'active' : 'draft'),
           feltColor: th.feltColor, feltEdgeColor: th.feltEdgeColor || th.feltColor,
           railColor: th.railColor, accentColor: th.accentColor || '#f0c46a',
+          cardBackColor: th.cardBackColor || th.colors?.backHi || '#6b78ea',
+          cardBackColor2: th.cardBackColor2 || th.colors?.backLo || '#2a3196',
         };
       });
     }
@@ -88,6 +94,9 @@ export class TableThemeFormComponent implements OnInit {
 
   gradient(): string {
     return `radial-gradient(120% 100% at 50% 42%, ${this.t.feltColor}, ${this.t.feltEdgeColor || this.t.feltColor} 75%)`;
+  }
+  cardBackGradient(): string {
+    return `linear-gradient(180deg, ${this.t.cardBackColor || '#6b78ea'}, ${this.t.cardBackColor2 || '#2a3196'})`;
   }
 
   save() {

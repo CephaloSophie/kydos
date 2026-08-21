@@ -23,6 +23,13 @@ export interface ThemeColorInput {
   feltEdgeColor?: string | null;
   railColor: string;
   accentColor?: string | null;
+  /**
+   * v18 — Dos des cartes (affiché sur la table). `cardBackColor` = haut du
+   * dégradé, `cardBackColor2` = bas ; la rayure et la bordure en sont dérivées.
+   * Optionnels : défaut indigo historique.
+   */
+  cardBackColor?: string | null;
+  cardBackColor2?: string | null;
 }
 
 /** Jeu de couleurs résolu, consommé tel quel par le rendu Pixi (hex #rrggbb). */
@@ -30,6 +37,8 @@ export interface ResolvedThemeColors {
   felt1: string; felt2: string;
   rail: string; railHi: string; railLo: string; railInner: string;
   accent: string; accent2: string;
+  /** v18 — dos des cartes : dégradé (haut/bas), rayure, bordure. */
+  backHi: string; backLo: string;
 }
 
 const HEX_RE = /^#?[0-9a-fA-F]{6}$/;
@@ -80,6 +89,9 @@ export function resolveThemeColors(input: ThemeColorInput): ResolvedThemeColors 
   const felt2 = normalizeHex(input.feltEdgeColor ?? null, shade(felt1, -0.45));
   const rail = normalizeHex(input.railColor, '#6b3a1a');
   const accent = normalizeHex(input.accentColor ?? null, '#f0c46a');
+  // v18 — dos des cartes : défaut indigo historique ; bas dérivé du haut.
+  const backHi = normalizeHex(input.cardBackColor ?? null, '#6b78ea');
+  const backLo = normalizeHex(input.cardBackColor2 ?? null, shade(backHi, -0.55));
   return {
     felt1,
     felt2,
@@ -89,6 +101,8 @@ export function resolveThemeColors(input: ThemeColorInput): ResolvedThemeColors 
     railInner: shade(rail, -0.65),
     accent,
     accent2: shade(accent, 0.3),
+    backHi,
+    backLo,
   };
 }
 
