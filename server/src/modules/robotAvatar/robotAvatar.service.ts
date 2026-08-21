@@ -43,6 +43,39 @@ export class RobotAvatarService {
       minLevel: d.minLevel ?? 0, maxLevel: d.maxLevel ?? null,
     }));
   }
+
+  /**
+   * Résout les « faces » (couleurs accent/corps/contour) d'un lot de clés
+   * d'avatar — pour teinter la mascotte robot servie comme logo de siège dans
+   * la table Pixi. Repli sur les presets intégrés si la clé n'est pas en base.
+   */
+  async resolveFaces(keys: string[]): Promise<Map<string, RobotFace>> {
+    const wanted = [...new Set(keys.filter(Boolean))];
+    if (!wanted.length) return new Map();
+    await this.ensureSeeded();
+    const docs: any[] = await RobotAvatarModel.find({ key: { $in: wanted } }).lean();
+    return mergeFaces(wanted, docs);
+  }
+}
+
+export interface RobotFace { accentColor: string; bodyColor: string | null; outlineColor: string | null }
+
+/**
+ * PUR (testable) : associe chaque clé demandée à une face, en priorité depuis
+ * les documents en base, sinon depuis les presets intégrés. Les clés vides sont
+ * ignorées, les doublons dédoublonnés, les clés totalement inconnues absentes.
+ */
+export function mergeFaces(keys: string[], docs: Array<{ key: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null }>): Map<string, RobotFace> {
+  const wanted = [...new Set(keys.filter(Boolean))];
+  const byKey = new Map(docs.map((d) => [d.key, d]));
+  const out = new Map<string, RobotFace>();
+  for (const key of wanted) {
+    const d = byKey.get(key);
+    if (d) { out.set(key, { accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null }); continue; }
+    const preset = BUILTIN_AVATARS.find((a) => a.key === key);
+    if (preset) out.set(key, { accentColor: preset.accentColor, bodyColor: null, outlineColor: null });
+  }
+  return out;
 }
 
 export const robotAvatarService = new RobotAvatarService();

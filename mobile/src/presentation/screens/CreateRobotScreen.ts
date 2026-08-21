@@ -54,7 +54,7 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   const previewName = h('div', { class: 'title', style: { fontSize: '19px', color: '#fff' } }, draft.name);
   const previewPerso = Badge(personalityLabel(draft.strategy), 'gold');
   const mascotSlot = h('div', { class: 'robot--float' });
-  const renderMascot = () => { clear(mascotSlot); mascotSlot.append(RobotMascot(avatarFace(draft.avatarId), 108)); };
+  const renderMascot = () => { clear(mascotSlot); mascotSlot.append(RobotMascot(avatarFace(draft.avatarId), 88)); };
   renderMascot();
 
   const avatarRow = h('div', { class: 'row gap-2 wrap', style: { justifyContent: 'center', marginTop: '12px' } });
@@ -63,7 +63,7 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
     getAvatarList().forEach((a) => {
       const selected = a.key === draft.avatarId;
       const chip = h('button', {
-        class: 'avatar-pick',
+        class: 'avatar avatar-pick',
         title: a.name,
         style: {
           padding: '4px', borderRadius: '14px', cursor: 'pointer', lineHeight: '0',
@@ -71,7 +71,7 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
           border: selected ? `2px solid ${a.accentColor}` : '2px solid var(--c-line)',
         },
         onClick: () => { draft.avatarId = a.key; renderMascot(); renderAvatars(); },
-      }, RobotMascot({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 40));
+      }, RobotMascot({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 34));
       avatarRow.append(chip);
     });
   };

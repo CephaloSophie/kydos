@@ -4,6 +4,7 @@ import type { Bid, Card, EngineView, ScoreSummary, Seat } from 'belote-core';
 import { TableScene } from './scene';
 import { TableHud } from './hud';
 import { getTheme, themeCssVars, themeWith, type PixiTableTheme } from './theme';
+import type { RobotFace } from './robotMascot';
 import { enterFullscreen, exitFullscreen, isFullscreen, isPhone } from './fullscreen';
 import { loadAtlasFonts } from './scene/cardAtlas';
 import './styles/index.css';
@@ -13,6 +14,11 @@ export interface PixiTableProps {
   names: string[];
   /** Sièges VIP (halo doré autour du logo), indexé par siège absolu 0..3. */
   vipSeats?: boolean[];
+  /**
+   * Avatars robots par siège absolu 0..3 : la mascotte paramétrique (couleurs
+   * accent/corps/contour) sert de logo de siège. `null`/absent ⇒ pastille initiale.
+   */
+  avatars?: (RobotFace | null)[];
   hands: (Card[] | null)[];
   mySeat: Seat | null;
   legal?: Card[];
@@ -91,7 +97,7 @@ export function PixiTable(props: PixiTableProps) {
       await app.init({ antialias: true, backgroundAlpha: 0, resolution: window.devicePixelRatio || 1, autoDensity: true });
       if (disposed) { app.destroy(true); return; }
       host.appendChild(app.canvas);
-      const scene = new TableScene({ onPlay: (c) => onPlayRef.current?.(c) }, themeRef.current);
+      const scene = new TableScene({ onPlay: (c) => onPlayRef.current?.(c) }, themeRef.current, () => renderRef.current());
       app.stage.addChild(scene);
       appRef.current = app; sceneRef.current = scene;
       // La taille est pilotée par le HOST, mesuré directement : on ne dépend
@@ -172,7 +178,7 @@ export function PixiTable(props: PixiTableProps) {
     const scene = sceneRef.current; const app = appRef.current;
     if (!scene || !app || !app.renderer) return;
     applySize();
-    scene.update({ view, names, hands, legal, mySeat: (mySeat ?? 0) as Seat, showDemandeInPlay, showReflexion, partnerFaceDown: props.partnerFaceDown ?? true, vipSeats: props.vipSeats });
+    scene.update({ view, names, hands, legal, mySeat: (mySeat ?? 0) as Seat, showDemandeInPlay, showReflexion, partnerFaceDown: props.partnerFaceDown ?? true, vipSeats: props.vipSeats, avatars: props.avatars });
   };
   renderRef.current = renderScene;
   useEffect(renderScene);

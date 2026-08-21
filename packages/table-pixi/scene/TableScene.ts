@@ -3,6 +3,7 @@ import type { Card, EngineView, Seat } from 'belote-core';
 import type { PixiTableTheme } from '../theme';
 import { FeltLayer } from './FeltLayer';
 import { SeatsLayer, buildSeatModels } from './SeatsLayer';
+import type { RobotFace } from '../robotMascot';
 import { HandsLayer } from './HandsLayer';
 import { TrickLayer } from './TrickLayer';
 import { AnnouncesLayer } from './AnnouncesLayer';
@@ -16,6 +17,8 @@ export interface SceneState {
   /** In play mode the PARTNER's hand is always face-down (you never see your partner's cards). */
   partnerFaceDown?: boolean;
   vipSeats?: boolean[];
+  /** Avatars robots par siège absolu (mascotte utilisée comme logo de siège). */
+  avatars?: (RobotFace | null)[];
 }
 
 /**
@@ -33,10 +36,10 @@ export class TableScene extends Container {
   private w = 0; private h = 0;
   private _rect: Rect = { x: 0, y: 0, w: 0, h: 0, r: 0 };
 
-  constructor(private cb: SceneCallbacks, private theme: PixiTableTheme) {
+  constructor(private cb: SceneCallbacks, private theme: PixiTableTheme, redraw?: () => void) {
     super();
     this.felt = new FeltLayer(theme);
-    this.seats = new SeatsLayer(theme);
+    this.seats = new SeatsLayer(theme, redraw);
     this.hands = new HandsLayer(theme);
     this.trick = new TrickLayer(theme);
     this.announces = new AnnouncesLayer(theme);
@@ -87,7 +90,7 @@ export class TableScene extends Container {
     this.felt.layout(this._rect, this.w);
     this.felt.update(s.view.trump, this._rect);
     this.hands.update(s.hands, s.legal, s.view, s.mySeat, this._rect, this.atlas, cardW, (c) => this.cb.onPlay?.(c), s.partnerFaceDown ?? false);
-    this.seats.update(buildSeatModels(s.view, s.names, s.showDemandeInPlay, s.showReflexion ?? true, s.vipSeats), s.mySeat, this._rect, this.hands.metrics);
+    this.seats.update(buildSeatModels(s.view, s.names, s.showDemandeInPlay, s.showReflexion ?? true, s.vipSeats, s.avatars), s.mySeat, this._rect, this.hands.metrics);
     this.trick.update(s.view, s.mySeat, this._rect, this.atlas, cardW);
     this.announces.update(s.view, s.mySeat, this._rect, this.hands.metrics, s.showReflexion ?? true);
   }

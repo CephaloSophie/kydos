@@ -6,6 +6,7 @@ import {
 } from 'belote-core';
 import { TableModel } from '../table/table.model.js';
 import { RobotModel } from '../robot/robot.model.js';
+import { robotAvatarService, type RobotFace } from '../robotAvatar/robotAvatar.service.js';
 import { SessionModel } from './session.model.js';
 import { GameModel } from './game.model.js';
 import { gamePersistenceService, type PersistenceParticipant } from './gamePersistence.service.js';
@@ -33,6 +34,8 @@ interface LiveGame {
   rules: ContreeRules;
   /** v18 — couleurs du thème de table (envoyées au client avec l'état). */
   themeColors: Record<string, string> | null;
+  /** v18 — face d'avatar (couleurs de mascotte) par siège robot, sinon null. */
+  avatarBySeat: (RobotFace | null)[];
   participants: PersistenceParticipant[];
   robotBrains: (RobotAlgorithm | null)[];
   robots: (RobotConfig | null)[];
@@ -151,6 +154,16 @@ export class LiveGameService {
     const sessionDocument = await SessionModel.create({ table: tableId, status: 'running' });
     await TableModel.findByIdAndUpdate(tableId, { $set: { activeSession: sessionDocument._id } });
 
+    // v18 — face d'avatar par siège robot : la clé d'avatar (mobile.avatarId) de
+    // chaque robot est résolue en couleurs de mascotte, servies comme logo de siège.
+    const avatarKeyBySeat = tableDocument.seats.map((seat: any) => {
+      if (seat.kind !== 'robot') return null;
+      const robotDocument: any = robotById.get(String(seat.robot));
+      return (robotDocument?.mobile?.avatarId as string | undefined) ?? null;
+    });
+    const faceByKey = await robotAvatarService.resolveFaces(avatarKeyBySeat.filter(Boolean) as string[]);
+    const avatarBySeat: (RobotFace | null)[] = avatarKeyBySeat.map((key: string | null) => (key ? faceByKey.get(key) ?? null : null));
+
     // v18 — thème de table (couleurs résolues) posé au provisionnement.
     const tc = (tableDocument.config?.themeColors ?? null) as any;
     const themeColors = tc && tc.felt1
@@ -161,6 +174,7 @@ export class LiveGameService {
       engine,
       rules: contreeRules,
       themeColors,
+      avatarBySeat,
       participants,
       robotBrains,
       robots,
@@ -286,6 +300,8 @@ export class LiveGameService {
     const players = liveGame.participants.map((participant, i) => ({
       seat: i, name: engine.players[i]?.name ?? `Siège ${i + 1}`,
       type: participant.type, userId: participant.userId ?? null,
+      // v18 — face d'avatar du robot (couleurs de mascotte) pour le logo de siège.
+      avatar: liveGame.avatarBySeat[i] ?? null,
     }));
     // Nombre de spectateurs = abonnés non assis. Diffusé pour l'affichage.
     const spectatorCount = sockets.filter((sock) => this.seatOfUser(liveGame, sock.data.userId) == null).length;

@@ -19,7 +19,7 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
   const robotCard = (r: Robot) => h('div', { class: 'card' },
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', { class: 'row gap-3' },
-        RobotMascot(avatarFace(r.avatarId), 44),
+        RobotMascot(avatarFace(r.avatarId), 40),
         h('div', {},
           h('div', { class: 'title', style: { fontSize: '15px' } }, r.name),
           h('div', { class: 'mono', style: { fontSize: '9px', color: r.status === 'playing' ? 'var(--c-success)' : 'var(--c-text-mute)' } },
