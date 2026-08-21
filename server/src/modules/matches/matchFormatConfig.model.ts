@@ -28,14 +28,26 @@ const MatchFormatConfigSchema = new Schema(
     manches: { type: Number, enum: [1, 2, 4], default: 2 },
     baseTarget: { type: Number, default: 1500 },
     labelTarget: { type: Number, default: 2000 },
+    /** v17 — règles de belote configurables (voir TableConfigSchema). */
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
     /** Habillage carte (mobile). */
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },
+    /** v18 — thème de table (bibliothèque back-office) appliqué au match. */
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
     /** v16 — Critère d'accès : niveau requis (min) et plafond (max, null = aucun). */
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },
-    /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel. */
+    /** v16 — délai (s) avant redirection auto depuis la popup LIVE. */
+    autoRejoinSec: { type: Number, default: 5, min: 0 },
+    /** Actif = proposé aux joueurs ; ordre d'affichage dans le carrousel.
+     *  v18 — `active` reste la source de vérité pour l'app mobile ; il est
+     *  synchronisé avec `status` (active ⇔ status === 'active'). */
     active: { type: Boolean, default: true, index: true },
+    /** v18 — cycle de vie éditorial : brouillon → prêt → publié. */
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
     order: { type: Number, default: 0 },
   },
   { timestamps: true },

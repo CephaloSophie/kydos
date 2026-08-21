@@ -145,6 +145,11 @@ const StatsSubSchema = new Schema(
     capotsAnnoncesTotal: { type: Number, default: 0 },
     belotesA: { type: Number, default: 0 },
     belotesB: { type: Number, default: 0 },
+    // v18 — métriques enrichies.
+    totalTricks: { type: Number, default: 0 },
+    contractsMade: { type: Number, default: 0 },
+    contractsFailed: { type: Number, default: 0 },
+    avgContract: { type: Number, default: 0 },
   },
   { _id: false },
 );
@@ -155,12 +160,17 @@ const GameSchema = new Schema(
     session: { type: Schema.Types.ObjectId, ref: 'Session', default: null, index: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
+    // v18 — rattachement compétition.
+    match: { type: Schema.Types.ObjectId, ref: 'Match', default: null, index: true },
+    formatConfig: { type: Schema.Types.ObjectId, ref: 'MatchFormatConfig', default: null, index: true },
+    tournament: { type: Schema.Types.ObjectId, ref: 'Tournament', default: null, index: true },
     visibility: { type: String, enum: ['public', 'private', 'team'], default: 'private', index: true },
     mode: { type: String, enum: ['local', 'online', 'competition'], default: 'local' },
     kind: { type: String, enum: ['hybride', 'acier', 'royal', 'local'], default: 'local', index: true },
     target: { type: Number, default: 0 },
     winner: { type: String, enum: ['A', 'B', null], default: null },
     finishedAt: { type: Date, default: () => new Date() },
+    durationMs: { type: Number, default: 0 },
     participants: { type: [ParticipantSubSchema], default: [] },
     manches: { type: [MancheSubSchema], default: [] },
     finalScoreA: { type: Number, default: 0 },
@@ -228,6 +238,7 @@ const BracketMatchSchema = new Schema(
     scoreB: { type: Number, default: null },
     startedAt: { type: Date, default: null },
     finishedAt: { type: Date, default: null },
+    scheduledStartAt: { type: Date, default: null },
     nextMatchIndex: { type: Number, default: null },
     nextSlot: { type: String, enum: ['A', 'B', null], default: null },
   },
@@ -257,6 +268,11 @@ const TournamentGameConfigSchema = new Schema(
     manches: { type: Number, enum: [1, 2, 4], default: 2 },
     baseTarget: { type: Number, default: 1500 },
     labelTarget: { type: Number, default: 2000 },
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
+    roundCountdownSec: { type: Number, default: 10 },
+    autoRejoinSec: { type: Number, default: 5 },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     turnTimeoutMs: { type: Number, default: 15000 },
@@ -343,12 +359,55 @@ const MatchFormatConfigSchema = new Schema(
     icon: { type: String, default: '♦' },
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },
+    autoRejoinSec: { type: Number, default: 5, min: 0 },
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
     active: { type: Boolean, default: true, index: true },
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
     order: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 mongoose.models.MatchFormatConfig ?? model('MatchFormatConfig', MatchFormatConfigSchema);
+
+/* ── Bibliothèque de thèmes de table (v18) ────────────────────────────────── */
+const TableThemeSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    key: { type: String, default: null, index: true },
+    builtIn: { type: Boolean, default: false, index: true },
+    feltColor: { type: String, required: true },
+    feltEdgeColor: { type: String, default: null },
+    railColor: { type: String, required: true },
+    accentColor: { type: String, default: null },
+    cardBackColor: { type: String, default: null },
+    cardBackColor2: { type: String, default: null },
+    active: { type: Boolean, default: true, index: true },
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.TableTheme ?? model('TableTheme', TableThemeSchema);
+
+/* ── Catalogue d'avatars de robots (v18) ──────────────────────────────────── */
+const RobotAvatarSchema = new Schema(
+  {
+    key: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 40 },
+    accentColor: { type: String, required: true },
+    minLevel: { type: Number, default: 0, min: 0 },
+    maxLevel: { type: Number, default: null },
+    builtIn: { type: Boolean, default: false, index: true },
+    active: { type: Boolean, default: true, index: true },
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.RobotAvatar ?? model('RobotAvatar', RobotAvatarSchema);
 
 const PromoCodeSchema = new Schema(
   {

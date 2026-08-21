@@ -8,7 +8,8 @@
  * MOTEUR (1–10) sans en changer la sémantique ; `bluff` reste présentationnel.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { AVATAR_PRESETS, personalityLabel, type RobotStrategy } from '../../domain/entities/Robot';
+import { personalityLabel, type RobotStrategy } from '../../domain/entities/Robot';
+import { getAvatarList, avatarAccent, loadAvatarCatalog } from '../../data/AvatarCatalog';
 import { Robot, Avatar, Button, Badge, Slider, Dialog } from '../components/ui';
 import type { AppContext } from '../context';
 
@@ -23,6 +24,10 @@ const SLIDER_DEFS: { key: keyof RobotStrategy; label: string; fill: string }[] =
 
 export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   const { router, robotService } = ctx;
+
+  // v18 — s'assure que le catalogue d'avatars (back-office) est à jour, puis
+  // rafraîchit le sélecteur (les avatars débloqués dépendent du niveau joueur).
+  void loadAvatarCatalog(ctx.api).then(() => { try { renderAvatars(); renderMascot(); } catch { /* pas encore monté */ } });
 
   // Mode édition si le hash porte un ?id= : on pré-remplit le brouillon avec la
   // fiche du robot (lue depuis le cache de session, donc dispo hors-ligne).
@@ -41,7 +46,8 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
         strategy: editing!.mobile?.strategy ?? { aggro: 55, risk: 45, bluff: 45, memoire: 60 },
       }
     : { name: 'Atné', avatarId: 'atne', strategy: { aggro: 62, risk: 38, bluff: 45, memoire: 78 } };
-  const accent = () => (AVATAR_PRESETS.find((a) => a.id === draft.avatarId) || AVATAR_PRESETS[0]).accent;
+  // v18 — les avatars proviennent du catalogue back-office (débloqués par niveau).
+  const accent = () => avatarAccent(draft.avatarId);
 
   // --- Colonne aperçu -------------------------------------------------------
   const previewName = h('div', { class: 'title', style: { fontSize: '19px', color: '#fff' } }, draft.name);
@@ -53,9 +59,9 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
   const avatarRow = h('div', { class: 'row gap-2', style: { justifyContent: 'center', marginTop: '12px' } });
   const renderAvatars = () => {
     clear(avatarRow);
-    AVATAR_PRESETS.forEach((a) => avatarRow.append(Avatar({
-      accent: a.accent, size: 36, ring: a.id === draft.avatarId ? a.accent : 'var(--c-line-strong)',
-      onClick: () => { draft.avatarId = a.id; renderMascot(); renderAvatars(); },
+    getAvatarList().forEach((a) => avatarRow.append(Avatar({
+      accent: a.accentColor, size: 36, ring: a.key === draft.avatarId ? a.accentColor : 'var(--c-line-strong)',
+      onClick: () => { draft.avatarId = a.key; renderMascot(); renderAvatars(); },
     })));
   };
   renderAvatars();

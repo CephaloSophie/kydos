@@ -27,12 +27,36 @@ const TableConfigSchema = new Schema(
     /** v16 — Objectif (score cible) d'une manche standard et du grand label. */
     baseTarget: { type: Number, default: 1500 },
     labelTarget: { type: Number, default: 2000 },
+    /**
+     * v17 — Règles de belote configurables à l'instanciation de la table :
+     *   • openingBidMin : score initial pour commencer les enchères (minBid).
+     *   • countBelote   : la belote (Roi+Dame d'atout) compte-t-elle au score ?
+     *   • clockwise     : sens du jeu (false = antihoraire, true = horaire).
+     */
+    openingBidMin: { type: Number, default: 90 },
+    countBelote: { type: Boolean, default: true },
+    clockwise: { type: Boolean, default: false },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     gameType: { type: String, default: 'contree' },
     maxPlayers: { type: Number, default: 4 },
     allowSpectators: { type: Boolean, default: true },
+    // Legacy v16 (conservé pour compat) : thème enum figé.
     feltTheme: { type: String, enum: ['classic', 'cosmos', 'olympus'], default: 'classic' },
+    /**
+     * v18 — Thème de table choisi (bibliothèque back-office). `tableThemeId`
+     * référence un TableTheme ; `themeColors` en est le rendu résolu (couleurs
+     * concrètes) posé au provisionnement, pour que le mobile l'affiche tel quel.
+     */
+    tableThemeId: { type: Schema.Types.ObjectId, ref: 'TableTheme', default: null },
+    themeColors: {
+      felt1: { type: String, default: null }, felt2: { type: String, default: null },
+      rail: { type: String, default: null }, railHi: { type: String, default: null },
+      railLo: { type: String, default: null }, railInner: { type: String, default: null },
+      accent: { type: String, default: null }, accent2: { type: String, default: null },
+      // v18 — dos des cartes.
+      backHi: { type: String, default: null }, backLo: { type: String, default: null },
+    },
     turnTimeoutMs: { type: Number, default: 10000 },
     surcoincheWindowMs: { type: Number, default: 3500 },
     notifyMs: { type: Number, default: 5000 },

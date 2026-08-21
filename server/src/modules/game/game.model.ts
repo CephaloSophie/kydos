@@ -54,6 +54,15 @@ const StatsSubSchema = new Schema(
     capotsAnnoncesTotal: { type: Number, default: 0 },
     belotesA: { type: Number, default: 0 },
     belotesB: { type: Number, default: 0 },
+    // v18 — enrichissement du suivi par partie (compétition ou simple) :
+    /** Nombre total de plis joués (= 8 × donnes). */
+    totalTricks: { type: Number, default: 0 },
+    /** Nombre de contrats tenus par le preneur (donnes réussies). */
+    contractsMade: { type: Number, default: 0 },
+    /** Nombre de contrats chutés (dedans). */
+    contractsFailed: { type: Number, default: 0 },
+    /** Valeur moyenne des contrats annoncés (0 si aucune donne). */
+    avgContract: { type: Number, default: 0 },
   },
   { _id: false },
 );
@@ -73,6 +82,12 @@ const GameSchema = new Schema(
     session: { type: Schema.Types.ObjectId, ref: 'Session', default: null, index: true },
     owner: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
+    // v18 — rattachement compétition : le Match, sa variante (MATCH RAPIDE) et
+    // le tournoi éventuel. Permet au back-office de lister/agréger les parties
+    // jouées sous une variante ou un tournoi donnés.
+    match: { type: Schema.Types.ObjectId, ref: 'Match', default: null, index: true },
+    formatConfig: { type: Schema.Types.ObjectId, ref: 'MatchFormatConfig', default: null, index: true },
+    tournament: { type: Schema.Types.ObjectId, ref: 'Tournament', default: null, index: true },
 
     visibility: { type: String, enum: ['public', 'private', 'team'], default: 'private', index: true },
     mode: { type: String, enum: ['local', 'online', 'competition'], default: 'local' },
@@ -81,6 +96,8 @@ const GameSchema = new Schema(
     target: { type: Number, default: 0 },
     winner: { type: String, enum: ['A', 'B', null], default: null },
     finishedAt: { type: Date, default: () => new Date() },
+    /** v18 — durée de la partie (ms), déduite du replay (0 si indisponible). */
+    durationMs: { type: Number, default: 0 },
 
     // Embarqués (cohérence avec la partie ; suffisent au listing sans charger le replay)
     participants: { type: [ParticipantSubSchema], default: [] },

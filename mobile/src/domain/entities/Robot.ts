@@ -9,7 +9,12 @@
  *     altérer le comportement des robots créés côté web.
  * ========================================================================== */
 
-/** Palette d'avatars-mascottes disponibles à la création (couleurs du DS). */
+/**
+ * @deprecated v18 — Le catalogue d'avatars est désormais servi par le
+ * back-office (`data/AvatarCatalog`). Cette liste ne sert plus que de repli
+ * hors-ligne / pour les tests. Ne plus l'utiliser dans l'UI : préférer
+ * `getAvatarList()` / `avatarAccent()`.
+ */
 export const AVATAR_PRESETS = [
   { id: 'atne', name: 'Atné', accent: '#7ecb98' },
   { id: 'bato', name: 'Bâto', accent: '#e6c46a' },
@@ -87,6 +92,12 @@ export class Robot {
     this.status = data.status ?? 'idle';
   }
 
+  /**
+   * Couleur d'accent de l'avatar — REPLI domaine (presets). La couleur
+   * effective affichée provient du catalogue back-office et est résolue dans la
+   * couche présentation via `avatarAccent(robot.avatarId)` (clean architecture :
+   * le domaine ne dépend pas de l'infrastructure/API).
+   */
   get accent(): string {
     return (AVATAR_PRESETS.find((a) => a.id === this.avatarId) ?? AVATAR_PRESETS[0]).accent;
   }

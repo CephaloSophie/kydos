@@ -1,12 +1,14 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TournamentService } from '../../services/tournament.service';
+import { TableThemeService, type TableTheme } from '../../services/table-theme.service';
 import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type EconomicsResult, type TournamentCapacity } from '../../models';
 
 @Component({
   selector: 'app-tournament-form',
-  imports: [FormsModule],
+  imports: [FormsModule, CommonModule],
   template: `
     <div class="page-header">
       <h1>{{ editId ? 'Modifier le tournoi' : 'Nouveau tournoi' }}</h1>
@@ -103,16 +105,30 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Compte à rebours avant chaque round (s)</label>
+            <input type="number" [(ngModel)]="form.gameConfig.roundCountdownSec" min="0" max="300" step="1" />
+          </div>
+          <div class="form-group">
+            <label>Redirection auto depuis la popup LIVE (s)</label>
+            <input type="number" [(ngModel)]="form.gameConfig.autoRejoinSec" min="0" max="60" step="1" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label>Délai entre plis (ms)</label>
             <input type="number" [(ngModel)]="form.gameConfig.trickDelayMs" min="0" step="100" />
           </div>
           <div class="form-group">
-            <label>Thème du tapis</label>
-            <select [(ngModel)]="form.gameConfig.feltTheme">
-              <option value="classic">Classic</option>
-              <option value="cosmos">Cosmos</option>
-              <option value="olympus">Olympus</option>
+            <label>Thème de la table</label>
+            <select [(ngModel)]="form.gameConfig.tableThemeId">
+              <option [ngValue]="null">— Défaut —</option>
+              @for (th of themes; track th._id) {
+                <option [ngValue]="th._id">{{ th.name }}</option>
+              }
             </select>
+            @if (selectedTheme(); as th) {
+              <div class="theme-swatch" [style.background]="themeGradient(th)" [style.borderColor]="th.colors?.rail || th.railColor"></div>
+            }
           </div>
         </div>
         <div class="form-row">
@@ -124,6 +140,29 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
             <input type="checkbox" [(ngModel)]="form.gameConfig.signals.reflexion" id="sig1" />
             <label for="sig1" style="margin: 0">Signal réflexion</label>
           </div>
+        </div>
+
+        <h3 style="margin: 20px 0 12px">Règles de belote</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Score initial des enchères</label>
+            <input type="number" [(ngModel)]="form.gameConfig.openingBidMin" min="80" max="180" step="10" />
+            <small class="hint">Enchère minimale d'ouverture (multiple de 10, 80–180).</small>
+          </div>
+          <div class="form-group">
+            <label>Sens du jeu</label>
+            <select [(ngModel)]="form.gameConfig.clockwise">
+              <option [ngValue]="false">Antihoraire (standard)</option>
+              <option [ngValue]="true">Horaire</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 8px">
+            <input type="checkbox" [(ngModel)]="form.gameConfig.countBelote" id="belote" />
+            <label for="belote" style="margin: 0">Compter la belote dans le score (+20)</label>
+          </div>
+          <div class="form-group"></div>
         </div>
 
         <h3 style="margin: 20px 0 12px">Prix par position</h3>
@@ -198,6 +237,8 @@ import { TOURNAMENT_CAPACITIES, MATCH_FORMATS, type PositionPrize, type Economic
     </div>
   `,
   styles: [`
+    .theme-swatch { height: 40px; margin-top: 8px; border-radius: 8px; border: 6px solid #6b3a1a; }
+    .hint { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
     .form-layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
     @media (max-width: 900px) { .form-layout { grid-template-columns: 1fr; } }
     .prizes-grid { display: flex; flex-direction: column; gap: 8px; }
@@ -241,10 +282,16 @@ export class TournamentFormComponent implements OnInit {
       manches: 2,
       baseTarget: 1500,
       labelTarget: 2000,
+      openingBidMin: 90,
+      countBelote: true,
+      clockwise: false,
+      roundCountdownSec: 10,
+      autoRejoinSec: 5,
       turnTimeoutMs: 15000,
       trickDelayMs: 900,
       speed: 1,
       feltTheme: 'classic',
+      tableThemeId: null as string | null,
       allowSpectators: true,
       signals: { reflexion: true, repeatSuit: true },
     },
@@ -252,16 +299,19 @@ export class TournamentFormComponent implements OnInit {
 
   prizes: { position: number; prize: number; occupants: number }[] = [];
   economics: EconomicsResult | null = null;
+  themes: TableTheme[] = [];
 
   constructor(
     private tournamentService: TournamentService,
     private router: Router,
     private route: ActivatedRoute,
+    private tableThemeService: TableThemeService,
   ) {}
 
   ngOnInit() {
     this.editId = this.route.snapshot.params['id'] || null;
     this.generatePositions();
+    this.tableThemeService.list().subscribe((res) => { this.themes = res.themes.filter((t) => t.active); });
     if (this.editId) {
       this.tournamentService.getById(this.editId).subscribe(res => {
         const t = res.tournament;
@@ -280,10 +330,16 @@ export class TournamentFormComponent implements OnInit {
             manches: t.gameConfig?.manches ?? 2,
             baseTarget: t.gameConfig?.baseTarget ?? 1500,
             labelTarget: t.gameConfig?.labelTarget ?? 2000,
+            openingBidMin: t.gameConfig?.openingBidMin ?? 90,
+            countBelote: t.gameConfig?.countBelote !== false,
+            clockwise: t.gameConfig?.clockwise === true,
+            roundCountdownSec: t.gameConfig?.roundCountdownSec ?? 10,
+            autoRejoinSec: t.gameConfig?.autoRejoinSec ?? 5,
             turnTimeoutMs: t.gameConfig?.turnTimeoutMs ?? 15000,
             trickDelayMs: t.gameConfig?.trickDelayMs ?? 900,
             speed: t.gameConfig?.speed ?? 1,
             feltTheme: t.gameConfig?.feltTheme ?? 'classic',
+            tableThemeId: t.gameConfig?.tableThemeId ?? null,
             allowSpectators: t.gameConfig?.allowSpectators !== false,
             signals: {
               reflexion: t.gameConfig?.signals?.reflexion !== false,
@@ -301,6 +357,15 @@ export class TournamentFormComponent implements OnInit {
         this.updateEconomics();
       });
     }
+  }
+
+  selectedTheme(): TableTheme | null {
+    return this.themes.find((t) => t._id === this.form.gameConfig.tableThemeId) ?? null;
+  }
+  themeGradient(t: TableTheme): string {
+    const c1 = t.colors?.felt1 || t.feltColor;
+    const c2 = t.colors?.felt2 || t.feltEdgeColor || t.feltColor;
+    return `radial-gradient(120% 100% at 50% 42%, ${c1}, ${c2} 75%)`;
   }
 
   generatePositions() {

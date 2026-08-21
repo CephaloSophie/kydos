@@ -28,7 +28,7 @@ export interface Tournament {
   createdBy: string;
   participants: TournamentParticipant[];
   bracketTree: BracketTree;
-  winners: string[];
+  winners: TournamentWinner[];
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
@@ -39,24 +39,42 @@ export interface TournamentGameConfig {
   manches: number;
   baseTarget: number;
   labelTarget: number;
+  /** v17 — score initial des enchères (minBid, multiple de 10). */
+  openingBidMin: number;
+  /** v17 — belote (Roi+Dame d'atout) comptée dans le score ? */
+  countBelote: boolean;
+  /** v17 — sens du jeu (false = antihoraire, true = horaire). */
+  clockwise: boolean;
+  roundCountdownSec: number;
+  autoRejoinSec: number;
   trickDelayMs: number;
   speed: number;
   turnTimeoutMs: number;
   allowSpectators: boolean;
   feltTheme: string;
+  /** v18 — thème de table (id de la bibliothèque), null = défaut. */
+  tableThemeId: string | null;
   signals: { reflexion: boolean; repeatSuit: boolean };
 }
 
+/**
+ * Participant enrichi renvoyé par GET /admin/tournaments/:id.
+ * Les noms d'utilisateur et de robot sont résolus côté serveur pour éviter
+ * l'affichage d'ObjectIds bruts dans l'IHM.
+ */
 export interface TournamentParticipant {
   userId: string;
-  robotIds: string[];
-  substituteRobotId: string | null;
+  username: string | null;
+  robots: { id: string; name: string }[];
+  substituteRobot: { id: string; name: string } | null;
   seedIndex: number | null;
   eliminatedAtRound: number | null;
   finalPosition: number | null;
   prizeAwarded: number;
   joinedAt: string;
 }
+
+export interface TournamentWinner { userId: string; username: string | null }
 
 export interface BracketTree {
   rounds: BracketRound[];
@@ -70,23 +88,42 @@ export interface BracketRound {
   matches: BracketMatch[];
 }
 
+/** État visuel unifié d'un match du bracket, calculé côté serveur. */
+export type BracketMatchState = 'pending' | 'ready' | 'countdown' | 'live' | 'finished';
+
 export interface BracketMatch {
   matchIndex: number;
   matchId: string | null;
   gameId: string | null;
+  liveTableId: string | null;
   slotA: BracketSlot;
   slotB: BracketSlot;
   winner: 'A' | 'B' | null;
+  /** Points de la manche courante/dernière (peut repartir de 0 entre manches). */
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   startedAt: string | null;
   finishedAt: string | null;
+  scheduledStartAt: string | null;
+  state: BracketMatchState;
 }
 
+/**
+ * Un slot représente une équipe : 1 joueur (formats 1v1) ou 2 coéquipiers
+ * (Carrée royale). Les usernames sont résolus par le serveur ; displayName*
+ * reste disponible comme repli si l'utilisateur n'existe plus.
+ */
 export interface BracketSlot {
   userId: string | null;
+  username: string | null;
   seedIndex: number | null;
+  userId2: string | null;
+  username2: string | null;
   displayName: string;
+  displayName2: string;
 }
 
 export interface RoundPrize {

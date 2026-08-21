@@ -19,6 +19,7 @@ import { houseAccountingService } from '../houseAccounting/houseAccounting.servi
 import { badRequest, notFound, forbidden } from '../../core/HttpError.js';
 import { buildInitialBracket, advanceBracket, findBracketMatchByMatchId, computeFinalPositions, formTeamSeeds } from './bracket.js';
 import { computeUserTournamentStatus } from './userStatus.js';
+import { buildActiveResponse, buildFallbackResponse } from './activeEngagement.js';
 import { MatchModel } from '../matches/match.model.js';
 
 export class TournamentService {
@@ -49,11 +50,20 @@ export class TournamentService {
     const tournaments = await TournamentModel.find({
       status: TournamentStatus.LIVE,
       'participants.userId': new Types.ObjectId(userId),
-    }).select('name format color icon bracketTree').lean();
+    }).select('name format color icon bracketTree gameConfig').lean();
+
+    // Repli : tournoi LIVE où le joueur est éliminé/champion (plus engagé mais
+    // il peut encore consulter l'arbre et regarder les autres matchs). On le
+    // renvoie SEULEMENT si aucun engagement actif n'est trouvé.
+    let fallback: any | null = null;
 
     for (const t of tournaments as any[]) {
       const status = computeUserTournamentStatus(t.bracketTree, userId);
-      if (status.state === 'none' || status.state === 'eliminated' || status.state === 'champion') continue;
+      if (status.state === 'none') continue;
+      if (status.state === 'eliminated' || status.state === 'champion') {
+        if (!fallback) fallback = buildFallbackResponse(t, status);
+        continue;
+      }
 
       // Table live des matchs attendus / du mien, pour spectate / rejoindre.
       const matchIds = [
@@ -67,23 +77,9 @@ export class TournamentService {
           if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
         }
       }
-      const roundLabel = (t.bracketTree?.rounds ?? []).find((r: any) => r.roundIndex === status.roundIndex)?.label ?? '';
-
-      return {
-        tournamentId: String(t._id),
-        name: t.name, format: t.format, color: t.color, icon: t.icon,
-        state: status.state,
-        roundIndex: status.roundIndex,
-        roundLabel,
-        myMatchId: status.myMatchId,
-        myTableId: status.myMatchId ? tableByMatch.get(status.myMatchId) ?? null : null,
-        awaiting: status.awaiting.map((a) => ({
-          ...a,
-          tableId: a.matchId ? tableByMatch.get(a.matchId) ?? null : null,
-        })),
-      };
+      return buildActiveResponse(t, status, tableByMatch);
     }
-    return null;
+    return fallback;
   }
 
   /** Détail d'un tournoi (draft visible seulement à son créateur). */
@@ -105,11 +101,31 @@ export class TournamentService {
     if (!doc) throw notFound('Tournoi introuvable.');
     if (doc.status === TournamentStatus.DRAFT && String(doc.createdBy) !== String(requesterId)) throw notFound('Tournoi introuvable.');
     if (doc.status === TournamentStatus.UPCOMING) throw badRequest('Le tournoi n\u2019a pas encore commenc\u00e9.');
+
+    const bracket = doc.bracketTree || { rounds: [], lastCompletedRound: 0 };
+    // v16 \u2014 enrichit chaque match EN COURS avec sa table live (pour spectateur).
+    const liveMatchIds: string[] = [];
+    for (const r of bracket.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.matchId && !m.winner) liveMatchIds.push(String(m.matchId));
+      }
+    }
+    if (liveMatchIds.length) {
+      const matches = await MatchModel.find({ _id: { $in: liveMatchIds } }).select('liveTableId').lean();
+      const tableByMatch = new Map<string, string>();
+      for (const m of matches as any[]) if (m.liveTableId) tableByMatch.set(String(m._id), String(m.liveTableId));
+      for (const r of bracket.rounds ?? []) {
+        for (const m of r.matches ?? []) {
+          if (m.matchId && !m.winner) (m as any).tableId = tableByMatch.get(String(m.matchId)) ?? null;
+        }
+      }
+    }
+
     return {
       tournamentId: String(doc._id),
       name: doc.name, format: doc.format, capacity: doc.capacity,
       status: doc.status, color: doc.color, icon: doc.icon,
-      bracket: doc.bracketTree || { rounds: [], lastCompletedRound: 0 },
+      bracket,
       participants: doc.participants,
       winners: doc.winners,
     };
@@ -367,6 +383,9 @@ export class TournamentService {
     winnerUserId: string;         // pour retrouver quel slot est gagnant
     scoreA: number;
     scoreB: number;
+    // v17 — manches gagnées (best-of-N) : score de progression figé au final.
+    manchesA?: number;
+    manchesB?: number;
     gameId: string | null;
   }): Promise<void> {
     const t = await TournamentModel.findById(input.tournamentId);
@@ -389,6 +408,8 @@ export class TournamentService {
       winner,
       scoreA: input.scoreA,
       scoreB: input.scoreB,
+      manchesA: input.manchesA ?? null,
+      manchesB: input.manchesB ?? null,
       gameId: input.gameId,
       matchId: input.matchId,
       finishedAt: new Date(),
@@ -430,7 +451,12 @@ export class TournamentService {
    * séparé) et par les joueurs — sans dépendance Redis supplémentaire.
    * No-op si le match a déjà un vainqueur (score final déjà figé).
    */
-  async updateLiveScore(input: { tournamentId: string; matchId: string; scoreA: number; scoreB: number }): Promise<void> {
+  async updateLiveScore(input: {
+    tournamentId: string; matchId: string;
+    scoreA: number; scoreB: number;
+    // v17 — manches gagnées (score de progression monotone).
+    manchesA?: number; manchesB?: number;
+  }): Promise<void> {
     const t = await TournamentModel.findById(input.tournamentId);
     if (!t || t.status !== TournamentStatus.LIVE) return;
     const tree = (t as any).bracketTree;
@@ -439,9 +465,14 @@ export class TournamentService {
     if (!found) return;
     const bm = tree.rounds[found.roundIndex - 1].matches[found.matchIndex];
     if (!bm || bm.winner) return;                      // déjà terminé → score figé
-    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB) return;  // inchangé
+    const mA = input.manchesA ?? bm.manchesA ?? 0;
+    const mB = input.manchesB ?? bm.manchesB ?? 0;
+    // Inchangé (points ET manches) → pas d'écriture.
+    if (bm.scoreA === input.scoreA && bm.scoreB === input.scoreB && bm.manchesA === mA && bm.manchesB === mB) return;
     bm.scoreA = input.scoreA;
     bm.scoreB = input.scoreB;
+    bm.manchesA = mA;
+    bm.manchesB = mB;
     if (!bm.startedAt) bm.startedAt = new Date();
     (t as any).markModified?.('bracketTree');
     await t.save();

@@ -44,6 +44,16 @@ export default defineConfig({
           'src/modules/tournaments/royal-bracket.test.ts',
           // v16 : statut du joueur dans un tournoi live (waiting/playing/…).
           'src/modules/tournaments/userStatus.test.ts',
+          // v16 : composition pure de l'engagement joueur dans un tournoi LIVE.
+          'src/modules/tournaments/activeEngagement.test.ts',
+          // v16 : lecture pure de autoRejoinSec (MatchFormatConfig).
+          'src/modules/matchmaking/matchmaking.autoRejoin.test.ts',
+          // v18 : résolution pure des couleurs de thème de table.
+          'src/modules/tableTheme/tableTheme.colors.test.ts',
+          // v18 : dérivations pures du suivi enrichi d'une partie.
+          'src/modules/game/gameTracking.test.ts',
+          // v18 : déblocage des avatars par niveau.
+          'src/modules/robotAvatar/robotAvatar.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',

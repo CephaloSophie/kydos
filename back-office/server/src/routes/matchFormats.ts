@@ -2,6 +2,8 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
+import { aggregateVariantStats } from '../matchAnalytics.js';
+import { resolveStatus } from '../statusSync.js';
 
 const router = Router();
 
@@ -18,9 +20,9 @@ const STRUCTURE: Record<string, { humansPerMatch: number; winnersPerMatch: numbe
 
 /** Valeurs par défaut (reprises du catalogue serveur) si la collection est vide. */
 const DEFAULTS = [
-  { format: 'duo_steel', label: 'Duo d’acier', subtitle: 'Un affrontement 100 % en coulisses.', buyInPerPlayer: 200, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#3f6ea1', icon: '♦', minLevel: 0, maxLevel: null, active: true, order: 0 },
-  { format: 'hybrid_alliance', label: 'Alliance hybride', subtitle: 'Vous + votre robot, tous ensemble.', buyInPerPlayer: 150, prizePerWinner: 225, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#c99c3f', icon: '♠', minLevel: 0, maxLevel: null, active: true, order: 1 },
-  { format: 'royal_square', label: 'Carrée royale', subtitle: 'Quatre humains, deux équipes, une couronne.', buyInPerPlayer: 100, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, color: '#b0384a', icon: '♥', minLevel: 0, maxLevel: null, active: true, order: 2 },
+  { format: 'duo_steel', label: 'Duo d’acier', subtitle: 'Un affrontement 100 % en coulisses.', buyInPerPlayer: 200, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#3f6ea1', icon: '♦', minLevel: 0, maxLevel: null, active: true, order: 0 },
+  { format: 'hybrid_alliance', label: 'Alliance hybride', subtitle: 'Vous + votre robot, tous ensemble.', buyInPerPlayer: 150, prizePerWinner: 225, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#c99c3f', icon: '♠', minLevel: 0, maxLevel: null, active: true, order: 1 },
+  { format: 'royal_square', label: 'Carrée royale', subtitle: 'Quatre humains, deux équipes, une couronne.', buyInPerPlayer: 100, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000, openingBidMin: 90, countBelote: true, clockwise: false, color: '#b0384a', icon: '♥', minLevel: 0, maxLevel: null, active: true, order: 2 },
 ];
 
 let legacyIndexChecked = false;
@@ -70,6 +72,45 @@ const num = (v: any, min: number, max: number, cur: number) => {
   const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
 };
 
+/**
+ * v18 — Visualisation d'une variante : détail + parties jouées + agrégats.
+ * `GET /:id/analytics?limit=50` renvoie { variant, stats, games } où `games`
+ * est l'historique récent (léger) et `stats` les pourcentages/chiffres utiles.
+ */
+router.get('/:id/analytics', async (req, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const GameModel = mongoose.model('Game');
+    const variant: any = await Model.findById(req.params.id).lean();
+    if (!variant) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    // Toutes les parties de cette variante pour les agrégats (champs légers) ;
+    // l'historique affiché est borné par `limit`.
+    const allGames: any[] = await GameModel.find({ formatConfig: variant._id })
+      .select('winner finalScoreA finalScoreB manchesWonA manchesWonB durationMs stats finishedAt participants')
+      .sort({ finishedAt: -1 })
+      .lean();
+
+    const stats = aggregateVariantStats(allGames);
+    const games = allGames.slice(0, limit).map((g) => ({
+      id: String(g._id),
+      winner: g.winner ?? null,
+      finalScoreA: g.finalScoreA ?? 0, finalScoreB: g.finalScoreB ?? 0,
+      manchesWonA: g.manchesWonA ?? 0, manchesWonB: g.manchesWonB ?? 0,
+      durationMs: g.durationMs ?? 0,
+      totalDonnes: g.stats?.totalDonnes ?? 0,
+      capotsTotal: g.stats?.capotsTotal ?? 0,
+      finishedAt: g.finishedAt,
+      players: (g.participants ?? []).filter((p: any) => p.type === 'human').map((p: any) => p.name).filter(Boolean),
+    }));
+
+    res.json({ variant: { ...variant, houseNet: houseNet(variant) }, stats, games });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
 
 // v16 — Créer une NOUVELLE variante d'un format (mise/niveau/titre propres).
@@ -94,7 +135,15 @@ router.post('/', async (req: AdminRequest, res) => {
       icon: b.icon ? String(b.icon) : base.icon,
       minLevel: num(b.minLevel, 0, 9999, 0),
       maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
-      active: b.active !== false,
+      autoRejoinSec: num(b.autoRejoinSec, 0, 60, 5),
+      // v17 — règles de belote configurables.
+      openingBidMin: num(b.openingBidMin, 80, 180, 90),
+      countBelote: b.countBelote !== false,
+      clockwise: b.clockwise === true,
+      // v18 — thème de table.
+      tableThemeId: /^[0-9a-fA-F]{24}$/.test(String(b.tableThemeId ?? '')) ? b.tableThemeId : null,
+      // v18 — statut éditorial (défaut brouillon à la création via l'interface dédiée).
+      ...resolveStatus({ status: b.status, active: b.active }, { status: 'draft', active: false }),
       order: num(b.order, 0, 999, count),
     });
     await logAudit(req.adminId!, 'matchFormat.create', String(cfg._id), { after: { format, label: cfg.label, buyInPerPlayer: cfg.buyInPerPlayer } });
@@ -111,7 +160,7 @@ router.put('/:id', async (req: AdminRequest, res) => {
     const cfg = await Model.findById(req.params.id) as any;
     if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
 
-    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, active, order } = req.body;
+    const { label, subtitle, buyInPerPlayer, prizePerWinner, manches, baseTarget, labelTarget, color, icon, minLevel, maxLevel, autoRejoinSec, openingBidMin, countBelote, clockwise, tableThemeId, active, order } = req.body;
     if (label !== undefined) cfg.label = String(label);
     if (subtitle !== undefined) cfg.subtitle = String(subtitle);
     if (buyInPerPlayer !== undefined) cfg.buyInPerPlayer = num(buyInPerPlayer, 0, 1_000_000, cfg.buyInPerPlayer);
@@ -123,13 +172,55 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (icon !== undefined) cfg.icon = String(icon);
     if (minLevel !== undefined) cfg.minLevel = num(minLevel, 0, 9999, cfg.minLevel);
     if (maxLevel !== undefined) cfg.maxLevel = (maxLevel === null || maxLevel === '') ? null : num(maxLevel, 0, 9999, cfg.maxLevel ?? 0);
-    if (active !== undefined) cfg.active = !!active;
+    if (autoRejoinSec !== undefined) cfg.autoRejoinSec = num(autoRejoinSec, 0, 60, cfg.autoRejoinSec ?? 5);
+    if (openingBidMin !== undefined) cfg.openingBidMin = num(openingBidMin, 80, 180, cfg.openingBidMin ?? 90);
+    if (countBelote !== undefined) cfg.countBelote = !!countBelote;
+    if (clockwise !== undefined) cfg.clockwise = !!clockwise;
+    if (tableThemeId !== undefined) cfg.tableThemeId = /^[0-9a-fA-F]{24}$/.test(String(tableThemeId ?? '')) ? tableThemeId : null;
+    // v18 — statut éditorial ⇆ active synchronisés.
+    if ((req.body.status !== undefined) || (active !== undefined)) {
+      const s = resolveStatus({ status: req.body.status, active }, { status: cfg.status, active: cfg.active });
+      cfg.status = s.status; cfg.active = s.active;
+    }
     if (order !== undefined) cfg.order = num(order, 0, 999, cfg.order);
     await cfg.save();
 
     await logAudit(req.adminId!, 'matchFormat.update', String(cfg._id), {
       after: { buyInPerPlayer: cfg.buyInPerPlayer, prizePerWinner: cfg.prizePerWinner, manches: cfg.manches, minLevel: cfg.minLevel, active: cfg.active },
     });
+    res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// v18 — Variante brute par _id (pour l'écran d'édition dédié).
+router.get('/:id/raw', async (req, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const cfg: any = await Model.findById(req.params.id).lean();
+    if (!cfg) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+    res.json({ format: { ...cfg, houseNet: houseNet(cfg) } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// v18 — Cloner une variante : copie tous les réglages, statut brouillon.
+router.post('/:id/clone', async (req: AdminRequest, res) => {
+  try {
+    const Model = mongoose.model('MatchFormatConfig');
+    const src: any = await Model.findById(req.params.id).lean();
+    if (!src) { res.status(404).json({ error: 'Variante introuvable' }); return; }
+    const { _id, createdAt, updatedAt, __v, ...rest } = src;
+    const count = await Model.countDocuments({ format: src.format });
+    const cfg = await Model.create({
+      ...rest,
+      label: `${src.label} (copie)`,
+      status: 'draft', active: false,
+      order: count,
+    });
+    await logAudit(req.adminId!, 'matchFormat.clone', String(cfg._id), { before: { source: String(src._id) }, after: { label: cfg.label } });
     res.json({ format: { ...cfg.toObject(), houseNet: houseNet(cfg) } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });

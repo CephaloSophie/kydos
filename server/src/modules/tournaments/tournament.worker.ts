@@ -44,12 +44,21 @@ export class TournamentWorker {
         } catch { /* on ignore, un autre process a pu passer avant */ }
       }
       // 2) live → progression du bracket via l'orchestrateur
-      const live = await TournamentModel.find({ status: TournamentStatus.LIVE }).select('_id').limit(20).lean();
-      for (const t of live) {
-        try { await tournamentOrchestrator.run(String((t as any)._id)); }
-        catch { /* résilience : on retente au tick suivant */ }
-      }
+      await this.progressLive();
     } catch { /* worker ne doit jamais planter, ceinture + bretelles */ }
+  }
+
+  /**
+   * v16 — Fait avancer TOUS les tournois LIVE (idempotent). Appelée aussi par
+   * le sweep temps-réel (3 s) pour créer promptement les matchs dont le compte
+   * à rebours est écoulé, sans attendre le tick worker (30 s).
+   */
+  async progressLive(): Promise<void> {
+    const live = await TournamentModel.find({ status: TournamentStatus.LIVE }).select('_id').limit(50).lean();
+    for (const t of live) {
+      try { await tournamentOrchestrator.run(String((t as any)._id)); }
+      catch { /* résilience : on retente au tick suivant */ }
+    }
   }
 }
 

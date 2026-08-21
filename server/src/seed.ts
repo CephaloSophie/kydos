@@ -221,6 +221,9 @@ export async function seedDatabase() {
   const cfg = (manches: 1 | 2 | 4, baseTarget: number) => ({
     manches, baseTarget, labelTarget: 2000, trickDelayMs: 900, speed: 1,
     turnTimeoutMs: 15000, allowSpectators: true, feltTheme: 'classic',
+    // v16 — compte à rebours / redirection auto ; v17 — règles de belote.
+    roundCountdownSec: 10, autoRejoinSec: 5,
+    openingBidMin: 90, countBelote: true, clockwise: false,
     signals: { reflexion: true, repeatSuit: true },
   });
   await TournamentModel.create([
@@ -275,6 +278,16 @@ export async function seedDatabase() {
   // -- 12. Config MATCH RAPIDE (v16) --
   await matchFormatConfigService.ensureSeeded();
   console.log('[seed] config des 3 MATCH RAPIDE initialisee (editable au back-office)');
+
+  // -- 13. Bibliotheque de themes de table (v18) --
+  const { tableThemeService } = await import('./modules/tableTheme/tableTheme.service.js');
+  await tableThemeService.ensureSeeded();
+  console.log('[seed] 6 themes de table intgres initialises (editable au back-office)');
+
+  // -- 14. Catalogue d'avatars de robots (v18) --
+  const { robotAvatarService } = await import('./modules/robotAvatar/robotAvatar.service.js');
+  await robotAvatarService.ensureSeeded();
+  console.log('[seed] 5 avatars de robots intgres initialises (editable au back-office)');
 
   console.log('\n[seed] termine  -  joueur : ameur / belote123 . back-office : ameur (admin)');
 }

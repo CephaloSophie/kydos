@@ -20,6 +20,9 @@ export interface AwaitedMatch {
   slotBName: string;
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   winner: 'A' | 'B' | null;
 }
 
@@ -29,6 +32,11 @@ export interface UserTournamentStatus {
   roundIndex: number | null;
   /** Mon match en cours (à rejoindre) si state === 'playing'. */
   myMatchId: string | null;
+  /**
+   * v16 — Instant planifié de démarrage de MON match (compte à rebours), en
+   * état 'pending'. ISO string ou null.
+   */
+  startsAt: string | null;
   /** Match(s) dont dépend le démarrage du mien (à finir avant), si 'waiting'. */
   awaiting: AwaitedMatch[];
 }
@@ -47,12 +55,14 @@ function toAwaited(m: BracketMatch, roundIndex: number): AwaitedMatch {
     matchIndex: m.matchIndex,
     slotAName: m.slotA.displayName || '—',
     slotBName: m.slotB.displayName || '—',
-    scoreA: m.scoreA, scoreB: m.scoreB, winner: m.winner,
+    scoreA: m.scoreA, scoreB: m.scoreB,
+    manchesA: (m as any).manchesA ?? null, manchesB: (m as any).manchesB ?? null,
+    winner: m.winner,
   };
 }
 
 export function computeUserTournamentStatus(tree: BracketTree, userId: string): UserTournamentStatus {
-  const none: UserTournamentStatus = { state: 'none', roundIndex: null, myMatchId: null, awaiting: [] };
+  const none: UserTournamentStatus = { state: 'none', roundIndex: null, myMatchId: null, startsAt: null, awaiting: [] };
   if (!tree?.rounds?.length) return none;
 
   // Dernière apparition du joueur dans un slot = sa progression la plus avancée
@@ -74,14 +84,14 @@ export function computeUserTournamentStatus(tree: BracketTree, userId: string): 
     const winnerSlot = cur.winner === 'A' ? cur.slotA : cur.slotB;
     if (inSlot(winnerSlot, userId)) {
       // Gagnant d'un match décidé sans apparaître plus loin ⇒ c'était la finale.
-      return { state: 'champion', roundIndex: curRound, myMatchId: cur.matchId ? String(cur.matchId) : null, awaiting: [] };
+      return { state: 'champion', roundIndex: curRound, myMatchId: cur.matchId ? String(cur.matchId) : null, startsAt: null, awaiting: [] };
     }
-    return { state: 'eliminated', roundIndex: curRound, myMatchId: null, awaiting: [] };
+    return { state: 'eliminated', roundIndex: curRound, myMatchId: null, startsAt: null, awaiting: [] };
   }
 
   // Mon match est en cours (créé, pas encore fini) ⇒ à rejoindre.
   if (cur.matchId) {
-    return { state: 'playing', roundIndex: curRound, myMatchId: String(cur.matchId), awaiting: [] };
+    return { state: 'playing', roundIndex: curRound, myMatchId: String(cur.matchId), startsAt: null, awaiting: [] };
   }
 
   // Match pas encore créé. Si l'autre slot est vide, j'attends le(s) match(s)
@@ -96,11 +106,13 @@ export function computeUserTournamentStatus(tree: BracketTree, userId: string): 
       state: 'waiting',
       roundIndex: curRound,
       myMatchId: null,
+      startsAt: null,
       awaiting: feeders.map((m) => toAwaited(m, curRound - 1)),
     };
   }
 
   // Les deux slots sont remplis mais le match n'est pas encore créé : il va
   // démarrer imminemment (l'orchestrateur le crée au prochain tick).
-  return { state: 'pending', roundIndex: curRound, myMatchId: null, awaiting: [] };
+  const startsAt = (cur as any).scheduledStartAt ? new Date((cur as any).scheduledStartAt).toISOString() : null;
+  return { state: 'pending', roundIndex: curRound, myMatchId: null, startsAt, awaiting: [] };
 }

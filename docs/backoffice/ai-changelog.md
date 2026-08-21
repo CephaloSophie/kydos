@@ -4,6 +4,60 @@ Journal de suivi des modifications effectuées par l'assistant AI (Claude), comm
 
 ---
 
+## v18 — Thèmes de table, enchère d'ouverture, gestion & visualisation Match rapide
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demandes** : (C) l'enchère d'ouverture configurée (80) doit s'appliquer au popup d'enchères ; (A) un module de thèmes de table au back-office, réutilisables et réellement appliqués aux tournois/compétitions ; (B) refonte de la gestion Match rapide (recherche/filtres, visualisation par variante avec historique + stats) et enrichissement du suivi par partie.
+
+### C. Enchère d'ouverture appliquée au HUD
+- Cause racine : `table-pixi/hud/bidMath` codait l'échelle 90→180 en dur.
+- `EngineView` expose `minBid`/`maxBid` ; l'échelle du HUD est construite dynamiquement. +4 tests.
+
+### A. Bibliothèque de thèmes de table
+- Entité RÉUTILISABLE `TableTheme` (feutre + bordure + accent), 6 presets intégrés non supprimables ; résolution PURE des couleurs (`resolveThemeColors`, dérive felt2 + nuances de rail + accent2). 9 tests.
+- Module back-office « Thèmes de table » (CRUD, aperçu fidèle du dégradé/rail).
+- Sélection du thème à la création (tournoi + variante Match rapide) et application RÉELLE au rendu : couleurs résolues posées sur la table live → mobile via `themeOverrides` de PixiTable.
+
+### B. Gestion & visualisation Match rapide
+- Suivi enrichi par partie : `Game` rattaché à sa variante/tournoi + `durationMs`, contrats tenus/chutés, moyenne, plis (`gameTracking.ts` pur, 5 tests).
+- Agrégats par variante (`matchAnalytics.ts` pur, 5 tests) + endpoint `/:id/analytics`.
+- Liste avec recherche + filtres (format, état) ; page de visualisation par variante : cartes de stats (victoires, scores/manches/durée moyens, capot/belote, réussite des contrats) + historique des parties.
+
+**Tests** : core 72, table-pixi 19, serveur 200, back-office server 43.
+
+---
+
+## v17 — Table de belote entièrement configurable + score de progression (manches)
+
+**Branche** : `claude/back-office-angular-mhtcd8`
+**Demande** : la table de belote (package `belote-core`) doit être configurable à l'instanciation — score initial pour commencer les enchères, belote comptée ou non dans le score, sens du jeu (horaire / antihoraire), en plus des manches / score cible déjà présents. Corriger aussi l'arbre des tournois où les matchs EN COURS affichaient un score à zéro. Le tout comme une **conception** propre (pas un correctif), avec tests, seeds et docs à jour.
+
+### A. Résolution centralisée de la config moteur (`belote-core`)
+- Nouveau module **`packages/core/src/engine/tableConfig.ts`** : `resolveRulesConfig`, `resolvePartieConfig`, `resolveTableConfig`. C'est LE point unique qui traduit les options « métier » d'une table en objets moteur (`RulesConfig` + `PartieConfig`).
+  - `openingBidMin` → `RulesConfig.minBid` (score initial des enchères).
+  - `countBelote` → `RulesConfig.beloteBonus` (20 si comptée, 0 sinon).
+  - `clockwise` → `PartieConfig.clockwise` (sens du jeu).
+- 14 tests unitaires purs (dont l'alimentation réelle du moteur : minBid appliqué, sens reflété dans la vue, belote retirée du score de manche).
+
+### B. Câblage de la config dans TOUS les runners (fin du singleton `new ContreeRules()`)
+- `liveGame.service`, `match.headlessRunner`, `robotMatch.service` construisent désormais un `ContreeRules` **par table** via `resolveTableConfig`. La session live mémorise son barème (`live.rules`) pour les remplaçants.
+- `match.liveRunner.provision` propage `openingBidMin/countBelote/clockwise` à la table éphémère.
+- L'orchestrateur de tournoi et le matchmaking passent ces réglages au runner headless / à la table live.
+
+### C. Champs de configuration ajoutés partout
+- Modèles : `Table.config`, `Tournament.gameConfig`, `MatchFormatConfig` (jeu) + miroirs back-office. Sanitizers (`openingBidMin` borné 80–180, booléens).
+- Formulaires back-office : section « Règles de belote » (tournoi + Formats de match).
+
+### D. Arbre des tournois : score de progression MONOTONE (manches gagnées)
+- **Cause racine** : la vue moteur `cumulative` (points de manche) **repart de zéro à chaque manche** — d'où l'impression d'un match « en cours à zéro ».
+- Correctif de conception : le bracket porte désormais `manchesA/manchesB` (best-of-N), **monotone**, écrit en direct par le sweep (via `snapshotSessions().manchesWon`) et figé au final (headless + settle). Les UIs affichent les manches gagnées comme score principal, les points en secondaire, et **jamais un « 0 » trompeur** sur un match à venir.
+
+### E. Seeds, tests, docs
+- Seeds tournois + MatchFormatConfig enrichis des nouveaux champs.
+- Tests : core 14 (tableConfig) ; serveur +2 (bracket manches). Suites : core 71, serveur 186, back-office server 37.
+
+---
+
 ## v16 — Paramètres de jeu configurables, gestion Match rapide, refresh, seeds
 
 **Branche** : `claude/back-office-angular-mhtcd8`

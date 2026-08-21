@@ -137,6 +137,8 @@ export class MatchmakingService {
       const { matchHeadlessRunner } = await import('../matches/match.headlessRunner.js');
       await matchHeadlessRunner.run(matchId, {
         manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
+        // v17 — règles de belote configurables de la variante.
+        openingBidMin: eff.openingBidMin, countBelote: eff.countBelote, clockwise: eff.clockwise,
         prizePerWinner: eff.prizePerWinner, houseRake: eff.houseRake,
       });
     } catch (e) {
@@ -151,6 +153,10 @@ export class MatchmakingService {
       const { matchLiveService } = await import('../matches/match.liveRunner.js');
       await matchLiveService.provision(matchId, {
         manches: eff.manches, baseTarget: eff.baseTarget, labelTarget: eff.labelTarget,
+        // v17 — règles de belote configurables de la variante.
+        openingBidMin: eff.openingBidMin, countBelote: eff.countBelote, clockwise: eff.clockwise,
+        // v18 — thème de table de la variante.
+        tableThemeId: eff.tableThemeId,
       });
       // Passe le match en RUNNING dès que la table est prête. Les joueurs
       // peuvent se connecter ; liveGameService.launch se déclenchera quand

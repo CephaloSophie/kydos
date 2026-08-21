@@ -2,71 +2,11 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import type { AdminRequest } from '../middleware/auth.js';
 import { logAudit } from '../middleware/auditLog.js';
+import { sanitizeGameConfig, computeEconomics, buildTournamentDetail } from '../tournamentDetail.js';
 
 const TOURNAMENT_CAPACITIES = [4, 8, 16, 32, 64, 128];
 const VALID_FORMATS = ['duo_steel', 'hybrid_alliance', 'royal_square'];
 const VALID_STATUSES = ['draft', 'upcoming', 'live', 'finished', 'cancelled'];
-
-function occupantsAtPosition(capacity: number, position: number): number {
-  if (position === 1 || position === 2) return 1;
-  let rank = 3;
-  let losers = 2;
-  while (losers <= capacity / 2) {
-    if (rank === position) return losers;
-    rank += losers;
-    losers *= 2;
-  }
-  return 0;
-}
-
-/**
- * Économie d'un tournoi (prix par position).
- *
- * Carrée royale (royal_square) : le bracket se joue en ÉQUIPES de 2 humains,
- * donc `capacity/2` feuilles, et chaque rang final est occupé par 2 humains
- * par équipe. On applique alors leaves = capacity/2 et teamSize = 2.
- * Les autres formats (1 vs 1) : leaves = capacity, teamSize = 1.
- */
-function computeEconomics(capacity: number, entryFee: number, prizesByPosition: { position: number; prize: number }[], format?: string) {
-  const isRoyal = format === 'royal_square';
-  const leaves = isRoyal ? capacity / 2 : capacity;
-  const teamSize = isRoyal ? 2 : 1;
-  const totalCollected = capacity * entryFee;
-  let totalPaid = 0;
-  const breakdown = prizesByPosition.map(pp => {
-    const occupants = occupantsAtPosition(leaves, pp.position) * teamSize;
-    const totalPaidAtThisPosition = occupants * pp.prize;
-    totalPaid += totalPaidAtThisPosition;
-    return { position: pp.position, occupants, prizePerOccupant: pp.prize, totalPaidAtThisPosition };
-  });
-  return { totalCollected, totalPaid, houseNet: totalCollected - totalPaid, breakdown };
-}
-
-/**
- * Normalise la config de jeu d'un tournoi (v16). Applique bornes et valeurs
- * par défaut pour tout paramètre accepté par la table / la session de jeu.
- */
-function sanitizeGameConfig(raw: any): any {
-  const g = raw || {};
-  const clamp = (v: any, min: number, max: number, def: number) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : def;
-  };
-  return {
-    manches: [1, 2, 4].includes(Number(g.manches)) ? Number(g.manches) : 2,
-    baseTarget: clamp(g.baseTarget, 100, 100000, 1500),
-    labelTarget: clamp(g.labelTarget, 100, 100000, 2000),
-    trickDelayMs: clamp(g.trickDelayMs, 0, 10000, 900),
-    speed: clamp(g.speed, 0.5, 4, 1),
-    turnTimeoutMs: clamp(g.turnTimeoutMs, 3000, 120000, 15000),
-    allowSpectators: g.allowSpectators !== false,
-    feltTheme: ['classic', 'cosmos', 'olympus'].includes(g.feltTheme) ? g.feltTheme : 'classic',
-    signals: {
-      reflexion: g.signals?.reflexion !== false,
-      repeatSuit: g.signals?.repeatSuit !== false,
-    },
-  };
-}
 
 const router = Router();
 
@@ -87,15 +27,71 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * Retourne un tournoi entièrement enrichi pour la vue Détail : usernames et
+ * noms de robots (participants + slots du bracket), état de chaque match du
+ * bracket (statut, table live, partie associée, scores serveur, dates) et
+ * gagnants nommés. Conçu comme LA source unique de vérité de la page —
+ * l'IHM n'a plus besoin d'appels supplémentaires.
+ */
 router.get('/:id', async (req, res) => {
   try {
     const TournamentModel = mongoose.model('Tournament');
-    const tournament = await TournamentModel.findById(req.params.id).lean();
+    const UserModel = mongoose.model('User');
+    const RobotModel = mongoose.model('Robot');
+    const MatchModel = mongoose.model('Match');
+
+    const tournament: any = await TournamentModel.findById(req.params.id).lean();
     if (!tournament) {
       res.status(404).json({ error: 'Tournoi non trouvé' });
       return;
     }
-    res.json({ tournament });
+
+    // 1) Résolution centralisée des noms (users + robots) en 2 requêtes.
+    const userIds = new Set<string>();
+    const robotIds = new Set<string>();
+    for (const p of tournament.participants ?? []) {
+      if (p.userId) userIds.add(String(p.userId));
+      for (const r of p.robotIds ?? []) robotIds.add(String(r));
+      if (p.substituteRobotId) robotIds.add(String(p.substituteRobotId));
+    }
+    for (const w of tournament.winners ?? []) userIds.add(String(w));
+    for (const r of tournament.bracketTree?.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.slotA?.userId) userIds.add(String(m.slotA.userId));
+        if (m.slotA?.userId2) userIds.add(String(m.slotA.userId2));
+        if (m.slotB?.userId) userIds.add(String(m.slotB.userId));
+        if (m.slotB?.userId2) userIds.add(String(m.slotB.userId2));
+      }
+    }
+    const [users, robots] = await Promise.all([
+      UserModel.find({ _id: { $in: [...userIds] } }).select('username').lean(),
+      RobotModel.find({ _id: { $in: [...robotIds] } }).select('name owner').lean(),
+    ]);
+    const userName = new Map<string, string>();
+    for (const u of users as any[]) userName.set(String(u._id), u.username);
+    const robotById = new Map<string, { name: string; owner: string }>();
+    for (const r of robots as any[]) robotById.set(String(r._id), { name: r.name, owner: String(r.owner ?? '') });
+
+    // 2) Résolution des matchs rattachés (statut, table live, scores serveur).
+    const bracketMatchIds: string[] = [];
+    for (const r of tournament.bracketTree?.rounds ?? []) {
+      for (const m of r.matches ?? []) {
+        if (m.matchId) bracketMatchIds.push(String(m.matchId));
+      }
+    }
+    const matchDocs = bracketMatchIds.length
+      ? await MatchModel.find({ _id: { $in: bracketMatchIds } })
+          .select('status liveTableId game scoreTeamA scoreTeamB winnerTeam startedAt finishedAt')
+          .lean()
+      : [];
+    const matchById = new Map<string, any>();
+    for (const m of matchDocs as any[]) matchById.set(String(m._id), m);
+
+    // 3) Composition pure — pas d'I/O ici.
+    const detail = buildTournamentDetail(tournament, userName, robotById, matchById);
+
+    res.json({ tournament: { ...tournament, ...detail } });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

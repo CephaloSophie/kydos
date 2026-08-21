@@ -13,6 +13,7 @@
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
 import { Button } from '../components/ui';
+import { BracketView, type BracketData } from '../components/BracketView';
 import type { AppContext } from '../context';
 
 /** Enum client des statuts (miroir de TournamentStatus serveur). */
@@ -68,6 +69,33 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
   }
 
   const posLabel = (pos: number): string => pos === 1 ? '1er' : `${pos}e`;
+  const spectate = (tableId: string) => router.go(`table?online=${tableId}&watch=1`);
+  const replay = (gameId: string) => router.go(`replay?id=${gameId}`);
+
+  /**
+   * v16 — Section bracket EN LIGNE (responsive) affichée directement dans la
+   * fenêtre du tournoi (plus de bouton « Voir l'arbre »), avec une icône
+   * Actualiser pour recharger les résultats en direct.
+   */
+  const bracketSection = (): HTMLElement => {
+    const host = h('div', { class: 'overflow-x' }, h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, 'Chargement de l’arbre…'));
+    const load = async () => {
+      try {
+        const data = await api.getTournamentBracket(id!) as unknown as BracketData;
+        clear(host);
+        host.append(BracketView(data, { onSpectate: spectate, onReplay: replay }));
+      } catch (e) {
+        clear(host);
+        host.append(h('div', { class: 'mono', style: { fontSize: '11px', color: 'var(--c-text-mute)' } }, `Arbre indisponible : ${(e as Error).message}`));
+      }
+    };
+    void load();
+    return h('div', { class: 'card' },
+      h('div', { class: 'between', style: { marginBottom: '10px', alignItems: 'center' } },
+        h('div', { class: 'title', style: { fontSize: '13px' } }, 'Arbre du tournoi'),
+        h('button', { class: 'btn btn--sm btn--ghost', onClick: () => void load() }, '↻ Actualiser')),
+      host);
+  };
 
   const render = (t: TournamentDetail) => {
     clear(root);
@@ -128,41 +156,20 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
     );
   };
 
-  /* ── Vue LIVE : bracket + matchs en cours ──────────────────────────────── */
+  /* -- Vue LIVE : bracket INLINE (responsive) + matchs en cours -- */
   const renderLive = (t: TournamentDetail) => {
     const totalRounds = Math.log2(t.capacity);
     const alive = t.participants.filter((p) => p.eliminatedAtRound == null);
     return h('div', { class: 'col gap-3' },
       h('div', { class: 'card' },
-        h('div', { class: 'between' },
+        h('div', { class: 'between', style: { alignItems: 'center' } },
           h('div', {},
             h('div', { class: 'title', style: { fontSize: '13px' } }, 'Tournoi en cours'),
             h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', marginTop: '3px' } },
               `${alive.length} survivant(s) \u00b7 ${totalRounds} rounds au total`)),
-          h('div', { class: 'row gap-2', style: { alignItems: 'center' } },
-            h('button', {
-              class: 'btn btn--sm',
-              style: { background: 'var(--c-gold)', color: '#1a0f00', fontWeight: '700' },
-              onClick: () => router.go(`tournament-bracket?id=${t._id}`),
-            }, '\u25b6 Voir l\u2019arbre'),
-            h('span', { class: 'live-chip__dot' })))),
-      // Bracket (une colonne par round)
-      h('div', { style: { display: 'grid', gridTemplateColumns: `repeat(${totalRounds}, 1fr)`, gap: '10px' } },
-        ...Array.from({ length: totalRounds }, (_, i) => {
-          const round = i + 1;
-          const matchIds = (t.bracket ?? [])[i] ?? [];
-          return h('div', { class: 'col gap-2' },
-            h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-text-mute)', textAlign: 'center' } }, `Round ${round}`),
-            matchIds.length === 0
-              ? h('div', { class: 'card', style: { opacity: '.5', textAlign: 'center', padding: '20px 8px' } },
-                  h('div', { class: 'mono', style: { fontSize: '10px' } }, '\u2014 \u00e0 venir \u2014'))
-              : h('div', { class: 'col gap-1' },
-                  ...matchIds.map((mid) =>
-                    h('div', { class: 'card', style: { padding: '8px', textAlign: 'center' } },
-                      h('div', { class: 'mono', style: { fontSize: '9px', color: 'var(--c-text-mute)' } }, mid.slice(-6)),
-                      h('div', { class: 'mono', style: { fontSize: '10px', color: 'var(--c-success)', marginTop: '3px' } }, 'Termin\u00e9')))),
-          );
-        })),
+          h('span', { class: 'live-chip__dot' }))),
+      // Resultats + matchs en cours affiches DIRECTEMENT (arbre responsive).
+      bracketSection(),
     );
   };
 
@@ -181,12 +188,9 @@ export function TournamentScreen(ctx: AppContext): HTMLElement {
           : h('div', {}, ''),
         winners.length > 1 ? h('div', { style: { fontSize: '12px', opacity: '.85', marginTop: '4px' } },
           `Finalistes : ${winners.slice(0, 3).map(winnerName).join(', ')}`) : h('div', {}, ''),
-        // v14.13 — Accès au bracket coupe du monde depuis le podium.
-        h('button', {
-          class: 'btn btn--sm',
-          style: { marginTop: '14px', background: '#fff', color: '#1a0f00', fontWeight: '700' },
-          onClick: () => router.go(`tournament-bracket?id=${t._id}`),
-        }, '\u25b6 Voir l\u2019arbre complet')),
+        ),
+      // v16 - Arbre (resultats + rejouer) affiche EN LIGNE, responsive.
+      bracketSection(),
       // R\u00e9cap gains par position (v14.14 : donn\u00e9es r\u00e9elles).
       h('div', { class: 'card' },
         h('div', { class: 'title', style: { fontSize: '13px', marginBottom: '8px' } }, 'Gains par position'),

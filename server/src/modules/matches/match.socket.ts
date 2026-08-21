@@ -49,6 +49,10 @@ export class MatchSocket {
         await matchLiveService.syncTournamentLiveScores();
         // 4) Détecte les matchs terminés et fait le settle (score, gains, rake).
         await matchLiveService.sweepFinishedMatches(server);
+        // 5) v16 — progression fine des tournois live : crée les matchs dont le
+        //    compte à rebours est écoulé (le worker 30 s serait trop lent).
+        const { tournamentWorker } = await import('../tournaments/tournament.worker.js');
+        await tournamentWorker.progressLive();
       } catch { /* résilience */ }
     }, SWEEP_INTERVAL_MS);
     // Le handle est référencé pour cleanup éventuel (server.on('close')).

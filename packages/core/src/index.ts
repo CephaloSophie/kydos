@@ -13,6 +13,7 @@ export * from './robot/conventions/BiddingConvention';
 export * from './robot/conventions/StandardContree';
 export * from './robot/RobotBrain';
 export * from './engine/types';
+export * from './engine/tableConfig';
 export * from './engine/GameEngine';
 export * from './engine/RobotDriver';
 export * from './robot/AlgoSpec';

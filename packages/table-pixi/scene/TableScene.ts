@@ -40,7 +40,10 @@ export class TableScene extends Container {
     this.hands = new HandsLayer(theme);
     this.trick = new TrickLayer(theme);
     this.announces = new AnnouncesLayer(theme);
-    this.atlas = new CardAtlas(Math.min(3, Math.ceil((window.devicePixelRatio || 1) * 1.5)));
+    this.atlas = new CardAtlas(
+      Math.min(3, Math.ceil((window.devicePixelRatio || 1) * 1.5)),
+      { backHi: theme.backHi, backLo: theme.backLo, backStripe: theme.backStripe, backBorder: theme.backBorder },
+    );
     this.addChild(this.felt, this.trick, this.hands, this.seats, this.announces);
   }
 
@@ -51,6 +54,8 @@ export class TableScene extends Container {
     this.hands.setTheme(theme);
     this.trick.setTheme(theme);
     this.announces.setTheme(theme);
+    // v18 — le dos des cartes suit le thème (reconstruit si couleurs changées).
+    this.atlas.setBack({ backHi: theme.backHi, backLo: theme.backLo, backStripe: theme.backStripe, backBorder: theme.backBorder });
   }
 
   /** Show a transient emote bubble on a seat (smiley bar). */

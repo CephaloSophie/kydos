@@ -69,6 +69,11 @@ export class TournamentOrchestrator {
       participantsByUser.set(String(p.userId?._id ?? p.userId), p);
     }
 
+    // v16 — compte à rebours (s) avant chaque match. Le match n'est CRÉÉ
+    // qu'une fois l'instant planifié atteint, laissant au joueur le temps
+    // d'être notifié et de rejoindre. 0 = démarrage immédiat.
+    const countdownMs = Math.max(0, Number(gameConfig.roundCountdownSec ?? 10)) * 1000;
+
     let matchesLaunched = 0;
     let dirty = false;
 
@@ -78,6 +83,17 @@ export class TournamentOrchestrator {
       if (!bm.slotA?.userId || !bm.slotB?.userId) continue;
       // Déjà créé et en cours ou fini → skip.
       if (bm.matchId) continue;
+
+      // Compte à rebours : à la 1ʳᵉ fois où les 2 slots sont connus, on planifie
+      // le démarrage ; on ne crée le match qu'une fois l'instant atteint.
+      if (countdownMs > 0) {
+        if (!bm.scheduledStartAt) {
+          bm.scheduledStartAt = new Date(Date.now() + countdownMs);
+          dirty = true;
+          continue;
+        }
+        if (new Date(bm.scheduledStartAt).getTime() > Date.now()) continue;   // décompte en cours
+      }
 
       const participants = this.#buildParticipants(format, bm, participantsByUser);
       if (!participants) continue;   // config incomplète (ne devrait pas arriver)
@@ -102,6 +118,8 @@ export class TournamentOrchestrator {
         const manches = [1, 2, 4].includes(gameConfig.manches) ? gameConfig.manches : 2;
         void matchHeadlessRunner.run(String(created._id), {
           manches, baseTarget: gameConfig.baseTarget, labelTarget: gameConfig.labelTarget,
+          // v17 — règles de belote configurables du tournoi.
+          openingBidMin: gameConfig.openingBidMin, countBelote: gameConfig.countBelote, clockwise: gameConfig.clockwise,
         }).catch(() => {});
       } else if (format === MatchFormat.HYBRID_ALLIANCE || format === MatchFormat.ROYAL_SQUARE) {
         // v14.14 — HYBRID (2 humains) et ROYAL (4 humains) : table live que

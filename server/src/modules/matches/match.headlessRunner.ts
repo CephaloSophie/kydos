@@ -11,7 +11,8 @@
  * cohérente.
  * ========================================================================== */
 import {
-  ContreeRules, DEFAULT_PARTIE, GameEngine, createAlgorithm, robotFromFiche, robotAct, shouldSurcontrer,
+  ContreeRules, GameEngine, createAlgorithm, robotFromFiche, robotAct, shouldSurcontrer,
+  resolveTableConfig,
   type EnginePlayer, type LogEntry, type RobotAlgorithm, type RobotConfig, type Seat,
 } from 'belote-core';
 import { Types } from 'mongoose';
@@ -22,7 +23,6 @@ import { walletService } from '../wallet/wallet.service.js';
 import { houseAccountingService } from '../houseAccounting/houseAccounting.service.js';
 import { getMatchFormatRules, MatchFormat } from './matchFormat.js';
 
-const contreeRules = new ContreeRules();
 const MAX_STEPS = 20_000;
 
 export interface HeadlessMatchResult {
@@ -36,7 +36,12 @@ export class MatchHeadlessRunner {
   /** Lance et termine un match (DUO_STEEL) en synchronous. Rend le résultat. */
   async run(
     matchId: string,
-    options: { manches: 1 | 2 | 4; baseTarget?: number; labelTarget?: number; prizePerWinner?: number; houseRake?: number } = { manches: 2 },
+    options: {
+      manches: 1 | 2 | 4; baseTarget?: number; labelTarget?: number;
+      // v17 — règles de belote configurables.
+      openingBidMin?: number; countBelote?: boolean; clockwise?: boolean;
+      prizePerWinner?: number; houseRake?: number;
+    } = { manches: 2 },
   ): Promise<HeadlessMatchResult> {
     const match = await MatchModel.findById(matchId);
     if (!match) throw new Error(`Match introuvable : ${matchId}`);
@@ -59,18 +64,21 @@ export class MatchHeadlessRunner {
         return { seat: p.seat as Seat, name: doc?.name ?? `Robot ${p.seat + 1}`, type: 'robot', robotId: String(p.robotId) };
       });
 
-    const engine = new GameEngine(
-      enginePlayers,
-      {
-        ...DEFAULT_PARTIE,
-        manches: options.manches,
-        // v16 — score cible configurable (défaut 1500 / 2000).
-        baseTarget: options.baseTarget && options.baseTarget > 0 ? options.baseTarget : DEFAULT_PARTIE.baseTarget,
-        labelTarget: options.labelTarget && options.labelTarget > 0 ? options.labelTarget : DEFAULT_PARTIE.labelTarget,
-        local: false,
-      },
-      contreeRules,
-    );
+    // v17 — barème + orchestration résolus depuis les options du match/tournoi
+    // (score cible, score initial des enchères, belote comptée, sens du jeu).
+    const { rulesConfig, partieConfig } = resolveTableConfig({
+      manches: options.manches,
+      baseTarget: options.baseTarget,
+      labelTarget: options.labelTarget,
+      openingBidMin: options.openingBidMin,
+      countBelote: options.countBelote,
+      clockwise: options.clockwise,
+      responseTimeMs: 0,
+      maxPlayTimeMs: 0,
+      local: false,
+    });
+    const contreeRules = new ContreeRules(rulesConfig);
+    const engine = new GameEngine(enginePlayers, partieConfig, contreeRules);
     const logs: LogEntry[] = [];
     const robots: RobotConfig[] = enginePlayers.map((p) =>
       robotFromFiche(robotById.get(p.robotId!) ?? {}, { id: p.robotId!, name: p.name }),
@@ -108,6 +116,10 @@ export class MatchHeadlessRunner {
     const { gameId, winner } = await gamePersistenceService.persistFinishedGame({
       engine, tableId: null, sessionId: null, ownerId: ownerAId, teamId: null,
       visibility: 'public', mode: 'competition', participants: persistParticipants, logs, substituteSeats: new Set(),
+      // v18 — rattachement compétition (variante + tournoi éventuel).
+      match: String(match._id),
+      formatConfig: (match as any).formatConfig ? String((match as any).formatConfig) : null,
+      tournament: (match as any).tournament ? String((match as any).tournament) : null,
     });
 
     const finalManche = engine.manches[engine.manches.length - 1];
@@ -146,6 +158,9 @@ export class MatchHeadlessRunner {
             winnerUserId: String(winnerParticipant.userId),
             scoreA: finalManche.cumulative.A,
             scoreB: finalManche.cumulative.B,
+            // v17 — manches gagnées (best-of-N), score de progression.
+            manchesA: engine.view().manchesWon.A,
+            manchesB: engine.view().manchesWon.B,
             gameId,
           });
         }

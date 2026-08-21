@@ -43,17 +43,42 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
  * indigo striped back with white border). Exposed as Pixi Textures; on-screen
  * cards are plain Sprites — pixel-perfect at any zoom, zero ink bleed.
  */
+/** v18 — Couleurs du dos des cartes (thème). */
+export interface CardBackColors { backHi: string; backLo: string; backStripe: string; backBorder: string }
+const DEFAULT_BACK: CardBackColors = {
+  backHi: CARD_STYLE.backHi, backLo: CARD_STYLE.backLo, backStripe: CARD_STYLE.backStripe, backBorder: CARD_STYLE.backBorder,
+};
+
 export class CardAtlas {
   private textures = new Map<string, Texture>();
   readonly cardW = CARD_W;
   readonly cardH = CARD_H;
+  private dpr: number;
+  private back: CardBackColors;
 
-  constructor(dpr = 3) {
+  constructor(dpr = 3, back: Partial<CardBackColors> = {}) {
+    this.dpr = dpr;
+    this.back = { ...DEFAULT_BACK, ...back };
     for (const suit of SUITS) for (const rank of RANKS) {
       const card = { rank, suit } as Card;
       this.textures.set(key(card), this.renderFace(card, dpr));
     }
     this.textures.set('back', this.renderBack(dpr));
+  }
+
+  /**
+   * v18 — Reconstruit le dos avec de nouvelles couleurs (thème de table).
+   * No-op si les couleurs sont inchangées. Les sprites re-créés au prochain
+   * rendu piochent la nouvelle texture.
+   */
+  setBack(back: Partial<CardBackColors>): void {
+    const next = { ...DEFAULT_BACK, ...back };
+    if (next.backHi === this.back.backHi && next.backLo === this.back.backLo
+      && next.backStripe === this.back.backStripe && next.backBorder === this.back.backBorder) return;
+    this.back = next;
+    const old = this.textures.get('back');
+    this.textures.set('back', this.renderBack(this.dpr));
+    old?.destroy(true);
   }
 
   get(card: Card | 'back'): Texture { return this.textures.get(key(card)) ?? this.textures.get('back')!; }
@@ -110,7 +135,7 @@ export class CardAtlas {
   /** Back: white card body, inset(3px) indigo panel with 45° white stripes + white border. */
   private renderBack(dpr: number): Texture {
     const { cv, ctx } = this.canvas(dpr);
-    const S = CARD_STYLE;
+    const S = { ...CARD_STYLE, ...this.back };
 
     // Card body (white) so the inset panel reads like the DS spec.
     roundRect(ctx, 0, 0, CARD_W, CARD_H, CARD_RADIUS);

@@ -113,3 +113,24 @@ describe('bracket · idempotence rejouée sur 3 rounds', () => {
     expect(JSON.stringify(t)).toBe(snapshot);
   });
 });
+
+describe('bracket · v17 manches gagnées (score de progression monotone)', () => {
+  it('advanceBracket persiste manchesA/manchesB quand fournis', () => {
+    const t = buildInitialBracket(4, seedsFor(4));
+    advanceBracket(t, { roundIndex: 1, matchIndex: 0, winner: 'A', scoreA: 121, scoreB: 90, manchesA: 2, manchesB: 1, gameId: 'g1' });
+    const bm = t.rounds[0].matches[0];
+    expect(bm.manchesA).toBe(2);
+    expect(bm.manchesB).toBe(1);
+    // Les points restent disponibles en secondaire.
+    expect(bm.scoreA).toBe(121);
+  });
+
+  it('manchesA/manchesB par défaut à null tant que non renseignés', () => {
+    const t = buildInitialBracket(4, seedsFor(4));
+    expect(t.rounds[0].matches[0].manchesA).toBeNull();
+    expect(t.rounds[0].matches[0].manchesB).toBeNull();
+    // advanceBracket sans manches ne les invente pas.
+    advanceBracket(t, { roundIndex: 1, matchIndex: 0, winner: 'A', scoreA: 121, scoreB: 90, gameId: 'g1' });
+    expect(t.rounds[0].matches[0].manchesA).toBeNull();
+  });
+});

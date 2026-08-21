@@ -154,6 +154,14 @@ export interface EngineView {
   /** Premier annonceur de la donne (juste après le donneur, sens de jeu pris en compte). */
   firstBidderSeat: Seat;
   currentBidValue: number | null;
+  /**
+   * Enchère minimale d'OUVERTURE configurée pour cette table (RulesConfig.minBid).
+   * v17 — exposée pour que le HUD démarre l'échelle d'enchères à la bonne valeur
+   * (ex. 80 au lieu du 90 historique) au lieu de la coder en dur.
+   */
+  minBid: number;
+  /** Enchère maximale (RulesConfig.maxBid), borne haute de l'échelle. */
+  maxBid: number;
   contre: ContreLevel;
   /** Sièges autorisés à coincher / surcoincher maintenant (sens de jeu pris en compte). */
   contreSeats: Seat[];

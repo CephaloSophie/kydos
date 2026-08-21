@@ -1,7 +1,8 @@
 import type { Server } from 'socket.io';
 import {
   ContreeRules, createAlgorithm, GameEngine, makeRobot, robotFromFiche, robotAct, shouldSurcontrer,
-  type EnginePlayer, type LogEntry, type PartieConfig, type RobotAlgorithm, type RobotConfig, type Seat,
+  resolveTableConfig,
+  type EnginePlayer, type LogEntry, type RobotAlgorithm, type RobotConfig, type Seat,
 } from 'belote-core';
 import { TableModel } from '../table/table.model.js';
 import { RobotModel } from '../robot/robot.model.js';
@@ -12,7 +13,6 @@ import { singleGameLockService } from './singleGameLock.service.js';
 import { createLogger } from '../../core/logger.js';
 
 const logger = createLogger('live-game');
-const contreeRules = new ContreeRules();
 
 const DEFAULT_TURN_TIMEOUT_MS = 10000;
 const BID_RESPONSE_MS = 700;
@@ -29,6 +29,10 @@ const SUBSTITUTE_TURN_DELAY_MS = 500;
 
 interface LiveGame {
   engine: GameEngine;
+  /** v17 — barème résolu de la table (utilisé pour instancier les cerveaux). */
+  rules: ContreeRules;
+  /** v18 — couleurs du thème de table (envoyées au client avec l'état). */
+  themeColors: Record<string, string> | null;
   participants: PersistenceParticipant[];
   robotBrains: (RobotAlgorithm | null)[];
   robots: (RobotConfig | null)[];
@@ -82,7 +86,7 @@ export class LiveGameService {
     const robotDoc: any = await RobotModel.findById(robotId).lean();
     if (!robotDoc) return false;
     const robotCfg = robotFromFiche(robotDoc, { id: String(robotDoc._id), name: robotDoc.name });
-    const brain = createAlgorithm(robotCfg, contreeRules);
+    const brain = createAlgorithm(robotCfg, live.rules);
     live.substituteBrainBySeat.set(seat, brain);
     return true;
   }
@@ -107,18 +111,24 @@ export class LiveGameService {
       robotId: participant.robotId,
     }));
 
-    const partieConfig: PartieConfig = {
-      manches: [1, 2, 4].includes(tableDocument.config?.manches) ? tableDocument.config.manches : 2,
-      // v16 — score cible configurable (défaut 1500 / 2000).
-      baseTarget: tableDocument.config?.baseTarget > 0 ? tableDocument.config.baseTarget : 1500,
-      labelTarget: tableDocument.config?.labelTarget > 0 ? tableDocument.config.labelTarget : 2000,
-      responseTimeMs: 1000, maxPlayTimeMs: 10000,
-      clockwise: false, local: false,
-      signals: {
-        reflexion: tableDocument.config?.signals?.reflexion !== false,
-        repeatSuit: tableDocument.config?.signals?.repeatSuit !== false,
-      },
-    };
+    // v17 — TOUTE la configuration moteur (barème + orchestration) est
+    // résolue en un point unique depuis la config de la table. C'est ici que
+    // « score initial des enchères », « belote comptée ou non » et « sens du
+    // jeu » deviennent effectifs.
+    const cfg = tableDocument.config ?? {};
+    const { rulesConfig, partieConfig } = resolveTableConfig({
+      manches: cfg.manches,
+      baseTarget: cfg.baseTarget,
+      labelTarget: cfg.labelTarget,
+      openingBidMin: cfg.openingBidMin,
+      countBelote: cfg.countBelote,
+      clockwise: cfg.clockwise,
+      responseTimeMs: 1000,
+      maxPlayTimeMs: 10000,
+      local: false,
+      signals: cfg.signals,
+    });
+    const contreeRules = new ContreeRules(rulesConfig);
     const engine = new GameEngine(enginePlayers, partieConfig, contreeRules);
 
     const robotIds = tableDocument.seats.filter((seat: any) => seat.robot).map((seat: any) => seat.robot);
@@ -141,8 +151,16 @@ export class LiveGameService {
     const sessionDocument = await SessionModel.create({ table: tableId, status: 'running' });
     await TableModel.findByIdAndUpdate(tableId, { $set: { activeSession: sessionDocument._id } });
 
+    // v18 — thème de table (couleurs résolues) posé au provisionnement.
+    const tc = (tableDocument.config?.themeColors ?? null) as any;
+    const themeColors = tc && tc.felt1
+      ? { felt1: tc.felt1, felt2: tc.felt2, rail: tc.rail, railHi: tc.railHi, railLo: tc.railLo, railInner: tc.railInner, accent: tc.accent, accent2: tc.accent2, backHi: tc.backHi, backLo: tc.backLo }
+      : null;
+
     this.games.set(tableId, {
       engine,
+      rules: contreeRules,
+      themeColors,
       participants,
       robotBrains,
       robots,
@@ -274,7 +292,10 @@ export class LiveGameService {
     server.to(`table:${tableId}`).emit('table:spectators', { count: spectatorCount });
     for (const socket of sockets) {
       const seat = this.seatOfUser(liveGame, socket.data.userId);
-      const commonView = { ...view, handCounts, playerNames, players };
+      // v18 — themeColors voyage AVEC l'état de jeu : c'est le seul canal reçu
+      // par un joueur qui rejoint une table déjà en cours (le lobby n'est pas
+      // renvoyé au subscribe), donc le thème s'applique dès la 1ʳᵉ frame.
+      const commonView = { ...view, handCounts, playerNames, players, themeColors: liveGame.themeColors };
       if (seat != null) {
         socket.emit('table:game', { view: commonView, summary, myHand: engine.handOf(seat), legal: engine.legalCards(seat), mySeat: seat, logs: liveGame.logs.slice(-80) });
       } else {
@@ -386,7 +407,7 @@ export class LiveGameService {
   }
 
   /** Instantané des sessions de jeu actives — pour le moniteur wslogs (dev). */
-  snapshotSessions(): Array<{ tableId: string; phase: string; turn: number | null; kind: string; visibility: string; players: { seat: number; name: string; isRobot: boolean; substitute: boolean }[]; scores: { A: number; B: number }; logs: number }> {
+  snapshotSessions(): Array<{ tableId: string; phase: string; turn: number | null; kind: string; visibility: string; players: { seat: number; name: string; isRobot: boolean; substitute: boolean }[]; scores: { A: number; B: number }; manchesWon: { A: number; B: number }; logs: number }> {
     const out: any[] = [];
     for (const [tableId, live] of this.games.entries()) {
       const view = live.engine.view();
@@ -397,7 +418,10 @@ export class LiveGameService {
         kind: live.kind,
         visibility: live.visibility,
         players: live.engine.players.map((p, i) => ({ seat: i, name: p.name, isRobot: p.type === 'robot', substitute: live.substituteSeats.has(i) })),
+        // Points de la manche courante (peut repartir de 0 entre 2 manches).
         scores: view.cumulative,
+        // v17 — manches gagnées (best-of-N) : score de progression MONOTONE.
+        manchesWon: view.manchesWon,
         logs: live.logs.length,
       });
     }

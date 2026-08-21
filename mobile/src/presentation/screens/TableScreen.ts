@@ -80,6 +80,9 @@ export function TableScreen(ctx: AppContext): HTMLElement {
     const accent = usWon ? 'var(--c-success)' : themWon ? 'var(--c-danger)' : 'var(--c-gold)';
     const title = info.winner ? (usWon ? 'Victoire de NOUS' : "Victoire d'EUX") : 'Partie nulle';
 
+    // Conteneur du bouton « Arbre du tournoi » (rempli plus bas si tournoi).
+    const tournamentSlot = h('div', { class: 'col', style: { width: '100%' } });
+
     const card = h('div', { class: 'col center gap-3', style: {
       padding: '26px 30px', borderRadius: 'var(--r-2xl)', minWidth: '320px',
       background: 'linear-gradient(180deg, rgba(16,22,36,.98), rgba(9,13,22,.98))',
@@ -100,12 +103,30 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       h('div', { class: 'row gap-2', style: { marginTop: '6px' } },
         info.gameId ? Button('📊 Statistiques', { variant: 'secondary', size: 'sm', onClick: () => { overlay.remove(); onlineSocket.disconnect(); router.go(`gamestats?id=${info.gameId}`); } }) : null,
         info.gameId ? Button('▶ Rejouer', { variant: 'ghost', size: 'sm', onClick: () => { overlay.remove(); onlineSocket.disconnect(); router.go(`replay?id=${info.gameId}`); } }) : null),
+      // v16 — emplacement du bouton « Arbre du tournoi », injecté après coup si
+      // ce match appartient à un tournoi LIVE (vainqueur OU éliminé).
+      tournamentSlot,
       Button('Quitter la table', { size: 'sm', block: true, onClick: () => { overlay.remove(); leaveTable(); } }));
 
     const overlay = h('div', { class: 'center', style: {
       position: 'absolute', inset: '0', zIndex: '30', background: 'rgba(4,7,14,.72)', backdropFilter: 'blur(5px)',
     } }, card);
     root.append(overlay);
+
+    // v16 — si ce match en ligne est un match de TOURNOI encore LIVE, on propose
+    // d'aller à l'arbre pour choisir un match à regarder ou quitter. Vaut pour
+    // le vainqueur (état waiting/pending/champion) comme pour le perdant
+    // (éliminé) tant que le tournoi n'est pas terminé.
+    void (async () => {
+      try {
+        const { active } = await api.getMyTournament();
+        if (!active || !active.tournamentId) return;
+        tournamentSlot.append(
+          Button(`${active.icon || '♦'} Arbre du tournoi`, { variant: 'secondary', size: 'sm', block: true, onClick: () => {
+            overlay.remove(); onlineSocket.disconnect(); router.go(`tournament?id=${active.tournamentId}`);
+          } }));
+      } catch { /* pas un tournoi ou hors-ligne : on n'ajoute rien */ }
+    })();
   };
 
   const onlineSocket = new TableSocket();
@@ -233,6 +254,21 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   // lancée pour le type de table (local = entraînement ; en ligne, le kind du
   // lobby affinera). Coupée à la sortie d'écran (navigation quelconque).
   let melodyKind: string = onlineId ? 'default' : 'local';
+  // v18 — override de thème (couleurs résolues du thème back-office), reçu via
+  // la config de table du lobby. Converti hex string → hex number pour Pixi.
+  let themeOverrides: Record<string, number | string> | undefined;
+  const hexToNum = (s: string | null | undefined): number | null =>
+    (typeof s === 'string' && /^#?[0-9a-fA-F]{6}$/.test(s)) ? parseInt(s.replace('#', ''), 16) : null;
+  const buildThemeOverrides = (colors: any): Record<string, number | string> | undefined => {
+    if (!colors) return undefined;
+    const numKeys = ['felt1', 'felt2', 'rail', 'railHi', 'railLo', 'railInner', 'accent', 'accent2'] as const;
+    const out: Record<string, number | string> = {};
+    for (const k of numKeys) { const n = hexToNum(colors[k]); if (n != null) out[k] = n; }
+    // v18 — dos des cartes : chaînes CSS (l'atlas dessine sur un canvas 2D).
+    if (typeof colors.backHi === 'string') out.backHi = colors.backHi;
+    if (typeof colors.backLo === 'string') out.backLo = colors.backLo;
+    return Object.keys(out).length ? out : undefined;
+  };
   root.addEventListener('pointerdown', () => {
     soundService.unlock();
     soundService.playMelodyForTable(melodyKind);
@@ -331,6 +367,10 @@ export function TableScreen(ctx: AppContext): HTMLElement {
   const renderOnline = (state: LiveGameState) => {
     lastOnlineState = state;
     const v = state.view;
+    // v18 — le thème de table voyage AVEC l'état de jeu (seul canal reçu par un
+    // joueur qui rejoint une table déjà en cours). On applique dès réception.
+    const tc = (v as unknown as { themeColors?: any }).themeColors;
+    if (tc) { const ov = buildThemeOverrides(tc); if (ov) themeOverrides = ov; }
     const seat = state.mySeat ?? null;
     currentMySeat = seat;
     playDetected(v, (seat ?? null) as Seat | null);
@@ -369,6 +409,8 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       // v14.7 — Thème visuel de la table calé sur son kind : hybride (jaune),
       // acier (bleu), royal (rouge), le reste tombe sur 'local' (vert).
       theme: melodyKind,
+      // v18 — surcharge par le thème back-office choisi (feutre + bordure).
+      themeOverrides,
       opponentCards: 'back', showMenu: false, showScoreSheet: true, forceLandscape: false,
       onLeave: () => { onlineSocket.disconnect(); reactRoot?.unmount(); router.go('online'); },
     }));
@@ -407,7 +449,12 @@ export function TableScreen(ctx: AppContext): HTMLElement {
 
     onlineSocket.connect(onlineId, {
       // La mélodie suit le TYPE de la table (hybride/acier/royal), reçu du lobby.
-      onLobby: (lobby) => { melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind); },
+      onLobby: (lobby) => {
+        melodyKind = lobby.kind; soundService.playMelodyForTable(melodyKind);
+        // v18 — applique le thème de table choisi (couleurs feutre + bordure).
+        const ov = buildThemeOverrides(lobby.config?.themeColors);
+        if (ov) { themeOverrides = ov; if (lastOnlineState) renderOnline(lastOnlineState); }
+      },
       onGame: (state) => { gotState = true; waiting.style.display = 'none'; renderOnline(state); },
       onSpectators: (count) => { spectatorCount.textContent = `${count}`; },
       onSignal: (info) => { if (info.kind === 'smiley' && info.data && typeof (info.data as { emoji?: string }).emoji === 'string') { soundService.playEffect('emote'); emoteSignal = { seat: info.seat as Seat, emoji: (info.data as { emoji: string }).emoji, nonce: ++emoteNonce }; if (lastOnlineState) renderOnline(lastOnlineState); } },

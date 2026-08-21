@@ -66,6 +66,8 @@ export class SidebarComponent {
     { path: '/dashboard', label: 'Dashboard', icon: '📊', exact: true },
     { path: '/tournaments', label: 'Tournois', icon: '🏆', exact: false },
     { path: '/match-formats', label: 'Match rapide', icon: '⚡', exact: false },
+    { path: '/table-themes', label: 'Thèmes de table', icon: '🎨', exact: false },
+    { path: '/robot-avatars', label: 'Avatars robots', icon: '🤖', exact: false },
     { path: '/users', label: 'Utilisateurs', icon: '👤', exact: false },
     { path: '/promos', label: 'Codes Promo', icon: '🎟️', exact: false },
     { path: '/accounting', label: 'Comptabilité', icon: '💰', exact: false },

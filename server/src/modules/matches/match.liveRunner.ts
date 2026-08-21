@@ -93,6 +93,15 @@ export class MatchLiveService {
     const owner = match.participants.find((p: any) => p.isHuman)?.userId
       ?? match.participants[0]?.userId;
 
+    // v18 — thème de table : résolu en couleurs concrètes et posé sur la config
+    // pour que le mobile l'affiche directement (feutre + bordure). On ne pose
+    // les couleurs QUE si un thème a été explicitement choisi ; sinon on laisse
+    // `null` pour que le mobile garde le thème par défaut de son `kind`
+    // (acier/hybride/royal).
+    const chosenThemeId = configOverride?.tableThemeId ?? null;
+    const { tableThemeService } = await import('../tableTheme/tableTheme.service.js');
+    const themeColors = chosenThemeId ? await tableThemeService.resolveColorsById(chosenThemeId) : null;
+
     const table = await TableModel.create({
       status: 'lobby',
       kind: FORMAT_TO_KIND[format],
@@ -106,6 +115,13 @@ export class MatchLiveService {
         manches: [1, 2, 4].includes(configOverride?.manches) ? configOverride!.manches : 2,
         baseTarget: configOverride?.baseTarget > 0 ? configOverride!.baseTarget : 1500,
         labelTarget: configOverride?.labelTarget > 0 ? configOverride!.labelTarget : 2000,
+        // v17 — règles de belote configurables propagées à la table live.
+        openingBidMin: configOverride?.openingBidMin > 0 ? configOverride!.openingBidMin : 90,
+        countBelote: configOverride?.countBelote !== false,
+        clockwise: configOverride?.clockwise === true,
+        // v18 — thème de table (id + couleurs résolues).
+        tableThemeId: configOverride?.tableThemeId ?? null,
+        themeColors,
         trickDelayMs: configOverride?.trickDelayMs ?? 900,
         speed: configOverride?.speed ?? 1,
         feltTheme: configOverride?.feltTheme ?? 'classic',
@@ -246,6 +262,9 @@ export class MatchLiveService {
     const finalManche = (game as any)?.replay?.manches?.slice(-1)[0];
     const scoreA = finalManche?.cumulative?.A ?? 0;
     const scoreB = finalManche?.cumulative?.B ?? 0;
+    // v17 — manches gagnées (best-of-N) : score de progression monotone.
+    const manchesA = (game as any)?.manchesWonA ?? 0;
+    const manchesB = (game as any)?.manchesWonB ?? 0;
 
     match.status = MatchStatus.FINISHED;
     match.finishedAt = new Date();
@@ -254,6 +273,18 @@ export class MatchLiveService {
     match.scoreTeamA = scoreA;
     match.scoreTeamB = scoreB;
     await match.save();
+
+    // v18 — rattache la partie archivée à sa variante / son tournoi (le Game a
+    // été persisté par liveGame sans connaître le Match). Permet l'agrégation
+    // back-office des parties jouées sous une variante donnée.
+    await GameModel.updateOne(
+      { _id: info.gameId },
+      { $set: {
+        match: match._id,
+        formatConfig: (match as any).formatConfig ?? null,
+        tournament: (match as any).tournament ?? null,
+      } },
+    );
 
     // Économie : versement au(x) vainqueur(s), rake maison. Pour ROYAL_SQUARE,
     // il y a 2 vainqueurs (les 2 humains de l'équipe gagnante) → on crédite
@@ -307,6 +338,7 @@ export class MatchLiveService {
             matchId: String(match._id),
             winnerUserId: String(winnerParticipant.userId),
             scoreA, scoreB,
+            manchesA, manchesB,
             gameId: info.gameId,
           });
         }
@@ -335,21 +367,24 @@ export class MatchLiveService {
     }).select('_id tournament liveTableId').lean();
     if (running.length === 0) return;
 
-    // Index tableId → scores {A,B} depuis les sessions live en mémoire.
+    // Index tableId → { points manche courante, manches gagnées } depuis les
+    // sessions live en mémoire.
     const sessions = liveGameService.snapshotSessions();
-    const scoreByTable = new Map<string, { A: number; B: number }>();
-    for (const s of sessions) scoreByTable.set(s.tableId, s.scores);
+    const byTable = new Map<string, { scores: { A: number; B: number }; manchesWon: { A: number; B: number } }>();
+    for (const s of sessions) byTable.set(s.tableId, { scores: s.scores, manchesWon: s.manchesWon });
 
     const { tournamentService } = await import('../tournaments/tournament.service.js');
     for (const m of running) {
       const tableId = String((m as any).liveTableId);
-      const sc = scoreByTable.get(tableId);
-      if (!sc) continue;
+      const live = byTable.get(tableId);
+      if (!live) continue;
       try {
         await tournamentService.updateLiveScore({
           tournamentId: String((m as any).tournament),
           matchId: String((m as any)._id),
-          scoreA: sc.A, scoreB: sc.B,
+          scoreA: live.scores.A, scoreB: live.scores.B,
+          // v17 — score de progression monotone.
+          manchesA: live.manchesWon.A, manchesB: live.manchesWon.B,
         });
       } catch { /* résilience */ }
     }

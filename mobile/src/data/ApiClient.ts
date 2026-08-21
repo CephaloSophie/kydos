@@ -108,6 +108,13 @@ export class ApiClient {
   listMatchFormats() {
     return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number; minLevel?: number; maxLevel?: number | null }> }>('/matches/formats');
   }
+  /**
+   * v18 — Catalogue d'avatars de robots servi par le back-office, filtré par le
+   * niveau du joueur. Le mobile ne code plus aucun avatar en dur.
+   */
+  listAvatars() {
+    return this.call<{ avatars: Array<{ key: string; name: string; accentColor: string; minLevel: number; maxLevel: number | null }>; level: number }>('/avatars');
+  }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }
   /** Détail complet d'un match (participants avec robots populés). */
@@ -161,6 +168,9 @@ export class ApiClient {
             winner: 'A' | 'B' | null;
             scoreA: number | null;
             scoreB: number | null;
+            manchesA?: number | null;
+            manchesB?: number | null;
+            tableId?: string | null;
             startedAt: string | null;
             finishedAt: string | null;
           }>;
@@ -323,6 +333,9 @@ export interface AwaitedTournamentMatch {
   slotBName: string;
   scoreA: number | null;
   scoreB: number | null;
+  /** v17 — manches gagnées (best-of-N) : score de progression monotone. */
+  manchesA: number | null;
+  manchesB: number | null;
   winner: 'A' | 'B' | null;
   tableId: string | null;
 }
@@ -337,9 +350,13 @@ export interface TournamentActive {
   state: 'champion' | 'playing' | 'waiting' | 'pending' | 'eliminated' | 'none';
   roundIndex: number | null;
   roundLabel: string;
+  /** v16 — instant de démarrage planifié (compte à rebours), état 'pending'. */
+  startsAt: string | null;
   myMatchId: string | null;
   myTableId: string | null;
   awaiting: AwaitedTournamentMatch[];
+  /** v16 — délai (s) avant redirection auto depuis la popup LIVE. */
+  autoRejoinSec?: number;
 }
 
 /** Forme serveur d'un robot (serializer listByOwner). */

@@ -15,7 +15,14 @@ export interface MatchFormatConfig {
   icon: string;
   minLevel: number;
   maxLevel: number | null;
+  autoRejoinSec?: number;
+  openingBidMin?: number;
+  countBelote?: boolean;
+  clockwise?: boolean;
+  tableThemeId?: string | null;
   active: boolean;
+  /** v18 — cycle de vie : brouillon / prêt / publié. */
+  status?: 'draft' | 'pending' | 'active';
   order: number;
   houseNet?: number;
 }
@@ -30,6 +37,10 @@ export class MatchFormatService {
     return this.http.get<{ formats: MatchFormatConfig[] }>(this.apiUrl);
   }
 
+  get(id: string) {
+    return this.http.get<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}/raw`);
+  }
+
   create(data: { format: string } & Partial<Omit<MatchFormatConfig, 'format'>>) {
     return this.http.post<{ format: MatchFormatConfig }>(this.apiUrl, data);
   }
@@ -38,7 +49,38 @@ export class MatchFormatService {
     return this.http.put<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}`, data);
   }
 
+  clone(id: string) {
+    return this.http.post<{ format: MatchFormatConfig }>(`${this.apiUrl}/${id}/clone`, {});
+  }
+
   delete(id: string) {
     return this.http.delete<{ deleted: boolean }>(`${this.apiUrl}/${id}`);
   }
+
+  analytics(id: string) {
+    return this.http.get<VariantAnalytics>(`${this.apiUrl}/${id}/analytics`);
+  }
+}
+
+/** Agrégats renvoyés par l'endpoint de visualisation d'une variante. */
+export interface VariantStats {
+  gamesPlayed: number;
+  winsA: number; winsB: number; draws: number;
+  winRateA: number; winRateB: number;
+  avgScoreA: number; avgScoreB: number;
+  avgManches: number; avgDonnes: number; avgDurationMs: number;
+  capotRate: number; beloteRate: number;
+  contractSuccessRate: number; avgContract: number;
+}
+export interface VariantGameRow {
+  id: string; winner: 'A' | 'B' | null;
+  finalScoreA: number; finalScoreB: number;
+  manchesWonA: number; manchesWonB: number;
+  durationMs: number; totalDonnes: number; capotsTotal: number;
+  finishedAt: string; players: string[];
+}
+export interface VariantAnalytics {
+  variant: MatchFormatConfig & { houseNet?: number };
+  stats: VariantStats;
+  games: VariantGameRow[];
 }

@@ -18,6 +18,16 @@ import { MatchModel } from '../matches/match.model.js';
 import { MatchFormat } from '../matches/matchFormat.js';
 import { badRequest, notFound } from '../../core/HttpError.js';
 
+/**
+ * v16 — délai (s) exposé côté client pour le compte à rebours de redirection
+ * auto de la popup LIVE. Défaut 5 s ; toute valeur non-finie retombe dessus.
+ * Fonction pure exportée pour être testée en unitaire sans Mongoose.
+ */
+export function readAutoRejoinSecFromCfg(cfg: { autoRejoinSec?: unknown } | null | undefined): number {
+  const n = Number(cfg?.autoRejoinSec);
+  return Number.isFinite(n) ? n : 5;
+}
+
 function parseFormat(raw: unknown): MatchFormat {
   const s = String(raw ?? '').trim() as MatchFormat;
   if (!Object.values(MatchFormat).includes(s)) throw badRequest(`Format inconnu : ${raw}`);
@@ -100,6 +110,12 @@ export class MatchmakingController {
         .sort({ createdAt: -1 })
         .populate('participants.robotId', 'name mobile owner')
         .lean();
+    }
+    // v16 — expose autoRejoinSec (délai de redirection auto de la popup LIVE).
+    if (match?.formatConfig) {
+      const { MatchFormatConfigModel } = await import('../matches/matchFormatConfig.model.js');
+      const cfg: any = await MatchFormatConfigModel.findById(match.formatConfig).select('autoRejoinSec').lean();
+      match.autoRejoinSec = readAutoRejoinSecFromCfg(cfg);
     }
     response.json({ match: match ?? null });
   }

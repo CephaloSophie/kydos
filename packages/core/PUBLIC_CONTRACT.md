@@ -20,6 +20,21 @@ peuvent s'appuyer sans crainte de rupture.
 - `GameEngine` (phases, légalité, soumission d'enchère/carte)
 - `RobotDriver` : `robotFromFiche`, `makeRobot`, `createAlgorithm`, `robotAct`, `shouldSurcontrer`
 
+### Configuration de table (instanciation)
+Une table se configure via un objet d'options « métier » traduit en objets moteur
+par des helpers PURS (aucune I/O) :
+- `resolveTableConfig(opts)` → `{ rulesConfig, partieConfig }` — point d'entrée unique.
+- `resolveRulesConfig(opts)` / `resolvePartieConfig(opts)` — granularité fine.
+- Options (`TableConfigOptions`) : `manches`, `baseTarget`, `labelTarget`,
+  `openingBidMin` (score initial des enchères → `minBid`),
+  `countBelote` (belote comptée dans le score → prime 20 ou 0),
+  `clockwise` (sens du jeu), `responseTimeMs`, `maxPlayTimeMs`, `local`, `signals`.
+
+```ts
+const { rulesConfig, partieConfig } = resolveTableConfig({ openingBidMin: 100, countBelote: false, clockwise: true });
+const engine = new GameEngine(players, partieConfig, new ContreeRules(rulesConfig));
+```
+
 ### Robots (cœur extensible)
 - `AlgoSpec` (génome) + `normalizeAlgo`, `algoToRuntime`, presets `ALGO_CLASSIQUE`, `ALGO_AGRESSIF`, `DEFAULT_ALGO`
 - `Agent` + `createAgent` (individu instanciable depuis une spec seule)

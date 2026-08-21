@@ -15,6 +15,9 @@ export interface PixiTableTheme {
   text: number; textDim: number;
   surface: number; surface2: number;
 
+  /** v18 — Dos des cartes (chaînes CSS pour le rendu canvas de l'atlas). */
+  backHi: string; backLo: string; backStripe: string; backBorder: string;
+
   /** Base palette (theme-agnostic, colors.css). */
   suitRed: number; suitBlack: number;
   teamBlue: number; teamBlue2: number;
@@ -27,6 +30,8 @@ export interface PixiTableTheme {
 }
 
 const BASE = {
+  // v18 — dos des cartes par défaut (indigo historique).
+  backHi: '#6b78ea', backLo: '#2a3196', backStripe: 'rgba(255,255,255,0.15)', backBorder: 'rgba(255,255,255,0.85)',
   suitRed: 0xc41e3a, suitBlack: 0x0a0a0a,
   teamBlue: 0x4b57d1, teamBlue2: 0x6b78ea,
   teamYellow: 0xf4c542, teamYellow2: 0xffd766,
