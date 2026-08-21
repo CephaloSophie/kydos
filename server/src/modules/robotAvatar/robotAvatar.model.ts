@@ -13,8 +13,13 @@ const RobotAvatarSchema = new Schema(
     /** Slug stable (référencé par `robot.mobile.avatarId`). */
     key: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 40 },
-    /** Couleur d'accent de la mascotte (yeux / antenne). */
+    /** Couleur d'accent de la mascotte (yeux / antenne / bulbe). */
     accentColor: { type: String, required: true },
+    /** v18 — paramètres de design de la mascotte (SVG paramétrique).
+     *  bodyColor = plaques du corps ; outlineColor = bordure/contour.
+     *  null = dérivé automatiquement de accentColor (clair / foncé). */
+    bodyColor: { type: String, default: null },
+    outlineColor: { type: String, default: null },
     /** Plage de niveau joueur où l'avatar est proposé (maxLevel null = ∞). */
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },

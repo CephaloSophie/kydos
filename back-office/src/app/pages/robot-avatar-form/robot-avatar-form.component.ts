@@ -5,7 +5,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { RobotAvatarService } from '../../services/robot-avatar.service';
+import { robotMascotSvg } from '../../shared/robot-mascot';
 
 @Component({
   selector: 'app-robot-avatar-form',
@@ -27,7 +29,19 @@ import { RobotAvatarService } from '../../services/robot-avatar.service';
             <option value="active">Publié (proposé dans l'app)</option>
           </select>
         </div>
-        <div class="color-row"><span>Couleur d'accent</span><input type="color" [(ngModel)]="a.accentColor" /><code>{{ a.accentColor }}</code></div>
+        <div class="color-row"><span>Accent (yeux / antenne)</span><input type="color" [(ngModel)]="a.accentColor" /><code>{{ a.accentColor }}</code></div>
+        <div class="color-row">
+          <span>Corps (plaques)</span>
+          <input type="color" [ngModel]="a.bodyColor || autoBody()" (ngModelChange)="a.bodyColor = $event" />
+          <code>{{ a.bodyColor || '(auto)' }}</code>
+          @if (a.bodyColor) { <button class="link" (click)="a.bodyColor = null">auto</button> }
+        </div>
+        <div class="color-row">
+          <span>Contour (bordure)</span>
+          <input type="color" [ngModel]="a.outlineColor || autoOutline()" (ngModelChange)="a.outlineColor = $event" />
+          <code>{{ a.outlineColor || '(auto)' }}</code>
+          @if (a.outlineColor) { <button class="link" (click)="a.outlineColor = null">auto</button> }
+        </div>
         <div class="form-row">
           <div class="form-group"><label>Niveau min</label><input type="number" [(ngModel)]="a.minLevel" min="0" /></div>
           <div class="form-group"><label>Niveau max (vide = ∞)</label><input type="number" [(ngModel)]="a.maxLevel" min="0" placeholder="∞" /></div>
@@ -39,8 +53,8 @@ import { RobotAvatarService } from '../../services/robot-avatar.service';
         </div>
       </div>
       <div class="card preview-card">
-        <div class="mascot" [style.background]="a.accentColor">🤖</div>
-        <p class="hint">Aperçu de la mascotte teintée.</p>
+        <div class="mascot" [innerHTML]="mascot()"></div>
+        <p class="hint">Aperçu de la mascotte générée.</p>
       </div>
     </div>
   `,
@@ -56,26 +70,42 @@ import { RobotAvatarService } from '../../services/robot-avatar.service';
     .color-row code { font-size: 11px; color: var(--text-muted); }
     .actions-bar { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
     .err { color: var(--danger); font-size: 13px; }
-    .mascot { width: 120px; height: 120px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 56px; margin: 0 auto; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+    .mascot { display: flex; align-items: center; justify-content: center; margin: 8px auto; }
+    .mascot ::ng-deep svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,0.4)); }
     .hint { color: var(--text-muted); font-size: 12px; margin-top: 12px; text-align: center; }
+    .link { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 11px; text-decoration: underline; padding: 0; }
   `],
 })
 export class RobotAvatarFormComponent implements OnInit {
   editId: string | null = null;
   saving = false;
   error = '';
-  a: any = { name: '', status: 'draft', accentColor: '#7ecb98', minLevel: 0, maxLevel: null };
+  a: any = { name: '', status: 'draft', accentColor: '#7ecb98', bodyColor: null, outlineColor: null, minLevel: 0, maxLevel: null };
 
-  constructor(private svc: RobotAvatarService, private router: Router, private route: ActivatedRoute) {}
+  constructor(private svc: RobotAvatarService, private router: Router, private route: ActivatedRoute, private sanitizer: DomSanitizer) {}
 
   ngOnInit() {
     this.editId = this.route.snapshot.params['id'] || null;
     if (this.editId) {
       this.svc.get(this.editId).subscribe((res) => {
         const v = res.avatar as any;
-        this.a = { name: v.name, status: v.status ?? (v.active ? 'active' : 'draft'), accentColor: v.accentColor, minLevel: v.minLevel ?? 0, maxLevel: v.maxLevel ?? null };
+        this.a = { name: v.name, status: v.status ?? (v.active ? 'active' : 'draft'), accentColor: v.accentColor, bodyColor: v.bodyColor ?? null, outlineColor: v.outlineColor ?? null, minLevel: v.minLevel ?? 0, maxLevel: v.maxLevel ?? null };
       });
     }
+  }
+
+  private shade(hex: string, amt: number): string {
+    const h = (hex || '#7ecb98').replace('#', '');
+    const r = parseInt(h.slice(0, 2), 16) || 0, g = parseInt(h.slice(2, 4), 16) || 0, b = parseInt(h.slice(4, 6), 16) || 0;
+    const t = amt < 0 ? 0 : 255, p = Math.abs(amt);
+    const c = (n: number) => Math.max(0, Math.min(255, Math.round(n + (t - n) * p))).toString(16).padStart(2, '0');
+    return `#${c(r)}${c(g)}${c(b)}`;
+  }
+  autoBody(): string { return this.shade(this.a.accentColor, 0.62); }
+  autoOutline(): string { return this.shade(this.a.accentColor, -0.62); }
+
+  mascot(): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(robotMascotSvg({ accentColor: this.a.accentColor, bodyColor: this.a.bodyColor, outlineColor: this.a.outlineColor }, 150));
   }
 
   save() {

@@ -6,6 +6,8 @@ export interface RobotAvatar {
   key?: string;
   name: string;
   accentColor: string;
+  bodyColor?: string | null;
+  outlineColor?: string | null;
   minLevel: number;
   maxLevel: number | null;
   builtIn?: boolean;

@@ -31,13 +31,17 @@ export class RobotAvatarService {
    * Catalogue servi au mobile : avatars ACTIFS, filtrés par le niveau joueur
    * (si fourni). Trié par `order`.
    */
-  async listForPlayer(userLevel?: number): Promise<Array<{ key: string; name: string; accentColor: string; minLevel: number; maxLevel: number | null }>> {
+  async listForPlayer(userLevel?: number): Promise<Array<{ key: string; name: string; accentColor: string; bodyColor: string | null; outlineColor: string | null; minLevel: number; maxLevel: number | null }>> {
     await this.ensureSeeded();
     const docs: any[] = await RobotAvatarModel.find({ active: true }).sort({ order: 1 }).lean();
     const filtered = typeof userLevel === 'number'
       ? docs.filter((d) => isAvatarUnlocked(userLevel, d.minLevel ?? 0, d.maxLevel ?? null))
       : docs;
-    return filtered.map((d) => ({ key: d.key, name: d.name, accentColor: d.accentColor, minLevel: d.minLevel ?? 0, maxLevel: d.maxLevel ?? null }));
+    return filtered.map((d) => ({
+      key: d.key, name: d.name,
+      accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null,
+      minLevel: d.minLevel ?? 0, maxLevel: d.maxLevel ?? null,
+    }));
   }
 }
 

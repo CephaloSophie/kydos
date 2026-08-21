@@ -133,7 +133,13 @@ export class TournamentOrchestrator {
         // touche que status/startedAt et n'écrase pas le liveTableId posé par
         // provision().
         try {
-          await matchLiveService.provision(String(created._id), gameConfig);   // v16 — config tournoi
+          // v18 — normalise tableThemeId en chaîne (comme le matchmaking), pour
+          // que le thème (feutre + dos des cartes) s'applique aux tables de
+          // tournoi exactement comme aux matchs rapides.
+          await matchLiveService.provision(String(created._id), {
+            ...gameConfig,
+            tableThemeId: gameConfig.tableThemeId ? String(gameConfig.tableThemeId) : null,
+          });
         } catch { /* si provision échoue, la table sera créée à la demande */ }
         await MatchModel.updateOne(
           { _id: created._id },
