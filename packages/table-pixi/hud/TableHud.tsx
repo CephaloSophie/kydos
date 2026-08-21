@@ -157,7 +157,7 @@ export function TableHud(props: TableHudProps) {
 
       {/* Réactions : widget minimisé en BAS-GAUCHE du tapis. Un bouton ouvre la
           liste unique de smileys ; l'émote est diffusée à tous. */}
-      {props.onEmote && (
+      {/*props.onEmote && (
         <div className={`ky-emote-dock ${emotesOpen ? 'is-open' : ''}`}>
           {emotesOpen && (
             <div className="ky-emote-dock__list">
@@ -171,7 +171,7 @@ export function TableHud(props: TableHudProps) {
           <button className="ky-emote-dock__toggle" title="Réactions"
             onClick={() => setEmotesOpen((o) => !o)}>{emotesOpen ? '✕' : '🙂'}</button>
         </div>
-      )}
+      )*/}
 
       {manchePop && view.phase !== 'partie_end' && (
         <TableMessagePopup
