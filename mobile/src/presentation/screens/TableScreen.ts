@@ -396,9 +396,16 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       emoteSignal = { seat: seat as Seat, emoji, nonce: ++emoteNonce };
       renderOnline(state);
     } : null;
+    // v18 — chaque robot expose sa face d'avatar (accent/corps/contour) dans la
+    // liste des joueurs ; on la place au bon siège pour servir de logo Pixi.
+    const players = (v as unknown as { players?: { seat: number; avatar?: { accentColor: string; bodyColor?: string | null; outlineColor?: string | null } | null }[] }).players ?? [];
+    const avatars: ({ accentColor: string; bodyColor?: string | null; outlineColor?: string | null } | null)[] = [null, null, null, null];
+    for (const p of players) if (p && p.avatar && p.seat >= 0 && p.seat < 4) avatars[p.seat] = p.avatar;
+
     reactRoot.render(createElement(PixiTable, {
       view: v, names: (v as unknown as { playerNames?: string[] }).playerNames ?? ['A', 'B', 'C', 'D'],
       vipSeats: (() => { const arr = [false, false, false, false]; if (vip.isVipCached() && seat != null) arr[seat] = true; return arr; })(),
+      avatars,
       hands, mySeat: seat,
       legal: myTurn && v.phase === 'playing' ? (state.legal ?? []) : [],
       onBid: seat != null ? (b: Omit<Bid, 'seat'>) => onlineSocket.submitBid(b) : undefined,

@@ -398,6 +398,8 @@ const RobotAvatarSchema = new Schema(
     key: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true, trim: true, maxlength: 40 },
     accentColor: { type: String, required: true },
+    bodyColor: { type: String, default: null },
+    outlineColor: { type: String, default: null },
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },
     builtIn: { type: Boolean, default: false, index: true },

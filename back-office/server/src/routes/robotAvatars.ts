@@ -63,6 +63,8 @@ router.post('/', async (req: AdminRequest, res) => {
       key,
       name: String(b.name).trim(),
       accentColor: normalizeHex(b.accentColor, '#7ecb98'),
+      bodyColor: b.bodyColor ? normalizeHex(b.bodyColor, '#cfe9d8') : null,
+      outlineColor: b.outlineColor ? normalizeHex(b.outlineColor, '#14342a') : null,
       minLevel: num(b.minLevel, 0, 9999, 0),
       maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
       builtIn: false,
@@ -82,6 +84,8 @@ router.put('/:id', async (req: AdminRequest, res) => {
     const b = req.body || {};
     if (b.name !== undefined) doc.name = String(b.name).trim();
     if (b.accentColor !== undefined) doc.accentColor = normalizeHex(b.accentColor, doc.accentColor);
+    if (b.bodyColor !== undefined) doc.bodyColor = b.bodyColor ? normalizeHex(b.bodyColor, doc.bodyColor || '#cfe9d8') : null;
+    if (b.outlineColor !== undefined) doc.outlineColor = b.outlineColor ? normalizeHex(b.outlineColor, doc.outlineColor || '#14342a') : null;
     if (b.minLevel !== undefined) doc.minLevel = num(b.minLevel, 0, 9999, doc.minLevel);
     if (b.maxLevel !== undefined) doc.maxLevel = (b.maxLevel === null || b.maxLevel === '') ? null : num(b.maxLevel, 0, 9999, doc.maxLevel ?? 0);
     if ((b.status !== undefined) || (b.active !== undefined)) {
@@ -105,6 +109,7 @@ router.post('/:id/clone', async (req: AdminRequest, res) => {
     if (await Model.exists({ key })) key = `${src.key}-${Date.now().toString(36).slice(-4)}`;
     const doc = await Model.create({
       key, name: `${src.name} (copie)`, accentColor: src.accentColor,
+      bodyColor: src.bodyColor ?? null, outlineColor: src.outlineColor ?? null,
       minLevel: src.minLevel ?? 0, maxLevel: src.maxLevel ?? null,
       builtIn: false, status: 'draft', active: false, order: count,
     });

@@ -2,6 +2,7 @@ import { Container, Graphics, Sprite, Text, TextStyle, Texture } from 'pixi.js';
 import type { Bid, EngineView, Seat, Suit } from 'belote-core';
 import { SUIT_SYMBOL, isRedSuit } from './cardAtlas';
 import { makeChipTexture, makeTeamLogoTexture } from './tokenTexture';
+import { mascotTexture, type RobotFace } from '../robotMascot';
 import type { PixiTableTheme } from '../theme';
 import { type Dir, type Rect } from './geometry';
 import type { FanMetrics } from './HandsLayer';
@@ -15,6 +16,8 @@ export interface SeatModel {
   isDonneur: boolean; isEntame: boolean; isMeneur: boolean;
   demande: SeatDemande | null; contre: 'none' | 'contree' | 'surcontree';
   vip?: boolean;
+  /** Robot : mascotte paramétrique utilisée comme logo de siège (sinon initiale). */
+  avatar?: RobotFace | null;
 }
 
 /**
@@ -30,7 +33,7 @@ export class SeatsLayer extends Container {
   private texD: Texture; private texE: Texture; private texM: Texture;
   private logoTex = new Map<string, Texture>();
 
-  constructor(private theme: PixiTableTheme) {
+  constructor(private theme: PixiTableTheme, private redraw?: () => void) {
     super();
     this.texD = makeChipTexture('dealer');
     this.texE = makeChipTexture('entame');
@@ -91,10 +94,21 @@ export class SeatsLayer extends Container {
       }
       node.addChild(pill);
 
-      const logoSp = new Sprite(this.logo(m.team, m.name.charAt(0).toUpperCase()));
-      logoSp.width = logoSp.height = logoSize;
-      logoSp.position.set(padL, padY);
-      node.addChild(logoSp);
+      // Robot : mascotte paramétrique (rasterisée en texture, cache + async).
+      // Tant qu'elle n'est pas prête (ou pour un humain), repli sur la pastille initiale.
+      const mascot = m.avatar ? mascotTexture(m.avatar, 64, this.redraw) : null;
+      if (mascot) {
+        const mw = logoSize * 120 / 132; // conserve les proportions (viewBox 120×132)
+        const logoSp = new Sprite(mascot);
+        logoSp.width = mw; logoSp.height = logoSize;
+        logoSp.position.set(padL + (logoSize - mw) / 2, padY);
+        node.addChild(logoSp);
+      } else {
+        const logoSp = new Sprite(this.logo(m.team, m.name.charAt(0).toUpperCase()));
+        logoSp.width = logoSp.height = logoSize;
+        logoSp.position.set(padL, padY);
+        node.addChild(logoSp);
+      }
       nameTxt.position.set(padL + logoSize + gap, (pillH - nameTxt.height) / 2);
       node.addChild(nameTxt);
 
@@ -144,7 +158,7 @@ export class SeatsLayer extends Container {
   }
 }
 
-export function buildSeatModels(view: EngineView, names: string[], showDemandeInPlay: boolean, showReflexion = true, vipSeats?: boolean[]): SeatModel[] {
+export function buildSeatModels(view: EngineView, names: string[], showDemandeInPlay: boolean, showReflexion = true, vipSeats?: boolean[], avatars?: (RobotFace | null)[]): SeatModel[] {
   const lastSeatOf = (action: Bid['action']): Seat | null => {
     for (let i = view.bids.length - 1; i >= 0; i--) if (view.bids[i].action === action) return view.bids[i].seat;
     return null;
@@ -175,6 +189,7 @@ export function buildSeatModels(view: EngineView, names: string[], showDemandeIn
       isMeneur: seat === view.turn && !view.awaitingCollect,
       demande, contre: seat === surcontreSeat ? 'surcontree' : seat === contreSeat ? 'contree' : 'none',
       vip: vipSeats?.[seat] === true,
+      avatar: avatars?.[seat] ?? null,
     };
   });
 }

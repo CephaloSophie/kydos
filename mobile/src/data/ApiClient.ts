@@ -113,7 +113,7 @@ export class ApiClient {
    * niveau du joueur. Le mobile ne code plus aucun avatar en dur.
    */
   listAvatars() {
-    return this.call<{ avatars: Array<{ key: string; name: string; accentColor: string; minLevel: number; maxLevel: number | null }>; level: number }>('/avatars');
+    return this.call<{ avatars: Array<{ key: string; name: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null; minLevel: number; maxLevel: number | null }>; level: number }>('/avatars');
   }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }

@@ -9,8 +9,9 @@
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
 import { personalityLabel, type RobotStrategy } from '../../domain/entities/Robot';
-import { getAvatarList, avatarAccent, loadAvatarCatalog } from '../../data/AvatarCatalog';
-import { Robot, Avatar, Button, Badge, Slider, Dialog } from '../components/ui';
+import { getAvatarList, avatarFace, loadAvatarCatalog } from '../../data/AvatarCatalog';
+import { RobotMascot } from '../components/RobotMascot';
+import { Button, Badge, Slider, Dialog } from '../components/ui';
 import type { AppContext } from '../context';
 
 interface Draft { name: string; avatarId: string; strategy: RobotStrategy }
@@ -46,23 +47,33 @@ export function CreateRobotScreen(ctx: AppContext): HTMLElement {
         strategy: editing!.mobile?.strategy ?? { aggro: 55, risk: 45, bluff: 45, memoire: 60 },
       }
     : { name: 'Atné', avatarId: 'atne', strategy: { aggro: 62, risk: 38, bluff: 45, memoire: 78 } };
-  // v18 — les avatars proviennent du catalogue back-office (débloqués par niveau).
-  const accent = () => avatarAccent(draft.avatarId);
+  // v18 — les avatars (mascotte paramétrique) proviennent du catalogue
+  // back-office, débloqués par niveau ; le rendu se fait par code (SVG).
 
   // --- Colonne aperçu -------------------------------------------------------
   const previewName = h('div', { class: 'title', style: { fontSize: '19px', color: '#fff' } }, draft.name);
   const previewPerso = Badge(personalityLabel(draft.strategy), 'gold');
-  const mascotSlot = h('div', {});
-  const renderMascot = () => { clear(mascotSlot); mascotSlot.append(Robot({ size: 96, accent: accent(), float: true })); };
+  const mascotSlot = h('div', { class: 'robot--float' });
+  const renderMascot = () => { clear(mascotSlot); mascotSlot.append(RobotMascot(avatarFace(draft.avatarId), 88)); };
   renderMascot();
 
-  const avatarRow = h('div', { class: 'row gap-2', style: { justifyContent: 'center', marginTop: '12px' } });
+  const avatarRow = h('div', { class: 'row gap-2 wrap', style: { justifyContent: 'center', marginTop: '12px' } });
   const renderAvatars = () => {
     clear(avatarRow);
-    getAvatarList().forEach((a) => avatarRow.append(Avatar({
-      accent: a.accentColor, size: 36, ring: a.key === draft.avatarId ? a.accentColor : 'var(--c-line-strong)',
-      onClick: () => { draft.avatarId = a.key; renderMascot(); renderAvatars(); },
-    })));
+    getAvatarList().forEach((a) => {
+      const selected = a.key === draft.avatarId;
+      const chip = h('button', {
+        class: 'avatar avatar-pick',
+        title: a.name,
+        style: {
+          padding: '4px', borderRadius: '14px', cursor: 'pointer', lineHeight: '0',
+          background: selected ? 'rgba(255,255,255,.06)' : 'transparent',
+          border: selected ? `2px solid ${a.accentColor}` : '2px solid var(--c-line)',
+        },
+        onClick: () => { draft.avatarId = a.key; renderMascot(); renderAvatars(); },
+      }, RobotMascot({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 34));
+      avatarRow.append(chip);
+    });
   };
   renderAvatars();
 

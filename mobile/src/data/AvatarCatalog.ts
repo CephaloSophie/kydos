@@ -9,7 +9,14 @@
  * ========================================================================== */
 import type { ApiClient } from './ApiClient';
 
-export interface CatalogAvatar { key: string; name: string; accentColor: string; minLevel: number; maxLevel: number | null }
+export interface CatalogAvatar {
+  key: string; name: string;
+  accentColor: string;
+  /** v18 — paramètres de design (dérivés de l'accent si absents). */
+  bodyColor?: string | null;
+  outlineColor?: string | null;
+  minLevel: number; maxLevel: number | null;
+}
 
 /**
  * Repli minimal si l'API n'a pas (encore) répondu — mêmes valeurs que les
@@ -39,8 +46,19 @@ export function getAvatarList(): CatalogAvatar[] {
   return cache ?? FALLBACK;
 }
 
+/** Avatar par clé (repli sur le 1ᵉʳ). */
+export function avatarByKey(key: string | null | undefined): CatalogAvatar {
+  const list = getAvatarList();
+  return list.find((a) => a.key === key) ?? list[0];
+}
+
 /** Couleur d'accent d'un avatar par sa clé (repli sur le 1ᵉʳ avatar). */
 export function avatarAccent(key: string | null | undefined): string {
-  const list = getAvatarList();
-  return (list.find((a) => a.key === key) ?? list[0]).accentColor;
+  return avatarByKey(key).accentColor;
+}
+
+/** Face (couleurs de design) d'un avatar, pour la mascotte SVG paramétrique. */
+export function avatarFace(key: string | null | undefined): { accentColor: string; bodyColor?: string | null; outlineColor?: string | null } {
+  const a = avatarByKey(key);
+  return { accentColor: a.accentColor, bodyColor: a.bodyColor ?? null, outlineColor: a.outlineColor ?? null };
 }

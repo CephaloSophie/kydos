@@ -9,7 +9,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { RobotAvatarService, type RobotAvatar } from '../../services/robot-avatar.service';
+import { robotMascotSvg } from '../../shared/robot-mascot';
 
 type Row = RobotAvatar & { _busy?: boolean };
 
@@ -48,7 +50,7 @@ type Row = RobotAvatar & { _busy?: boolean };
           <tbody>
             @for (a of filtered(); track a._id) {
               <tr>
-                <td><span class="mascot" [style.background]="a.accentColor">🤖</span></td>
+                <td><span class="mascot" [innerHTML]="mascot(a)"></span></td>
                 <td><a [routerLink]="['/robot-avatars', a._id, 'edit']" style="font-weight:600">{{ a.name }}</a> @if (a.builtIn) { <span class="tag">intégré</span> }</td>
                 <td><span class="dot" [style.background]="a.accentColor"></span> {{ a.accentColor }}</td>
                 <td>{{ a.minLevel }}{{ a.maxLevel != null ? ' → ' + a.maxLevel : '+' }}</td>
@@ -72,7 +74,7 @@ type Row = RobotAvatar & { _busy?: boolean };
     .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
     .filters .search { flex: 1; min-width: 220px; }
     .filters .count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
-    .mascot { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; font-size: 16px; }
+    .mascot { display: inline-flex; align-items: center; justify-content: center; line-height: 0; }
     .dot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: middle; margin-right: 4px; border: 1px solid var(--border); }
     .tag { font-size: 10px; background: rgba(230,196,106,0.15); color: var(--primary); border-radius: 999px; padding: 1px 6px; }
     .actions { display: flex; gap: 4px; }
@@ -89,8 +91,12 @@ export class RobotAvatarsComponent implements OnInit {
   search = '';
   filterStatus = 'all';
 
-  constructor(private svc: RobotAvatarService) {}
+  constructor(private svc: RobotAvatarService, private sanitizer: DomSanitizer) {}
   ngOnInit() { this.load(); }
+
+  mascot(a: RobotAvatar): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(robotMascotSvg({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 34));
+  }
   load() { this.svc.list().subscribe((res) => { this.rows = res.avatars; }); }
 
   statusOf(a: Row): 'draft' | 'pending' | 'active' { return (a.status as any) ?? (a.active ? 'active' : 'draft'); }

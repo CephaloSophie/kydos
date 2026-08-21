@@ -71,4 +71,17 @@ describe('buildSeatModels — DOM GameTable parity', () => {
     expect(m[1].team).toBe('blue');
     expect(m[3].team).toBe('blue');
   });
+
+  it('attaches robot avatar faces per absolute seat (null for humans/empty)', () => {
+    const faces = [null, { accentColor: '#e85d70' }, null, { accentColor: '#7ecb98', bodyColor: '#123456', outlineColor: '#000000' }];
+    const m = buildSeatModels(mkView({}), NAMES, false, true, undefined, faces);
+    expect(m[0].avatar).toBeNull();
+    expect(m[1].avatar?.accentColor).toBe('#e85d70');
+    expect(m[3].avatar).toEqual({ accentColor: '#7ecb98', bodyColor: '#123456', outlineColor: '#000000' });
+  });
+
+  it('avatar defaults to null when no faces provided', () => {
+    const m = buildSeatModels(mkView({}), NAMES, false);
+    expect(m.every((x) => x.avatar === null)).toBe(true);
+  });
 });

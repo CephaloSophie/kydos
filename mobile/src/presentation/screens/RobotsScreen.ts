@@ -5,12 +5,13 @@
  * FIDÈLE au design system ; chargement asynchrone avec état vide soigné.
  * ========================================================================== */
 import { h, clear } from '../../core/dom';
-import { Avatar, Badge, Button, Dialog } from '../components/ui';
+import { Badge, Button, Dialog } from '../components/ui';
+import { RobotMascot } from '../components/RobotMascot';
 import { toast } from '../components/feedback';
 import type { AppContext } from '../context';
 import type { Robot } from '../../domain/entities/Robot';
 import { toDomain } from '../../data/RobotRepository';
-import { avatarAccent } from '../../data/AvatarCatalog';
+import { avatarFace } from '../../data/AvatarCatalog';
 
 export function RobotsScreen(ctx: AppContext): HTMLElement {
   const { router, robotService, api, ads } = ctx;
@@ -18,7 +19,7 @@ export function RobotsScreen(ctx: AppContext): HTMLElement {
   const robotCard = (r: Robot) => h('div', { class: 'card' },
     h('div', { class: 'between', style: { marginBottom: '12px' } },
       h('div', { class: 'row gap-3' },
-        Avatar({ accent: avatarAccent(r.avatarId), size: 40 }),
+        RobotMascot(avatarFace(r.avatarId), 40),
         h('div', {},
           h('div', { class: 'title', style: { fontSize: '15px' } }, r.name),
           h('div', { class: 'mono', style: { fontSize: '9px', color: r.status === 'playing' ? 'var(--c-success)' : 'var(--c-text-mute)' } },
