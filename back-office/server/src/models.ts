@@ -392,6 +392,23 @@ const TableThemeSchema = new Schema(
 );
 mongoose.models.TableTheme ?? model('TableTheme', TableThemeSchema);
 
+/* ── Catalogue d'avatars de robots (v18) ──────────────────────────────────── */
+const RobotAvatarSchema = new Schema(
+  {
+    key: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 40 },
+    accentColor: { type: String, required: true },
+    minLevel: { type: Number, default: 0, min: 0 },
+    maxLevel: { type: Number, default: null },
+    builtIn: { type: Boolean, default: false, index: true },
+    active: { type: Boolean, default: true, index: true },
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.RobotAvatar ?? model('RobotAvatar', RobotAvatarSchema);
+
 const PromoCodeSchema = new Schema(
   {
     code: { type: String, required: true, unique: true, index: true, match: /^\d{12}$/ },

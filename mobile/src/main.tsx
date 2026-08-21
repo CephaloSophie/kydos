@@ -138,6 +138,13 @@ async function boot(): Promise<void> {
     await runBootstrap({ api, session, sound: soundService });
   } catch { /* le bootstrap ne lève jamais, mais ceinture + bretelles */ }
 
+  // v18 — charge le catalogue d'avatars (back-office) si connecté ; les écrans
+  // (création de robot, listes) le liront ensuite de façon synchrone.
+  if (api.isAuthenticated()) {
+    try { const { loadAvatarCatalog } = await import('./data/AvatarCatalog'); await loadAvatarCatalog(api); }
+    catch { /* repli hors-ligne */ }
+  }
+
   router.start();
 
   // v14.14 — Pastille LIVE globale : rejoindre un match en cours depuis

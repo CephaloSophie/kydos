@@ -52,6 +52,8 @@ export default defineConfig({
           'src/modules/tableTheme/tableTheme.colors.test.ts',
           // v18 : dérivations pures du suivi enrichi d'une partie.
           'src/modules/game/gameTracking.test.ts',
+          // v18 : déblocage des avatars par niveau.
+          'src/modules/robotAvatar/robotAvatar.test.ts',
           'src/modules/game/gameQuery.filter.test.ts',
         ],
     environment: 'node',

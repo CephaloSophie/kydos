@@ -108,6 +108,13 @@ export class ApiClient {
   listMatchFormats() {
     return this.call<{ formats: Array<{ format: string; label: string; subtitle: string; buyIn: number; prize: number; manches: number; baseTarget: number; color: string; icon: string; order: number; minLevel?: number; maxLevel?: number | null }> }>('/matches/formats');
   }
+  /**
+   * v18 — Catalogue d'avatars de robots servi par le back-office, filtré par le
+   * niveau du joueur. Le mobile ne code plus aucun avatar en dur.
+   */
+  listAvatars() {
+    return this.call<{ avatars: Array<{ key: string; name: string; accentColor: string; minLevel: number; maxLevel: number | null }>; level: number }>('/avatars');
+  }
   /** Match courant ou plus récent du joueur (pour polling après matching). */
   getMyMatch() { return this.call<{ match: unknown | null }>('/matches/mine'); }
   /** Détail complet d'un match (participants avec robots populés). */

@@ -284,6 +284,11 @@ export async function seedDatabase() {
   await tableThemeService.ensureSeeded();
   console.log('[seed] 6 themes de table intgres initialises (editable au back-office)');
 
+  // -- 14. Catalogue d'avatars de robots (v18) --
+  const { robotAvatarService } = await import('./modules/robotAvatar/robotAvatar.service.js');
+  await robotAvatarService.ensureSeeded();
+  console.log('[seed] 5 avatars de robots intgres initialises (editable au back-office)');
+
   console.log('\n[seed] termine  -  joueur : ameur / belote123 . back-office : ameur (admin)');
 }
 
