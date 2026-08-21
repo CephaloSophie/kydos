@@ -29,6 +29,8 @@ export interface EffectiveMatchConfig {
   openingBidMin: number;
   countBelote: boolean;
   clockwise: boolean;
+  // v19 — coefficient de score de la variante (barème Kýdos), défaut 1.
+  scoreCoefficient: number;
   // v18 — thème de table (bibliothèque back-office), null = défaut.
   tableThemeId: string | null;
   houseRake: number;                 // recalculé : collecté − payé
@@ -155,6 +157,7 @@ export class MatchFormatConfigService {
       openingBidMin: cfg?.openingBidMin ?? 90,
       countBelote: cfg?.countBelote !== false,
       clockwise: cfg?.clockwise === true,
+      scoreCoefficient: typeof cfg?.scoreCoefficient === 'number' && cfg.scoreCoefficient > 0 ? cfg.scoreCoefficient : 1,
       tableThemeId: cfg?.tableThemeId ? String(cfg.tableThemeId) : null,
       houseRake,
       color: cfg?.color ?? d.color,

@@ -4,17 +4,20 @@
  * de code n'est impactée.
  *
  * Robustesse :
- *   - Chargement dynamique de ioredis pour ne pas exiger la dépendance en tests.
+ *   - ioredis est importé statiquement (dépendance de production déclarée) :
+ *     l'ESM interdit `require`, d'où l'ancienne erreur « require is not defined »
+ *     qui faisait échouer le mode Redis et retomber sur InMemory.
  *   - Reconnexion automatique avec backoff exponentiel (via ioredis).
  *   - Fallback InMemoryQueue si Redis refuse la connexion (l'app reste
  *     utilisable, à charge du dev de vérifier les logs).
  *   - Le singleton est reconstruit si `_resetMatchmakingQueueForTests` est
  *     appelé.
  */
+import IORedis from 'ioredis';
 import { environment } from '../../core/environment.js';
 import { createLogger } from '../../core/logger.js';
 import { InMemoryQueue, RedisQueue, type MatchmakingQueue, type RedisClient } from './queue.js';
-import IORedis from 'ioredis';
+
 const log = createLogger('queue');
 
 let cached: MatchmakingQueue | null = null;
@@ -26,13 +29,12 @@ export function getMatchmakingQueue(): MatchmakingQueue {
   if (environment.redisUrl) {
     try {
       redisClient = new IORedis(environment.redisUrl, {
+        // Robustesse en production :
         maxRetriesPerRequest: 3,
         retryStrategy: (times: number) => Math.min(times * 200, 3000),
         enableReadyCheck: true,
         lazyConnect: false,
       });
-
-
       // Log discret sur les événements de connexion — évite les crashs
       // silencieux et facilite le diagnostic.
       redisClient.on('ready', () => log.info('[queue] Redis prêt', { url: safeUrl(environment.redisUrl!) }));
@@ -41,8 +43,8 @@ export function getMatchmakingQueue(): MatchmakingQueue {
       cached = new RedisQueue(redisClient as RedisClient);
       log.info('[queue] mode Redis activé');
     } catch (e) {
-      // Redis inaccessible / ioredis absent : on retombe sur la file mémoire
-      // pour ne pas planter l'app. Les logs alertent le dev.
+      // Redis inaccessible : on retombe sur la file mémoire pour ne pas planter
+      // l'app. Les logs alertent le dev.
       log.error('[queue] Redis indisponible, fallback InMemory', { error: (e as Error).message });
       cached = new InMemoryQueue();
     }

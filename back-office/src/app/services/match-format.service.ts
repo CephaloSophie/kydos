@@ -19,6 +19,8 @@ export interface MatchFormatConfig {
   openingBidMin?: number;
   countBelote?: boolean;
   clockwise?: boolean;
+  /** v19 — coefficient de score de la variante (barème Kýdos), défaut 1. */
+  scoreCoefficient?: number;
   tableThemeId?: string | null;
   active: boolean;
   /** v18 — cycle de vie : brouillon / prêt / publié. */

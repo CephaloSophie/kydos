@@ -4,11 +4,15 @@ import { eloFromPersonality, rankLabel } from './user.service.js';
 import { computePlayerLevel } from '../../shared/levels.js';
 
 describe('computePlayerLevel', () => {
-  it('starts at level 1 and gains one level per 100 points', () => {
+  // v19 — le niveau suit désormais le modèle UNIQUE Kýdos (échelle 500, +8 %/niv.),
+  // et non plus l'ancien « 1 + floor(score/100) ». Cumuls : niveau 2 à 500,
+  // niveau 3 à 1040 (= 500 + 540).
+  it('starts at level 1 until the first threshold (500)', () => {
     expect(computePlayerLevel(0)).toBe(1);
-    expect(computePlayerLevel(99)).toBe(1);
-    expect(computePlayerLevel(100)).toBe(2);
-    expect(computePlayerLevel(1050)).toBe(11);
+    expect(computePlayerLevel(499)).toBe(1);
+    expect(computePlayerLevel(500)).toBe(2);
+    expect(computePlayerLevel(1040)).toBe(3);
+    expect(computePlayerLevel(1050)).toBe(3);
   });
   it('is safe on nullish input', () => {
     expect(computePlayerLevel(undefined as unknown as number)).toBe(1);

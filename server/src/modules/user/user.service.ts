@@ -1,8 +1,9 @@
+import { levelForScore } from 'belote-core';
 import { UserModel } from './user.model.js';
 import { TeamModel } from '../team/team.model.js';
 import { RobotModel } from '../robot/robot.model.js';
 import { GameModel } from '../game/game.model.js';
-import { computePlayerLevel } from '../../shared/levels.js';
+import { scoreConfigService } from '../scoreConfig/scoreConfig.service.js';
 import { notFound } from '../../core/HttpError.js';
 
 /** ELO d'affichage dérivé de la personnalité (1000 base + agressivité/mémoire). */
@@ -50,13 +51,20 @@ export class UserService {
     }
     const played = games.length;
 
+    // v19 — niveau & progression dérivés du modèle UNIQUE Kýdos (config live).
+    const scoreConfig = await scoreConfigService.get();
+    const progress = levelForScore(scoreConfig, userDocument.rewardPoints ?? 0);
+
     return {
       id: String(userDocument._id),
       username: userDocument.username,
-      level: computePlayerLevel(userDocument.rewardPoints),
+      level: progress.level,
       rewardPoints: userDocument.rewardPoints ?? 0,
+      // v19 — points accumulés dans le niveau courant + restants pour le suivant.
+      scoreInLevel: progress.pointsInLevel,
+      pointsToNextLevel: progress.pointsToNext,
       // Rang indicatif basé sur le niveau/points (pas de classement mondial live).
-      rank: rankLabel(computePlayerLevel(userDocument.rewardPoints)),
+      rank: rankLabel(progress.level),
       gamesPlayed: Math.max(userDocument.gamesPlayed ?? 0, played),
       wins,
       losses,

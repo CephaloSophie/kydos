@@ -31,7 +31,16 @@ const UserSchema = new Schema(
       maxPlayTimeMs: { type: Number, default: 10000 },
       defaultManches: { type: Number, default: 2 },
     },
+    /**
+     * Score cumulé Kýdos (modèle UNIQUE, voir belote-core `scoreKydos`).
+     * `rewardPoints` = score total à vie ; `level` et `scoreInLevel` en sont
+     * dérivés et rafraîchis à chaque gain (source unique : gamePersistence).
+     */
     rewardPoints: { type: Number, default: 0 },
+    /** Niveau courant (dérivé du score via l'échelle back-office). */
+    level: { type: Number, default: 1 },
+    /** Points accumulés DANS le niveau courant. */
+    scoreInLevel: { type: Number, default: 0 },
     gamesPlayed: { type: Number, default: 0 },
     /**
      * Économie serveur.

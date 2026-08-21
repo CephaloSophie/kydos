@@ -76,6 +76,10 @@ import { TableThemeService, type TableTheme } from '../../services/table-theme.s
           </div>
         </div>
         <div class="form-group chk"><input type="checkbox" [(ngModel)]="f.countBelote" id="belote" /><label for="belote">Compter la belote dans le score (+20)</label></div>
+        <div class="form-row">
+          <div class="form-group"><label>Coefficient de score</label><input type="number" [(ngModel)]="f.scoreCoefficient" min="0.1" max="100" step="0.1" /><small>Multiplie le score Kýdos gagné (1 = standard).</small></div>
+          <div class="form-group"></div>
+        </div>
 
         <h3>Thème & niveau</h3>
         <div class="form-row">
@@ -125,7 +129,7 @@ export class MatchFormatFormComponent implements OnInit {
   f: any = {
     format: 'duo_steel', status: 'draft', label: '', subtitle: '', icon: '♦', color: '#3f6ea1',
     buyInPerPlayer: 200, prizePerWinner: 150, manches: 2, baseTarget: 1500, labelTarget: 2000,
-    autoRejoinSec: 5, openingBidMin: 90, countBelote: true, clockwise: false,
+    autoRejoinSec: 5, openingBidMin: 90, countBelote: true, clockwise: false, scoreCoefficient: 1,
     tableThemeId: null as string | null, minLevel: 0, maxLevel: null as number | null,
   };
 
@@ -146,7 +150,7 @@ export class MatchFormatFormComponent implements OnInit {
           buyInPerPlayer: v.buyInPerPlayer, prizePerWinner: v.prizePerWinner,
           manches: v.manches ?? 2, baseTarget: v.baseTarget ?? 1500, labelTarget: v.labelTarget ?? 2000,
           autoRejoinSec: v.autoRejoinSec ?? 5, openingBidMin: v.openingBidMin ?? 90,
-          countBelote: v.countBelote !== false, clockwise: v.clockwise === true,
+          countBelote: v.countBelote !== false, clockwise: v.clockwise === true, scoreCoefficient: v.scoreCoefficient ?? 1,
           tableThemeId: v.tableThemeId ?? null, minLevel: v.minLevel ?? 0, maxLevel: v.maxLevel ?? null,
         };
       });

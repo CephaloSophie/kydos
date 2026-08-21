@@ -120,6 +120,8 @@ export class TournamentOrchestrator {
           manches, baseTarget: gameConfig.baseTarget, labelTarget: gameConfig.labelTarget,
           // v17 — règles de belote configurables du tournoi.
           openingBidMin: gameConfig.openingBidMin, countBelote: gameConfig.countBelote, clockwise: gameConfig.clockwise,
+          // v19 — coefficient de score du tournoi.
+          scoreCoefficient: gameConfig.scoreCoefficient,
         }).catch(() => {});
       } else if (format === MatchFormat.HYBRID_ALLIANCE || format === MatchFormat.ROYAL_SQUARE) {
         // v14.14 — HYBRID (2 humains) et ROYAL (4 humains) : table live que

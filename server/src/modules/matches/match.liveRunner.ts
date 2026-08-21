@@ -119,6 +119,8 @@ export class MatchLiveService {
         openingBidMin: configOverride?.openingBidMin > 0 ? configOverride!.openingBidMin : 90,
         countBelote: configOverride?.countBelote !== false,
         clockwise: configOverride?.clockwise === true,
+        // v19 — coefficient de score du tournoi/match propagé à la table live.
+        scoreCoefficient: configOverride?.scoreCoefficient > 0 ? configOverride!.scoreCoefficient : 1,
         // v18 — thème de table (id + couleurs résolues).
         tableThemeId: configOverride?.tableThemeId ?? null,
         themeColors,

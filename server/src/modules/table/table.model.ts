@@ -36,6 +36,12 @@ const TableConfigSchema = new Schema(
     openingBidMin: { type: Number, default: 90 },
     countBelote: { type: Boolean, default: true },
     clockwise: { type: Boolean, default: false },
+    /**
+     * v19 — Coefficient de SCORE de la partie (défaut 1). Multiplie le score
+     * gagné par les vainqueurs selon le modèle Kýdos (voir scoreKydos). 1 =
+     * barème standard ; >1 = partie « bonus ».
+     */
+    scoreCoefficient: { type: Number, default: 1 },
     trickDelayMs: { type: Number, default: 900 },
     speed: { type: Number, default: 1 },
     gameType: { type: String, default: 'contree' },

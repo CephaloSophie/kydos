@@ -15,6 +15,16 @@ const RobotSchema = new Schema(
     bidResponseMs: { type: Number, default: 700 },
     conventionConfig: { type: Schema.Types.Mixed, default: {} },
     algoSpec: { type: Schema.Types.Mixed, default: null },
+    /**
+     * Score cumulé Kýdos du robot (modèle UNIQUE, voir belote-core `scoreKydos`).
+     * `score` = total à vie ; `level` / `scoreInLevel` en sont dérivés et
+     * rafraîchis à chaque gain (source unique : gamePersistence).
+     */
+    score: { type: Number, default: 0 },
+    /** Niveau courant du robot (dérivé du score via l'échelle back-office). */
+    level: { type: Number, default: 1 },
+    /** Points accumulés DANS le niveau courant. */
+    scoreInLevel: { type: Number, default: 0 },
     offlineEnabled: { type: Boolean, default: false },
     representativeSlot: { type: Number, default: 0 },
     /**

@@ -140,6 +140,7 @@ export class MatchmakingService {
         // v17 — règles de belote configurables de la variante.
         openingBidMin: eff.openingBidMin, countBelote: eff.countBelote, clockwise: eff.clockwise,
         prizePerWinner: eff.prizePerWinner, houseRake: eff.houseRake,
+        scoreCoefficient: eff.scoreCoefficient,
       });
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -157,6 +158,8 @@ export class MatchmakingService {
         openingBidMin: eff.openingBidMin, countBelote: eff.countBelote, clockwise: eff.clockwise,
         // v18 — thème de table de la variante.
         tableThemeId: eff.tableThemeId,
+        // v19 — coefficient de score de la variante.
+        scoreCoefficient: eff.scoreCoefficient,
       });
       // Passe le match en RUNNING dès que la table est prête. Les joueurs
       // peuvent se connecter ; liveGameService.launch se déclenchera quand

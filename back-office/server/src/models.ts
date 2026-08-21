@@ -424,3 +424,28 @@ const PromoCodeSchema = new Schema(
   { timestamps: true },
 );
 mongoose.models.PromoCode ?? model('PromoCode', PromoCodeSchema);
+
+/**
+ * ScoreConfig — document SINGLETON (clé `default`) : modèle UNIQUE de score &
+ * niveau Kýdos, édité ici et lu par le serveur de jeu. Voir back-office
+ * `scoreKydos.ts` (miroir de belote-core) pour la sémantique de chaque champ.
+ */
+const ScoreLevelOverrideSchema = new Schema(
+  { level: { type: Number, required: true }, increment: { type: Number, required: true } },
+  { _id: false },
+);
+const ScoreConfigSchema = new Schema(
+  {
+    key: { type: String, default: 'default', unique: true, index: true },
+    baseWinnerPlayer: { type: Number, default: 500 },
+    baseWinnerRobot: { type: Number, default: 500 },
+    firstLevelThreshold: { type: Number, default: 500 },
+    levelUpPercent: { type: Number, default: 8 },
+    maxLevel: { type: Number, default: 200 },
+    tokenScorePercent: { type: Number, default: 0 },
+    gameTypeCoefficients: { type: Schema.Types.Mixed, default: {} },
+    levelOverrides: { type: [ScoreLevelOverrideSchema], default: [] },
+  },
+  { timestamps: true },
+);
+mongoose.models.ScoreConfig ?? model('ScoreConfig', ScoreConfigSchema);

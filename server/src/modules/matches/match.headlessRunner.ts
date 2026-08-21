@@ -41,6 +41,8 @@ export class MatchHeadlessRunner {
       // v17 — règles de belote configurables.
       openingBidMin?: number; countBelote?: boolean; clockwise?: boolean;
       prizePerWinner?: number; houseRake?: number;
+      // v19 — coefficient de score (barème Kýdos), défaut 1.
+      scoreCoefficient?: number;
     } = { manches: 2 },
   ): Promise<HeadlessMatchResult> {
     const match = await MatchModel.findById(matchId);
@@ -120,6 +122,8 @@ export class MatchHeadlessRunner {
       match: String(match._id),
       formatConfig: (match as any).formatConfig ? String((match as any).formatConfig) : null,
       tournament: (match as any).tournament ? String((match as any).tournament) : null,
+      // v19 — coefficient de score (barème Kýdos).
+      scoreCoefficient: options.scoreCoefficient ?? 1,
     });
 
     const finalManche = engine.manches[engine.manches.length - 1];

@@ -32,6 +32,8 @@ const MatchFormatConfigSchema = new Schema(
     openingBidMin: { type: Number, default: 90 },
     countBelote: { type: Boolean, default: true },
     clockwise: { type: Boolean, default: false },
+    /** v19 — coefficient de score de la variante (barème Kýdos). Défaut 1. */
+    scoreCoefficient: { type: Number, default: 1 },
     /** Habillage carte (mobile). */
     color: { type: String, default: '#3f6ea1' },
     icon: { type: String, default: '♦' },
