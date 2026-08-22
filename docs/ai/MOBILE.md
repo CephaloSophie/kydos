@@ -1,39 +1,59 @@
 # Application mobile — architecture et intégration
 
-Ce document décrit précisément **l'application mobile** (`mobile/`), séparée
-du web. Elle est fidèle au design system livré par Claude Design
-(`Kydos_Belote_Design_System_Complet.zip`) — les CSS du DS sont copiés verbatim.
+Ce document décrit **l'application mobile** (`mobile/`). Il est fidèle au design
+system livré par Claude Design (`Kydos_Belote_Design_System_Complet.zip`) — les CSS
+du DS sont copiés verbatim.
+
+> **⚠️ Document par accrétion, arrêté à v11.11.** Les sections numérotées sont un
+> historique de livraisons : elles décrivent des comportements **encore largement
+> valides**, mais ne couvrent **pas** ce qui est arrivé après (cache de session et
+> bootstrap, porte-monnaie/VIP/promos, publicité, avatars joueurs et robots, thèmes
+> de table, matchs & tournois, score & niveaux Kýdos). La mention « séparée du web »
+> n'a plus d'objet : le workspace `web/` a été supprimé en v16.
+>
+> Pour l'état courant : [`../../CLAUDE.md`](../../CLAUDE.md),
+> [`../session-cache.md`](../session-cache.md), [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md),
+> [`../SOUNDS.md`](../SOUNDS.md), [`../ADS.md`](../ADS.md), [`../WALLET.md`](../WALLET.md).
 
 ## 1. Arborescence
 
 ```
 mobile/
 ├── package.json          # workspace belote-mobile
-├── tsconfig.json         # strict, paths @table-pixi + belote-core
+├── tsconfig.json         # strict
 ├── vite.config.ts        # base './' pour Capacitor (file://)
-├── index.html            # <div id="viewport"> + orient-guard du DS
-├── capacitor.config.ts   # config Capacitor (appId, webDir=dist, paysage)
-├── capacitor/
-│   └── README.md         # étapes de build Capacitor (Android/iOS)
+├── index.html            # <div id="viewport"> + #boot (écran d'attente) + orient-guard
+├── capacitor.config.ts   # appId, webDir=dist, paysage forcé
+├── public/sounds/        # effets + mélodies (générés par scripts/generate-sounds.py)
 └── src/
-    ├── main.tsx          # COMPOSITION ROOT (injection de dépendances)
-    ├── css/              # tokens.css / base.css / components.css (verbatim du DS)
-    ├── core/             # dom.ts, EventBus, Store, Router (portés du DS en TS)
+    ├── main.tsx          # COMPOSITION ROOT (injection de dépendances) — la SEULE
+    ├── version.ts
+    ├── design-system/    # index.css · tokens.css · base.css · components.css (autonome)
+    ├── core/             # dom.ts · EventBus · Store · Router
     ├── domain/
-    │   ├── entities/Robot.ts + tests
-    │   └── usecases/RobotService.ts
+    │   ├── entities/     # Robot…
+    │   └── usecases/     # RobotService…
     ├── data/
-    │   ├── ApiClient.ts  # client HTTP du backend
-    │   ├── RobotRepository.ts # implémente IRobotRepository via l'API
+    │   ├── ApiClient.ts          # client HTTP du backend
+    │   ├── SessionCache.ts       # profil, wallet, VIP, robots — lecture synchrone
+    │   ├── bootstrap.ts          # runBootstrap() : tout charger une fois au boot
+    │   ├── persistentStorage.ts  # localStorage versionné et namespacé
+    │   ├── TableSocket.ts        # client Socket.IO (canal table:{id})
+    │   ├── AvatarCatalog.ts · PlayerAvatarCatalog.ts
+    │   ├── RobotRepository.ts    # implémente IRobotRepository via l'API
     │   └── i18n.ts
     ├── services/
-    │   ├── dailyTokens.ts + tests
-    │   └── gameLoop.ts + tests
-    └── presentation/
-        ├── context.ts
-        ├── components/   # ui.ts (Robot, Button, Slider, Dialog…), TopBar
-        └── screens/      # Login, Home, Robots, CreateRobot, Ranking, Compet,
-                          # History, About, Table, Replay
+    │   ├── localGame.ts · gameLoop.ts   # entraînement local (+ tests de parité)
+    │   ├── gameSetup.ts · wallet.ts · dailyTokens.ts · promoCode.ts
+    │   ├── sound/        # soundConfig.ts · SoundService.ts · soundEvents.ts
+    │   └── ads/          # adConfig.ts · AdManager.ts · VipService.ts · providers/
+    ├── presentation/
+    │   ├── context.ts    # résolution des dépendances pour les écrans
+    │   ├── components/   # ui.ts (Button, Badge, Dialog…), TopBar, Waiting, RobotMascot
+    │   └── screens/      # Login, Home, Robots, CreateRobot, Wallet, Profile,
+    │                     # Online, Table, Replay, Teams, Invitations, Matchmaking,
+    │                     # MatchEnroll, Tournament*, Ranking, History, Styleguide…
+    └── test/             # screens.e2e.test.ts + fakeServer.ts
 ```
 
 ## 2. Clean architecture

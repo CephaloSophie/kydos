@@ -1,5 +1,13 @@
 # Déploiement — Belote Contrée
 
+> **⚠️ Document VPS antérieur à la v16.** Toutes les étapes qui buildent ou servent
+> `belote-web` / `web/dist` sont **caduques** : le workspace `web/` a été supprimé.
+> Les process PM2 `belote-web` et `belote-web-dev` de `ecosystem.config.cjs` ne
+> peuvent plus démarrer. Le reste (Nginx, TLS, WebSocket, dépannage) reste valable
+> pour l'API. Référence à jour, y compris variables d'environnement, back-office et
+> checklist sécurité : [`ai/DEPLOYMENT.md`](./ai/DEPLOYMENT.md).
+
+
 Guide pour installer la plateforme en **local** ou sur un **VPS de test/production**.
 
 ## 1. Prérequis

@@ -1,5 +1,13 @@
 # SPEC — Kýdos Belote Back Office (Administration)
 
+> **⚠️ Document de CONSTRUCTION — le back-office existe désormais.** Ce texte a servi
+> à *spécifier* l'outil d'administration avant son écriture ; il ne décrit pas
+> forcément ce qui a été livré. Pour l'implémentation réelle (API `/admin`, pages
+> Angular, auth, audit, déploiement) : [`backoffice/technique.md`](./backoffice/technique.md)
+> et [`backoffice/fonctionnel.md`](./backoffice/fonctionnel.md). Les mentions du
+> workspace `web/` sont caduques (supprimé en v16).
+
+
 > **Public cible** : session Claude Code qui construira le back office complet.
 > Ce document est AUTOSUFFISANT — il contient toutes les informations nécessaires
 > pour construire l'application d'administration sans accéder au code du serveur

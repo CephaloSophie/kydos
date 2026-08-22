@@ -1,8 +1,17 @@
 # Module table-pixi — rendu canvas PixiJS v8 (v8)
 
-Table de jeu **Kydos Belote** en rendu canvas PixiJS v8, **à parité de comportement avec la table DOM
-(GameTable)** : même moteur, mêmes robots/cerveaux (`belote-core` intact), mêmes règles d'affichage.
-Module **autonome** : `web/src/table-pixi/` (scène Pixi + HUD HTML + thème + styles).
+Table de jeu **Kydos Belote** en rendu canvas PixiJS v8 : moteur et cerveaux de robots
+inchangés (`belote-core` intact), le module ne fait que **rendre** une vue moteur.
+Package **autonome** : `packages/table-pixi/` — `@kydos/table-pixi` (scène Pixi + HUD
+HTML + thème + styles), consommé par le mobile.
+
+> **⚠️ Chemins historiques.** Ce document a été écrit quand le module vivait dans
+> `web/src/table-pixi/` et coexistait avec une table DOM (`GameTable`). Le workspace
+> `web/` et la table DOM ont été **supprimés en v16** : les mentions de « parité DOM »
+> décrivent l'origine d'un comportement, pas un composant encore présent.
+> `StandalonePixiTable.tsx` n'existe plus ; l'entrée du package est `index.ts` →
+> `PixiTable.tsx`. Le HUD est dans `hud/`, les styles dans `styles/`, et
+> `robotMascot.ts` (mascottes paramétriques) s'est ajouté depuis.
 
 ## Architecture (clean, un composant par fichier)
 

@@ -1,5 +1,17 @@
 # Éditeur de cerveau de robot — Documentation
 
+> **⚠️ L'éditeur décrit ici n'existe plus.** Son front (`web/src/pages/robot-editor/`)
+> a disparu avec le workspace `web/`, supprimé en v16. Ce qui **subsiste** : le module
+> serveur `server/src/modules/brain` (API REST de versionnage des cerveaux — projets,
+> versions, clone) et le mécanisme d'extension `registerAlgorithm(name, factory)` de
+> `belote-core`, toujours résolu par `AlgoSpec.name`. Ces documents restent une bonne
+> référence de **conception** si l'éditeur devait être reconstruit (dans le mobile ou
+> le back-office), mais aucun des fichiers front qu'ils citent n'est présent.
+>
+> Pour l'état courant des robots : [`../architecture-robots.md`](../architecture-robots.md)
+> et [`../robot-cerveau-config.md`](../robot-cerveau-config.md).
+
+
 L'**éditeur de cerveau** (`/brain-editor`) est un mini-IDE qui permet d'écrire, tester, versionner et
 sauvegarder le « cerveau » d'un robot de belote — c'est-à-dire les fonctions du contrat `RobotAlgorithm`
 (`decideBid`, `decideCard`, `shouldContre`, `shouldSurcontre`) en JavaScript, avec des fonctions

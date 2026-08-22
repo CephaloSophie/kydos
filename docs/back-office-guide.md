@@ -1,5 +1,13 @@
 # Back Office — Guide de construction
 
+> **⚠️ Document de CONSTRUCTION — le back-office existe désormais.** Ce texte a servi
+> à *spécifier* l'outil d'administration avant son écriture ; il ne décrit pas
+> forcément ce qui a été livré. Pour l'implémentation réelle (API `/admin`, pages
+> Angular, auth, audit, déploiement) : [`backoffice/technique.md`](./backoffice/technique.md)
+> et [`backoffice/fonctionnel.md`](./backoffice/fonctionnel.md). Les mentions du
+> workspace `web/` sont caduques (supprimé en v16).
+
+
 > **Public** : équipe / IA qui construira le back office admin de Kýdos Belote.
 > Contient toutes les informations nécessaires pour construire une interface
 > d'administration complète sans avoir à explorer le code source.

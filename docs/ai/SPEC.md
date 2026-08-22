@@ -1,11 +1,33 @@
 # Kýdos Belote — Spécification maîtresse du produit
 
-Ce document est **la source unique de vérité produit** pour Kýdos Belote.
-**État courant : v11.8.0.** Trajectoire et travaux à venir : voir `docs/ROADMAP.md`.
-Historique détaillé des livraisons : `CHANGELOG.md`.
-Toute IA reprenant le projet doit lire ce fichier AVANT `README.md`, `MOBILE.md`
-ou `API.md`. Il consolide les exigences issues des conversations avec Ameur
-Hamdouni (CEO & Founder & Architect, Cephalo Sophie).
+> ## ⚠️ Document gelé — lire cet encadré d'abord
+>
+> Cette SPEC décrit l'état du produit vers **v11.8**. Le code est aujourd'hui à
+> **16.0.0** (+ jalons de conception v17–v19). Elle reste utile pour la **vision
+> produit** et les **règles métier de fond** ; elle est **fausse sur l'état
+> d'avancement**. Corrections principales :
+>
+> | Ce que dit la SPEC | État réel |
+> | --- | --- |
+> | §3.6 « pas de vrais tournois » | **Faux** : brackets 4→128, worker cron, bracket persistant, gains par position. Voir `../matches-tournaments.md`. |
+> | §3.9 « les mises ne sont PAS prélevées » | **Corrigé** : `walletService.stakeGame` prélève au lancement, tout ou rien, remboursement si un débit échoue. |
+> | §3.9 barème 100/50 par siège | **Remplacé** par les 3 formats de match (`DUO_STEEL` / `HYBRID_ALLIANCE` / `ROYAL_SQUARE`), source unique `matchFormat.ts`. |
+> | §4 « web et mobile partagent `@table-pixi` » | Le workspace `web/` a été **supprimé en v16**. La table est le package `packages/table-pixi`. |
+> | §8 « P2 — parité web » | **Sans objet** : il n'y a plus de web. |
+> | Niveau dérivé du score/solde | **Remplacé** par le modèle unique `scoreKydos` (échelle géométrique, `levelForScore()`). |
+> | Rien sur le back-office | Une app Angular 19 + API Express `/admin` administre tournois, formats, thèmes, avatars, score & niveaux, promos, comptabilité. |
+>
+> Non couverts ici car postérieurs : VIP, publicité, codes promo, thèmes de table,
+> catalogues d'avatars, cache de session mobile, sons. Voir
+> [`HISTORIQUE-v18-v19.md`](./HISTORIQUE-v18-v19.md) et
+> [`../../CLAUDE.md`](../../CLAUDE.md) pour l'état courant.
+
+
+Ce document consolide les **exigences produit** issues des conversations avec Ameur
+Hamdouni (CEO & Founder & Architect, Cephalo Sophie), **arrêtées à v11.8.0**.
+C'est la référence de la *vision* et des *règles métier de fond* ; pour l'état réel
+du code, lire d'abord [`../../CLAUDE.md`](../../CLAUDE.md), puis
+[`README.md`](./README.md).
 
 ## 1. Contexte et identité
 
