@@ -3,6 +3,10 @@
 Ce document est **la référence unique** pour comprendre le projet.
 Il s'adresse à une IA (Claude, Copilot, etc.) OU un développeur reprenant le code.
 
+> À lire aussi : [`../../CLAUDE.md`](../../CLAUDE.md) (règles opérationnelles, modules
+> centraux, pièges de test) et [`HISTORIQUE-v18-v19.md`](./HISTORIQUE-v18-v19.md)
+> (décisions de conception v18–v19 : thèmes, avatars, score & niveaux, profil, VIP).
+
 ## 1. Vision produit
 
 Kýdos Belote est un jeu de **belote contrée** haut de gamme orienté robots (IA
