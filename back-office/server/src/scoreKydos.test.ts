@@ -23,6 +23,12 @@ describe('scoreKydos (miroir back-office) — parité avec le cœur', () => {
     expect(g.total).toBe(500 * 2 * 1.5 + 50); // 1500 + 50
   });
 
+  it('applique le bonus VIP (vipRate %)', () => {
+    const g = computeScoreGain(cfg({ baseWinnerPlayer: 500, vipRate: 3 }), { isRobot: false, partieCoefficient: 1, gameTypeCoefficient: 1, isVip: true });
+    expect(g.vipBonus).toBe(15);
+    expect(g.total).toBe(515);
+  });
+
   it('diagnostic : détecte une échelle non croissante (creux)', () => {
     const issues = diagnoseScoreKydos(cfg({ maxLevel: 4, levelOverrides: [{ level: 2, increment: 350 }] }));
     expect(issues.some((i) => i.code === 'levels-not-increasing')).toBe(true);

@@ -11,13 +11,15 @@ export interface ScoreKydosConfig {
   levelUpPercent: number;
   maxLevel: number;
   tokenScorePercent: number;
+  /** Bonus de score VIP (%) appliqué à tout gain d'un joueur VIP. */
+  vipRate: number;
   gameTypeCoefficients: Record<string, number>;
   levelOverrides: LevelOverride[];
 }
 
 export interface DiagnosticIssue { severity: 'error' | 'warning' | 'info'; code: string; message: string }
 export interface LevelRow { level: number; increment: number; cumulative: number; cumulativeNext: number; overridden: boolean }
-export interface GainBreakdown { base: number; partieCoefficient: number; gameTypeCoefficient: number; tokenBonus: number; total: number }
+export interface GainBreakdown { base: number; partieCoefficient: number; gameTypeCoefficient: number; tokenBonus: number; vipBonus: number; total: number }
 
 export interface ScoreConfigPreview {
   config: ScoreKydosConfig;
@@ -25,7 +27,7 @@ export interface ScoreConfigPreview {
   levelTable: LevelRow[];
   totalLevels: number;
   gameTypeMatrix: { category: string; kinds: { kind: string; key: string; coefficient: number }[] }[];
-  gainExamples: { player: GainBreakdown; robot: GainBreakdown };
+  gainExamples: { player: GainBreakdown; robot: GainBreakdown; playerVip: GainBreakdown };
   milestones: { level: number; cumulativeToReach: number | null }[];
   sampleProgress: { level: number; pointsInLevel: number; pointsToNext: number; levelSpan: number; ratio: number };
 }

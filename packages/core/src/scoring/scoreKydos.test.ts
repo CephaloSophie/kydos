@@ -52,6 +52,23 @@ describe('scoreKydos — barème de gain', () => {
     expect(g.total).toBe(650);
   });
 
+  it('applique le bonus VIP (vipRate %) sur la totalité du gain', () => {
+    const c = cfg({ baseWinnerPlayer: 500, vipRate: 3 });
+    const nonVip = computeScoreGain(c, { isRobot: false, partieCoefficient: 1, gameTypeCoefficient: 1 });
+    const vip = computeScoreGain(c, { isRobot: false, partieCoefficient: 1, gameTypeCoefficient: 1, isVip: true });
+    expect(nonVip.total).toBe(500);
+    expect(vip.vipBonus).toBe(15);   // 3 % de 500
+    expect(vip.total).toBe(515);
+  });
+
+  it('le bonus VIP s’applique aussi au bonus jetons (sur le sous-total)', () => {
+    const c = cfg({ baseWinnerPlayer: 500, tokenScorePercent: 50, vipRate: 10 });
+    const vip = computeScoreGain(c, { isRobot: false, partieCoefficient: 1, gameTypeCoefficient: 1, tokensAccumulated: 100, isVip: true });
+    // sous-total = 500 + 50 = 550 ; +10 % = 55 ; total 605
+    expect(vip.vipBonus).toBe(55);
+    expect(vip.total).toBe(605);
+  });
+
   it('borne le gain à ≥ 0 et neutralise les coefficients invalides', () => {
     const c = cfg({ baseWinnerPlayer: 500 });
     // coefficient négatif → traité comme 1 (jamais de gain négatif).
@@ -136,6 +153,11 @@ describe('scoreKydos — diagnostic', () => {
 
   it('signale un pourcentage irréaliste (avertissement)', () => {
     expect(diagnoseScoreKydos(cfg({ levelUpPercent: 250 })).some((i) => i.severity === 'warning' && i.code === 'levelup-unrealistic')).toBe(true);
+  });
+
+  it('détecte un bonus VIP négatif (erreur) et irréaliste (avertissement)', () => {
+    expect(diagnoseScoreKydos(cfg({ vipRate: -1 })).some((i) => i.code === 'vip-rate-negative')).toBe(true);
+    expect(diagnoseScoreKydos(cfg({ vipRate: 250 })).some((i) => i.code === 'vip-rate-unrealistic')).toBe(true);
   });
 
   it('détecte des coefficients négatifs / à zéro', () => {

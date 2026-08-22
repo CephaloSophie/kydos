@@ -62,9 +62,15 @@ import { ScoreConfigService, type ScoreKydosConfig, type ScoreConfigPreview } fr
             <div class="inline"><input type="number" [(ngModel)]="config.tokenScorePercent" (ngModelChange)="onChange()" /><span class="unit">%</span></div>
             <small>0 = désactivé. Ex. 50 ⇒ +50 % des jetons gagnés en score.</small>
           </div>
+          <div class="field">
+            <label>⭐ Bonus VIP (% de score en plus pour un joueur VIP)</label>
+            <div class="inline"><input type="number" [(ngModel)]="config.vipRate" (ngModelChange)="onChange()" /><span class="unit">%</span></div>
+            <small>Appliqué à TOUT gain d'un joueur VIP, partout où le score se calcule. Défaut 3 %.</small>
+          </div>
           @if (preview) {
             <div class="examples">
               <div><span>Exemple joueur (partie rapide, 200 jetons)</span><strong>+{{ preview.gainExamples.player.total }}</strong></div>
+              <div><span>⭐ Même joueur en VIP</span><strong>+{{ preview.gainExamples.playerVip.total }}</strong></div>
               <div><span>Exemple robot (partie rapide)</span><strong>+{{ preview.gainExamples.robot.total }}</strong></div>
             </div>
           }

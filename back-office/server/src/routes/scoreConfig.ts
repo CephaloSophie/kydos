@@ -38,8 +38,8 @@ function buildPreview(config: ScoreKydosConfig) {
     kinds: GAME_KINDS.map((kind: GameKind) => ({ kind, key: gameTypeKey(category, kind), coefficient: gameTypeCoefficient(config, category, kind) })),
   }));
   // Exemple concret de gain (coefficient de partie 1, jetons 200).
-  const example = (isRobot: boolean, category: GameCategory, kind: GameKind) =>
-    computeScoreGain(config, { isRobot, partieCoefficient: 1, gameTypeCoefficient: gameTypeCoefficient(config, category, kind), tokensAccumulated: 200 });
+  const example = (isRobot: boolean, category: GameCategory, kind: GameKind, isVip = false) =>
+    computeScoreGain(config, { isRobot, partieCoefficient: 1, gameTypeCoefficient: gameTypeCoefficient(config, category, kind), tokensAccumulated: 200, isVip });
   return {
     diagnostics: diagnoseScoreKydos(config),
     levelTable,
@@ -48,6 +48,7 @@ function buildPreview(config: ScoreKydosConfig) {
     gainExamples: {
       player: example(false, 'quick', 'hybride'),
       robot: example(true, 'quick', 'hybride'),
+      playerVip: example(false, 'quick', 'hybride', true),
     },
     // Repères d'échelle : score cumulé pour quelques niveaux clés.
     milestones: [2, 5, 10, 25, 50, 100]

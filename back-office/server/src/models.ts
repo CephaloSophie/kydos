@@ -443,6 +443,7 @@ const ScoreConfigSchema = new Schema(
     levelUpPercent: { type: Number, default: 8 },
     maxLevel: { type: Number, default: 200 },
     tokenScorePercent: { type: Number, default: 0 },
+    vipRate: { type: Number, default: 3 },
     gameTypeCoefficients: { type: Schema.Types.Mixed, default: {} },
     levelOverrides: { type: [ScoreLevelOverrideSchema], default: [] },
   },

@@ -52,6 +52,12 @@ export interface ScoreKydosConfig {
    */
   tokenScorePercent: number;
   /**
+   * Bonus de score VIP, en pourcentage, appliqué à TOUT gain d'un joueur VIP.
+   * Défaut 3 ⇒ un joueur VIP gagne +3 % de score sur chaque partie. Centralisé
+   * ici pour que l'avantage VIP soit pris en compte partout où le score se calcule.
+   */
+  vipRate: number;
+  /**
    * Coefficient par TYPE de jeu (catégorie × genre), appliqué au gain. Clé au
    * format `${category}:${kind}` (ex. `tournament:royal`). Absent ⇒ 1.
    */
@@ -71,6 +77,7 @@ export const DEFAULT_SCORE_KYDOS: ScoreKydosConfig = {
   levelUpPercent: 8,
   maxLevel: 200,
   tokenScorePercent: 0,
+  vipRate: 3,
   gameTypeCoefficients: {},
   levelOverrides: [],
 };
@@ -113,6 +120,8 @@ export interface ScoreGainInput {
   gameTypeCoefficient: number;
   /** Jetons accumulés à créditer en score (via `tokenScorePercent`). Défaut 0. */
   tokensAccumulated?: number;
+  /** Le gagnant est-il VIP ? (applique le bonus `vipRate`). Défaut false. */
+  isVip?: boolean;
 }
 
 /** Détail du gain (traçable / affichable). */
@@ -121,6 +130,8 @@ export interface ScoreGainBreakdown {
   partieCoefficient: number;
   gameTypeCoefficient: number;
   tokenBonus: number;
+  /** Points ajoutés par le bonus VIP (0 si non VIP ou vipRate = 0). */
+  vipBonus: number;
   /** Total ENTIER ajouté au score cumulé (jamais négatif). */
   total: number;
 }
@@ -139,8 +150,11 @@ export function computeScoreGain(config: ScoreKydosConfig, input: ScoreGainInput
   const gameTypeCoef = safeCoef(input.gameTypeCoefficient);
   const tokenPct = Math.max(0, config.tokenScorePercent ?? 0);
   const tokenBonus = Math.round((tokenPct / 100) * safeNonNeg(input.tokensAccumulated));
-  const total = Math.max(0, Math.round(base * partieCoefficient * gameTypeCoef) + tokenBonus);
-  return { base, partieCoefficient, gameTypeCoefficient: gameTypeCoef, tokenBonus, total };
+  const subtotal = Math.max(0, Math.round(base * partieCoefficient * gameTypeCoef) + tokenBonus);
+  // Bonus VIP : +vipRate % sur la totalité du gain, pour un gagnant VIP.
+  const vipRate = Math.max(0, config.vipRate ?? 0);
+  const vipBonus = input.isVip ? Math.round((vipRate / 100) * subtotal) : 0;
+  return { base, partieCoefficient, gameTypeCoefficient: gameTypeCoef, tokenBonus, vipBonus, total: subtotal + vipBonus };
 }
 
 /* ── 2. ÉCHELLE DE NIVEAUX ─────────────────────────────────────────────────── */
@@ -245,6 +259,7 @@ const REALISM = {
   maxTokenPercent: 200,     // > 200 % des jetons : irréaliste
   maxLevels: 1000,          // table démesurée
   maxCoefficient: 100,      // coefficient énorme
+  maxVipRate: 100,          // > 100 % de bonus VIP : irréaliste
 };
 
 /**
@@ -281,6 +296,10 @@ export function diagnoseScoreKydos(config: ScoreKydosConfig): DiagnosticIssue[] 
   // Pourcentage jetons.
   if (!(config.tokenScorePercent >= 0)) err('token-percent-negative', `Pourcentage jetons négatif (${config.tokenScorePercent} %).`);
   else if (config.tokenScorePercent > REALISM.maxTokenPercent) warn('token-percent-unrealistic', `Pourcentage jetons très élevé (${config.tokenScorePercent} %) : peu réaliste.`);
+
+  // Bonus VIP.
+  if (!(config.vipRate >= 0)) err('vip-rate-negative', `Bonus VIP négatif (${config.vipRate} %) : le VIP pénaliserait le score.`);
+  else if (config.vipRate > REALISM.maxVipRate) warn('vip-rate-unrealistic', `Bonus VIP très élevé (${config.vipRate} %) : peu réaliste.`);
 
   // Coefficients de type de jeu.
   const seenKeys = new Set<string>();
@@ -341,6 +360,7 @@ export function resolveScoreKydosConfig(partial?: Partial<ScoreKydosConfig> | nu
     levelUpPercent: numOr(p.levelUpPercent, DEFAULT_SCORE_KYDOS.levelUpPercent),
     maxLevel: numOr(p.maxLevel, DEFAULT_SCORE_KYDOS.maxLevel),
     tokenScorePercent: numOr(p.tokenScorePercent, DEFAULT_SCORE_KYDOS.tokenScorePercent),
+    vipRate: numOr(p.vipRate, DEFAULT_SCORE_KYDOS.vipRate),
     gameTypeCoefficients: { ...(p.gameTypeCoefficients ?? {}) },
     levelOverrides: Array.isArray(p.levelOverrides) ? p.levelOverrides.map((o) => ({ level: o.level, increment: o.increment })) : [],
   };
