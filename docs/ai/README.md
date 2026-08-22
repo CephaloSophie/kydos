@@ -1,11 +1,11 @@
 # Kýdos Belote — Base de connaissance pour IA / développeurs
 
-Ce document est **la référence unique** pour comprendre le projet.
-Il s'adresse à une IA (Claude, Copilot, etc.) OU un développeur reprenant le code.
+Porte d'entrée du dépôt : ce qu'est le produit, comment le monorepo est organisé,
+et vers quel document aller ensuite.
 
-> À lire aussi : [`../../CLAUDE.md`](../../CLAUDE.md) (règles opérationnelles, modules
-> centraux, pièges de test) et [`HISTORIQUE-v18-v19.md`](./HISTORIQUE-v18-v19.md)
-> (décisions de conception v18–v19 : thèmes, avatars, score & niveaux, profil, VIP).
+> **À lire d'abord** : [`../../CLAUDE.md`](../../CLAUDE.md) — règles opérationnelles,
+> modules centraux (source unique de vérité), contrats à ne jamais casser, pièges de
+> test. Ce fichier-ci en est le complément « vue d'ensemble », pas un doublon.
 
 ## 1. Vision produit
 
@@ -28,150 +28,131 @@ créateur de la plateforme no-code **KANTO APLO**.
 Clients de l'entreprise : IFPEN, La Poste, LeadsHook, Docaposte, Softia,
 JCDecaux, Unibet, Allianz.
 
-## 2. Vue d'ensemble du monorepo
+Les robots sont des **individus** : nom, avatar, personnalité paramétrable, score et
+niveau cumulés, replays consultables — « algorithms as characters ».
+
+## 2. Le monorepo tel qu'il est
 
 ```
-belote/
+belote-kydos/
 ├── packages/
-│   ├── core/           # belote-core — moteur de jeu pur (règles, robots, scoring)
-│   ├── application/    # cas d'usage transverses (sessions de table)
-│   └── belote-table/   # table réutilisable (@kanto-aplo/belote-table)
-├── server/             # belote-server — API Express + Mongo + Socket.IO
-├── web/                # belote-web — application WEB (React + Vite)
-│   └── src/table-pixi/ # composant TABLE Pixi (réutilisable par web ET mobile)
-├── mobile/             # belote-mobile — application MOBILE (Vite + Capacitor)
-├── docs/               # documentation (dont ai/ pour les IA)
-└── CHANGELOG.md
+│   ├── core/           belote-core        — moteur de jeu PUR (règles, robots, scoring)
+│   ├── table-pixi/     @kydos/table-pixi  — la table de belote comme composant PixiJS
+│   ├── application/    ⚠️ LEGACY — plus aucun import, ne rien y ajouter
+│   └── belote-table/   ⚠️ LEGACY — plus aucun import, ne rien y ajouter
+├── server/             belote-server      — API Express + MongoDB + Socket.IO (port 4000)
+├── mobile/             belote-mobile      — app joueur (TypeScript + DOM, Vite + Capacitor)
+├── back-office/        ⚠️ HORS workspaces — Angular 19 + son propre Express (port 3001)
+├── scripts/            tnr.mjs, tnr-server.mjs, coverage.mjs, healthcheck.mjs
+├── Makefile            cycle mobile natif (device, émulateur, logs, cap sync)
+└── docs/               cette documentation
 ```
 
-Web et mobile sont **deux applications totalement séparées** qui partagent :
-- `belote-core` (le moteur de jeu — le comportement des robots) ;
-- `web/src/table-pixi/` (la table Pixi, importée dans mobile via alias `@table-pixi`).
+**Workspaces npm** : `packages/*`, `server`, `mobile`. Le glob attrape aussi les deux
+packages legacy, mais `typecheck:all` / `test:all` ne les traitent pas.
 
-## 3. Couches et architecture
+**Le workspace `web/` (ancienne app React) a été supprimé en v16.** Ce qui subsiste
+sur le disque n'est pas suivi par git. Toute documentation qui décrit `web/`,
+l'alias `@table-pixi` ou une parité web/mobile décrit un monde disparu.
 
-### 3.1 belote-core (moteur — packages/core)
+### Qui dépend de qui
 
-Moteur PUR du jeu de contrée. Aucun DOM, aucun réseau, aucune persistance.
-Il est le contrat stable de tout l'écosystème (SemVer strict).
+```
+        belote-core  (aucune dépendance — SemVer strict)
+              │
+      ┌───────┴────────┐
+      ▼                ▼
+@kydos/table-pixi   belote-server
+      │                │  HTTP / WebSocket
+      └──────┬─────────┘
+             ▼
+         belote-mobile
 
-Modules clés :
-- `domain/cards.ts`, `domain/types.ts` — types (Card, Seat, Suit…).
-- `rules/ContreeRules.ts` — règles de contrée (obligations, atout maître…).
-- `engine/GameEngine.ts` — MOTEUR : gère une partie complète (annonces →
-  jeu → scores). API publique : `submitBid`, `playCard`, `collectTrick`,
-  `nextDonne`, `nextManche`, `setBeloteAnnounce`, `view()`, `handOf()`,
-  `legalCards()`, `toReplay()`.
-- `engine/RobotDriver.ts` — `robotAct(engine, seat, algo)` : décide la
-  prochaine action d'un robot (annonce/carte + temps de réflexion réaliste).
-- `robot/RobotBrain.ts` — la « fiche » robot (personnalité 1–10 +
-  configuration algorithmique).
-- `robot/algorithm/*` — algorithmes de décision (interface pluggable).
+back-office (Angular)  ──►  back-office/server (Express)  ──►  MongoDB (même base)
+```
 
-**Contrainte critique** : le comportement des robots est piloté par
-`personality: { aggressiveness, concentration, velocity }` sur une échelle
-**1–10**. Toute UI qui expose une édition de robot DOIT préserver cette
-sémantique.
+Le back-office **ne dépend ni de `belote-core` ni de `table-pixi`** : quelques
+logiques pures y sont recopiées à l'identique. La liste des miroirs à garder
+synchronisés est dans `CLAUDE.md` (« Miroirs à garder synchronisés ») — c'est la
+règle la plus facile à casser du dépôt.
 
-### 3.2 belote-server (packages/server)
+## 3. Les cinq espaces en une phrase chacun
 
-- Express + MongoDB (Mongoose) + Socket.IO.
-- Auth JWT (endpoints `/auth/register`, `/auth/login`, `/auth/me`).
-- Modules : `auth`, `user`, `robot`, `brain`, `game`, `team`, `invitation`,
-  `analytics`, `competition`, `table`.
-- Chaque module suit le patron `routes.ts` → `controller.ts` → `service.ts`
-  → `model.ts`.
-
-Endpoints consommés par le mobile :
-- `POST /auth/login`, `POST /auth/register` → `{ token, user }`
-- `GET /auth/me` → `{ user }`
-- `GET /robots` → `{ robots: ServerRobot[] }`
-- `POST /robots` → `{ robot: { id, name } }`
-- `DELETE /robots/:id` → `{ ok: true }`
-- `GET /games` → `{ games: ServerGame[] }`
-- `GET /games/:id` → `{ game: ServerGame }` (avec `replay` pour le rejeu)
-- `POST /games` → `{ id }`
-- `GET /analytics/me` → `{ stats }`
-
-Le modèle robot expose un champ `mobile` (`Mixed`) contenant l'avatar et les
-curseurs de l'éditeur mobile — **purement présentationnel** (voir MOBILE.md).
-
-### 3.3 belote-web (web/)
-
-Application WEB React. Contient :
-- pages : Auth, Training, TrainingV2, Tables, Robots, Team, Settings, Replay…
-- `src/table-pixi/` : **composant table Pixi réutilisable** (design system table).
-- `src/table/` : ancienne table DOM (référence).
-
-### 3.4 belote-mobile (mobile/)
-
-Application MOBILE **séparée**. Voir `docs/ai/MOBILE.md` pour l'architecture
-détaillée. En résumé :
-- Clean architecture stricte : `core/` → `data/` → `domain/` → `presentation/`.
-- Design system Kýdos (CSS copié verbatim depuis le handoff).
-- Table Pixi réutilisée via alias `@table-pixi` (mount dans `#game-table-mount`).
-- Emballage Capacitor pour Android/iOS, **paysage forcé**.
+| Espace | Ce qu'il fait | À lire |
+| --- | --- | --- |
+| `packages/core` | Moteur PUR : règles de contrée, cerveaux de robots, scoring, orchestration donnes → manches → partie. Aucune I/O. | [`../architecture-robots.md`](../architecture-robots.md) |
+| `packages/table-pixi` | La table rendue en PixiJS + HUD (enchères, score, émotes, thèmes, mascottes). | [`../table-pixi/README.md`](../table-pixi/README.md) |
+| `server` | API REST + Socket.IO. 22 modules autonomes (`model → service → controller → routes`). | [`../api-reference.md`](../api-reference.md), [`../websocket-reference.md`](../websocket-reference.md) |
+| `mobile` | L'app joueur. Clean architecture `core → data → domain → presentation`, design system autonome, Capacitor. | [`MOBILE.md`](./MOBILE.md), [`../session-cache.md`](../session-cache.md) |
+| `back-office` | Administration : tournois, formats de match, thèmes, avatars, score & niveaux, utilisateurs, promos, comptabilité. | [`../backoffice/technique.md`](../backoffice/technique.md) |
 
 ## 4. Commandes essentielles
 
 ```bash
 npm install
-npm test                                       # tous les tests
-npm --workspace belote-core   run demo         # démo moteur (Vainqueur A)
-npm --workspace belote-web    run build
-npm --workspace belote-web    run build:lib    # bundle table-pixi standalone
-npm --workspace belote-mobile run dev          # dev server mobile (Vite)
-npm --workspace belote-mobile run build        # → mobile/dist/
-npm --workspace belote-mobile run cap:android
+npm run typecheck:all      # core + table-pixi + server + mobile
+npm run test:all           # idem, tests
+npm run tnr                # non-régression globale → reports/tnr-latest.json
+npm run coverage           # couverture consolidée (seuils par workspace)
+npm run seed               # jeu de données de démo
+npm run dev                # serveur + mobile en parallèle
+
+make check                 # diagnostic mobile ↔ serveur (7 vérifications)
+make android-device        # build + lance sur un device Android branché
+```
+
+Back-office (hors workspaces, se lancer depuis son dossier) :
+
+```bash
+cd back-office && npx ng serve                  # SPA Angular, port 4200
+cd back-office/server && npx tsx src/index.ts   # API admin, port 3001
+cd back-office/server && npm run seed:admin     # crée/promeut un compte admin
 ```
 
 ## 5. Conventions
 
-- **Tests** : commentés en ANGLAIS (français partout ailleurs).
-- **Versions** : bump synchronisé de tous les `package.json` + `version.ts`
-  + `CHANGELOG.md`, une entrée par version dans le format existant.
-- **Documentation** : mise à jour à chaque changement fonctionnel. Chaque
-  fichier de code décrit son rôle en tête (bloc `/* ==== */`).
-- **Aucun stub** : chaque livraison est verte (typecheck × 4 + tests + build).
-- **Séparation web/mobile** : ne JAMAIS importer un composant web dans mobile
-  ni l'inverse — sauf `belote-core` et `@table-pixi` (partagés explicitement).
+- **Langue** : code, commentaires, commits et docs en **français**. Exception
+  historique : les commentaires de tests sont en anglais.
+- **Commits conventionnels** : `feat(score): …`, `fix(queue): …`, `docs: …`.
+  Jamais de push direct sur `main` — toujours une branche dédiée.
+- **Logique métier = fonctions pures**, isolées et testées seules. C'est le patron
+  dominant du dépôt.
+- **Un point unique par décision** : la table des modules centraux de `CLAUDE.md`
+  fait foi. Ne jamais recalculer en dur ailleurs ce qu'un module central résout.
+- **Corriger la racine, pas le symptôme** — règle posée par le CEO, appliquée à
+  toutes les refontes récentes (config de table, thèmes, score).
+- **Aucun stub** : chaque livraison est verte (typecheck + tests + build).
+- Chaque fichier de code décrit son rôle en tête (bloc `/* ==== */`).
 
-## 6. État courant (v10.3.0)
+## 6. Versions
 
-- Application mobile complète (login réel, écurie, éditeur robot, table Pixi
-  mountée, rejeu, historique, classements, compétitions vitrine, à propos).
-- **Dialogue de configuration de partie** (même style que « Robot créé ! ») :
-  emplacement de chaque siège (Moi / Auto / mes robots), visibilité des
-  cartes (Personne / Mes robots / Tout le monde), nombre de manches
-  (1 / 2 / 4 — union stricte du moteur).
-- Table Pixi partagée fonctionnelle (thèmes local/vip/compétition, belote
-  optionnelle, animations, bulles d'annonces par siège, feuille cahier).
-- 169 tests unitaires (32 core + 63 web + 23 server + 51 mobile) + tests d'intégration Mongo (opt-in).
-- Capacitor prêt (paysage forcé Android/iOS).
+Tous les `package.json` sont à **`16.0.0`**. Les documents parlent de « v17 »,
+« v18 », « v19 » : ce sont des **jalons de conception**, pas des versions npm — le
+bump a décroché depuis v16.
 
-## 7. Tranches restantes
+Pour savoir ce qui a été livré et **pourquoi** :
 
-- **T2 (online)** : humain/robot vs humain/robot temps réel, verrou
-  « une seule partie à la fois », pending/annulation, reprise par un robot
-  au départ d'un joueur.
-- **T3 (équipes)** : owner / super admin / admin / user, 40 membres max,
-  spectateurs 5 max avec vue filtrée (jamais les cartes des autres).
-- **T4 (économie)** : jetons quotidiens serveur, prélèvements 100 humain /
-  50 robot, gains 150 (H×4), 225 (H×2+R×2), 150 (R×4). Replays enrichis
-  (collection indépendante : events, smileys, réflexions, temps réels,
-  replays publics par nom).
+- [`HISTORIQUE-v18-v19.md`](./HISTORIQUE-v18-v19.md) — thèmes de table, avatars,
+  score & niveaux, profil, VIP : les demandes, les causes racines, les décisions.
+- [`../backoffice/ai-changelog.md`](../backoffice/ai-changelog.md) — journal détaillé
+  des jalons v16 → v18, commit par commit.
+- `CHANGELOG.md` (racine) s'arrête à **v14.4** : il ne couvre plus l'état courant.
 
-## 8. Référentiel de tâches (obligatoire)
+## 7. Où aller ensuite
 
-`board/tasks.json` est la **base de vérité des tâches** : diagnostic
-serveur/mobile, tâches faites, manquantes, bugs, priorités, versions,
-estimations, historique et journaux.
+| Je veux… | Document |
+| --- | --- |
+| Comprendre comment un robot décide | [`../architecture-robots.md`](../architecture-robots.md) |
+| Changer un comportement de robot | [`../robot-cerveau-config.md`](../robot-cerveau-config.md) |
+| Comprendre matchs & tournois | [`../matches-tournaments.md`](../matches-tournaments.md), [`../match-live-runner.md`](../match-live-runner.md) |
+| Toucher aux jetons, promos, VIP | [`../WALLET.md`](../WALLET.md), [`../ADS.md`](../ADS.md) |
+| Travailler sur le mobile | [`MOBILE.md`](./MOBILE.md), [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md), [`../session-cache.md`](../session-cache.md) |
+| Lancer l'app sur un device | [`../mobile-connection.md`](../mobile-connection.md) |
+| Écrire ou lancer des tests | [`TESTING.md`](./TESTING.md) |
+| Déployer | [`DEPLOYMENT.md`](./DEPLOYMENT.md) |
+| Connaître la dette et les risques | [`../DIAGNOSTIC-v14.14-production-readiness.md`](../DIAGNOSTIC-v14.14-production-readiness.md) |
 
-- `board/BACKLOG.md` — lecture humaine du diagnostic.
-- `board/board.html` — tableau interactif (recherche, filtres, détail avec
-  historique et journaux). `npx serve board` puis ouvrir `board.html`.
-
-**Toute session de travail DOIT** : lire `tasks.json`, rapprocher chaque
-demande d'une tâche existante (enrichir ses `instructions`) ou en créer une,
-mettre à jour `status` / `updatedAt` / `history`, puis travailler par priorité.
-La mise à jour des documents est elle-même une tâche (**KB-121**).
+**Documents à ne plus prendre au pied de la lettre** : [`SPEC.md`](./SPEC.md) et
+[`../ROADMAP.md`](../ROADMAP.md) (gelés autour de v11.8 — un encadré en tête liste
+ce qui a changé depuis), [`../brain-editor/`](../brain-editor/) (décrit une UI
+supprimée avec `web/`), `board/tasks.json` (référentiel de tâches abandonné).

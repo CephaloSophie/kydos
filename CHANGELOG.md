@@ -2,6 +2,13 @@
 
 Chaque génération a un numéro. La version actuelle est affichée en haut à droite de l'app.
 
+> **⚠️ Journal arrêté à la v14.4.** Les `package.json` sont à **16.0.0** et les
+> jalons de conception v17–v19 (thèmes de table, avatars, score & niveaux, VIP,
+> profil) ne sont pas consignés ici. Pour la suite :
+> `docs/backoffice/ai-changelog.md` (v16 → v18, détaillé) et
+> `docs/ai/HISTORIQUE-v18-v19.md` (le **pourquoi** des décisions v18–v19).
+
+
 ## v14.4.0 — Runner temps-réel HYBRID/ROYAL + Redis robuste + perf peek (version actuelle)
 
 Session dédiée à trois chantiers en parallèle :

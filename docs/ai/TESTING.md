@@ -1,111 +1,113 @@
 # Stratégie de test — Kýdos Belote
 
-Approche « pyramide + non-régression + couverture mesurée », automatisée en CI.
+Pyramide + non-régression + couverture mesurée, automatisée en CI.
 
 ## 1. Commandes
 
 ```bash
-npm run tnr          # TNR global : typecheck ×5 + tests ×5 + builds ×3 + démo moteur
-npm run tnr:server   # TNR serveur : typecheck + tests + couverture + intégration Mongo
-npm run coverage     # Couverture consolidée des 5 workspaces (avec seuils)
-npm run e2e:web      # E2E web (Playwright, navigateur réel) — voir §6
+npm run test:all     # core + table-pixi + server + mobile
+npm run tnr          # TNR global : typecheck ×4 + tests ×4 + build mobile + démo moteur
+npm run tnr:server   # TNR serveur : typecheck + tests + couverture (+ Mongo si dispo)
+npm run coverage     # couverture consolidée des 4 workspaces (avec seuils)
+
+# back-office (hors workspaces)
+cd back-office/server && npx vitest run
 ```
 
-Chaque runner produit un artefact JSON dans `reports/` et sort en code 1 à la
-moindre régression :
-- `reports/tnr-latest.json`
-- `reports/tnr-server-latest.json`
-- `reports/coverage-latest.json`
+Chaque runner écrit un artefact JSON dans `reports/` et sort en code 1 à la moindre
+régression : `tnr-latest.json`, `tnr-server-latest.json`, `coverage-latest.json`.
 
-## 2. Pyramide de tests
+## 2. État des suites sur cet arbre
+
+| Suite | Tests | Remarque |
+| --- | --- | --- |
+| `belote-core` | 100 | moteur, règles, scoring, tableConfig, robots |
+| `@kydos/table-pixi` | 73 | layout, thèmes, HUD, mascottes, tri de main |
+| `belote-server` | 216 | **liste blanche de tests purs** par défaut (voir §4) |
+| `belote-mobile` | 185 verts / **3 échecs pré-existants** | voir §5 |
+| `back-office/server` | 54 | score Kýdos, analytics, statut, détail tournoi |
+
+## 3. Pyramide
 
 | Niveau | Emplacement | Portée |
 | --- | --- | --- |
-| Unitaire moteur | `packages/core/src/**/*.test.ts` | règles, scoring, stats, scénarios, format du replay |
-| Unitaire table | `packages/table-pixi/**/*.test.ts` | layout, thèmes, responsive, placement du pli |
+| Unitaire moteur | `packages/core/src/**/*.test.ts` | règles, scoring, scénarios, config de table, format du replay |
+| Unitaire table | `packages/table-pixi/**/*.test.ts` | layout, thèmes, responsive, placement du pli, mascottes |
 | Contrat API | `server/src/test/api.contract.test.ts` | routes, auth, forme des erreurs |
-| Unitaire serveur | `server/src/**/*.test.ts` (purs) | permissions, économie, helpers de profil, balance économique |
-| Intégration serveur | `server/src/**/*` important `setupMongo` | Mongo réel (opt-in, cf. §5) |
-| Unitaire mobile | `mobile/src/{domain,services}/**` | mapping, économie, services (TeamService…) |
-| E2E mobile | `mobile/src/test/screens.e2e.test.ts` | tous les écrans en DOM réel (happy-dom) |
-| Unitaire web | `web/src/**/*.test.ts` | composants et utilitaires |
-| E2E web | `web/e2e/*.spec.ts` | app réelle dans un navigateur (Playwright, cf. §6) |
+| Unitaire serveur | `server/src/**/*.test.ts` (purs) | permissions, économie, formats, queue, bracket, thèmes, avatars |
+| Intégration serveur | tests important `setupMongo` | Mongo réel — **opt-in** (§4) |
+| Unitaire mobile | `mobile/src/{data,services,domain}/**` | cache de session, économie, sons, parité des robots |
+| E2E mobile | `mobile/src/test/screens.e2e.test.ts` | tous les écrans en DOM réel (happy-dom) + faux serveur |
+| Back-office | `back-office/server/src/*.test.ts` | logiques pures miroir |
 
-## 3. Couverture (rapports)
+**Parité des robots** — `mobile/src/services/localGame.parity.test.ts` garantit qu'un
+robot au même `algoSpec` décide à l'identique côté mobile et côté core. C'est le
+filet qui interdit de dupliquer une heuristique dans un pilote.
 
-La couverture est mesurée par **Vitest + provider v8** dans chaque workspace,
-avec rapports `text-summary` (console), `html` (navigable, `coverage/`), `lcov`
-(agrégation externe / Codecov) et `json-summary` (consommé par le runner
-consolidé).
+## 4. ⚠️ Le piège de la liste blanche serveur
 
-`npm run coverage` exécute la couverture de tous les workspaces, agrège les
-résumés et affiche un tableau. Des **seuils** par workspace (dans chaque
-`vitest.config.ts`) font échouer la commande en cas de régression — ils sont
-calés sous le niveau courant et remontés progressivement (approche « cliquet »).
-
-Repères actuels (statements) : core ~81 %, mobile ~82 %, serveur ~34 %
-(unit-only ; l'intégration Mongo en CI couvre les contrôleurs/services), web
-~9 % (unités pures ; l'E2E Playwright couvre les parcours), table-pixi ~23 %.
-
-## 4. E2E mobile — faux serveur
-
-`mobile/src/test/fakeServer.ts` intercepte `fetch` et répond exactement comme le
-vrai serveur (mêmes chemins, payloads, statuts). La vraie couche `ApiClient` est
-donc exercée (en-têtes, parsing, 401). Le journal `calls[]` permet d'asserter
-qu'un écran interroge bien les bons endpoints. Chaque écran est monté en DOM réel
-(happy-dom) et vérifié sur son contenu. La table Pixi (WebGL) est remplacée par
-un composant inerte : la LOGIQUE de l'écran de jeu reste testée.
-
-## 5. Intégration MongoDB
-
-Les tests d'intégration importent `server/src/test/setupMongo` et démarrent un
-MongoDB en mémoire. Ils nécessitent le téléchargement du binaire :
+`mongodb-memory-server` télécharge son binaire depuis `fastdl.mongodb.org` : impossible
+dans un environnement sans réseau sortant. `server/vitest.config.ts` maintient donc,
+par défaut, une **liste blanche explicite de tests purs** ; la suite complète ne tourne
+qu'avec `MONGOMS_AVAILABLE=1`.
 
 ```bash
-MONGOMS_AVAILABLE=1 npm --workspace belote-server run test
-# ou, plus complet :
-MONGOMS_AVAILABLE=1 npm run tnr:server
+MONGOMS_AVAILABLE=1 npm --workspace belote-server run test   # suite complète
+MONGOMS_AVAILABLE=1 npm run tnr:server                       # + couverture
 ```
 
-Exclus par défaut (certains environnements n'ont pas accès à
-`fastdl.mongodb.org`). La CI les exécute dans le job `tnr-server` avec
-`MONGOMS_AVAILABLE=1`.
+> **Conséquence pratique** : un nouveau test serveur pur **doit être ajouté à cette
+> liste** dans `server/vitest.config.ts`, sinon il n'est jamais exécuté. C'est
+> silencieux — aucun message ne signale un test oublié.
 
-## 6. E2E web — Playwright
+## 5. Échecs pré-existants connus (mobile)
 
-`web/playwright.config.ts` lance lui-même le serveur de prévisualisation Vite
-(build + preview sur le port 4173), attend qu'il réponde, puis exécute
-`web/e2e/*.spec.ts` dans un **navigateur réel** (Chromium par défaut). Traces,
-captures et vidéos sont conservées à l'échec (`web/e2e/report`, `web/e2e/.results`).
+3 tests d'accueil de `mobile/src/test/screens.e2e.test.ts` échouent **avant toute
+modification** : l'écran d'accueil a 4 cartes-fonctionnalités quand le test en attend
+3, et le menu « Jouer en ligne » a bougé.
 
-```bash
-npm --workspace belote-web run e2e:install   # 1re fois : télécharge Chromium
-npm --workspace belote-web run e2e           # lance les scénarios
-npm --workspace belote-web run e2e:report    # ouvre le rapport HTML
-```
+**Ne pas les « corriger » par accident** en croyant avoir cassé quelque chose : ils
+sont rouges sur `main`. Les corriger est un travail à part entière (décider ce que
+l'accueil doit contenir, puis aligner le test).
 
-⚠️ Le **téléchargement du navigateur** nécessite un accès réseau au CDN
-Playwright, **indisponible dans le bac à sable de dev** (cf. KB-112). Ces tests
-sont donc conçus pour la **CI** (runner avec réseau). En sandbox, le filet E2E
-exécutable reste la suite DOM mobile (happy-dom).
+## 6. E2E mobile — le faux serveur
 
-## 7. Automatisation — CI
+`mobile/src/test/fakeServer.ts` intercepte `fetch` et répond exactement comme le vrai
+serveur (mêmes chemins, payloads, statuts). La vraie couche `ApiClient` est donc
+exercée : en-têtes, parsing, 401. Le journal `calls[]` permet d'asserter qu'un écran
+interroge bien les bons endpoints.
 
-`.github/workflows/ci.yml` orchestre, à chaque push / PR, cinq jobs parallèles :
+Chaque écran est monté en DOM réel (happy-dom). La table Pixi (WebGL) est remplacée
+par un composant inerte : la **logique** de l'écran de jeu reste testée, pas son rendu.
+
+> Il n'y a **plus d'E2E navigateur** : la suite Playwright vivait dans le workspace
+> `web/`, supprimé en v16. Le filet E2E exécutable est la suite DOM mobile.
+
+## 7. Couverture
+
+Vitest + provider v8 dans chaque workspace, rapports `text-summary`, `html`, `lcov`
+et `json-summary`. `npm run coverage` agrège les résumés et affiche un tableau.
+
+Des **seuils par workspace** (dans chaque `vitest.config.ts`) font échouer la commande
+en cas de régression. Ils sont calés sous le niveau courant et remontés progressivement
+— **effet cliquet : ils ne doivent jamais baisser.**
+
+## 8. CI
+
+`.github/workflows/ci.yml`, à chaque push / PR sur `main` et `develop` :
 
 | Job | Rôle |
 | --- | --- |
-| `typecheck` | typecheck des 5 workspaces |
+| `typecheck` | typecheck des 4 workspaces |
 | `coverage` | `npm run coverage` (échoue sous les seuils) + artefacts lcov |
 | `tnr` | TNR global + artefact `tnr-latest.json` |
 | `tnr-server` | TNR serveur **avec `MONGOMS_AVAILABLE=1`** (intégration Mongo réelle) |
-| `e2e-web` | installe Chromium puis lance l'E2E Playwright + rapport |
 
-Chaque job publie ses rapports en artefacts téléchargeables.
+Le back-office n'est pas encore couvert par la CI : ses tests se lancent à la main
+depuis `back-office/server`.
 
-## 8. Règle de non-régression
+## 9. Règle de non-régression
 
-Aucune livraison sans `npm run tnr` vert. Tout bug corrigé est accompagné d'un
-test qui échouait avant le correctif (ex. KB-272 rejeu `op.seat`, KB-290 émotes
-`kind`, KB-300 balance économique). Les seuils de couverture ne doivent jamais
-baisser.
+Aucune livraison sans TNR vert. **Tout bug corrigé est accompagné d'un test qui
+échouait avant le correctif** — c'est la règle la plus appliquée du dépôt (rejeu
+`op.seat`, émotes `kind`, balance économique, cache de thème, bracket monotone…).

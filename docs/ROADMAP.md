@@ -1,5 +1,14 @@
 # Kýdos Belote — Roadmap
 
+> **⚠️ Roadmap gelée (post-v11.8).** Plusieurs jalons sont **livrés** depuis :
+> économie équilibrée (prélèvement au lancement), tournois réels avec brackets,
+> back-office d'administration, score & niveaux centralisés, avatars, VIP.
+> Le point 7 (« parité web ») est **sans objet** : le workspace `web/` a été
+> supprimé en v16. Le point 12 (`packages/application`) reste ouvert : le package
+> est toujours là, sans aucun import. Suivi réel : `docs/backoffice/ai-changelog.md`
+> et `docs/ai/HISTORIQUE-v18-v19.md` — `board/tasks.json` n'est plus tenu à jour.
+
+
 Trajectoire produit **après v11.8.0**, priorisée à partir de l'audit croisé
 (`docs/AUDIT-3AGENTS.md`). Source de vérité produit : `docs/ai/SPEC.md`.
 Suivi opérationnel des tâches : `board/board.html` + `tasks.json`.
