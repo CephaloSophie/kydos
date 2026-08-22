@@ -294,6 +294,11 @@ export async function seedDatabase() {
   await scoreConfigService.ensureSeeded();
   console.log('[seed] modele de score & niveau initialise (editable au back-office)');
 
+  // -- 16. Catalogue de logos joueurs (v19) --
+  const { playerAvatarService } = await import('./modules/playerAvatar/playerAvatar.service.js');
+  await playerAvatarService.ensureSeeded();
+  console.log('[seed] logos joueurs integres initialises (editable au back-office)');
+
   console.log('\n[seed] termine  -  joueur : ameur / belote123 . back-office : ameur (admin)');
 }
 

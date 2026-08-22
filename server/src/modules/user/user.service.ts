@@ -4,7 +4,9 @@ import { TeamModel } from '../team/team.model.js';
 import { RobotModel } from '../robot/robot.model.js';
 import { GameModel } from '../game/game.model.js';
 import { scoreConfigService } from '../scoreConfig/scoreConfig.service.js';
-import { notFound } from '../../core/HttpError.js';
+import { playerAvatarService } from '../playerAvatar/playerAvatar.service.js';
+import { serializePublicUser } from './user.serializer.js';
+import { badRequest, notFound } from '../../core/HttpError.js';
 
 /** ELO d'affichage dérivé de la personnalité (1000 base + agressivité/mémoire). */
 export function eloFromPersonality(personality?: { aggressiveness?: number; concentration?: number; velocity?: number }): number {
@@ -72,6 +74,31 @@ export class UserService {
       robots,
       team: teamDocument ? { id: String(userDocument.team), name: teamDocument.name, visibility: teamDocument.visibility } : null,
     };
+  }
+
+  /**
+   * Met à jour le PROFIL enrichi de l'utilisateur courant : prénom, nom, e-mail
+   * et logo choisi (avatarId). Chaque champ est optionnel ; seuls les champs
+   * fournis sont modifiés. Le logo est validé contre le catalogue actif.
+   */
+  async updateMyProfile(userId: string, input: { firstName?: unknown; lastName?: unknown; email?: unknown; avatarId?: unknown }) {
+    const set: Record<string, unknown> = {};
+    const str = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
+    if (input.firstName !== undefined) set.firstName = str(input.firstName, 60);
+    if (input.lastName !== undefined) set.lastName = str(input.lastName, 60);
+    if (input.email !== undefined) {
+      const email = str(input.email, 120);
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw badRequest('adresse e-mail invalide');
+      set.email = email || null;
+    }
+    if (input.avatarId !== undefined) {
+      const key = input.avatarId === null ? null : str(input.avatarId, 40);
+      if (key && !(await playerAvatarService.isValidKey(key))) throw badRequest('logo inconnu');
+      set.avatarId = key || null;
+    }
+    const userDocument = await UserModel.findByIdAndUpdate(userId, { $set: set }, { new: true });
+    if (!userDocument) throw notFound();
+    return serializePublicUser(userDocument);
   }
 
   async search(query: string, excludeUserId: string) {

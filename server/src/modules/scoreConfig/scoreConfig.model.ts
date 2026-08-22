@@ -27,6 +27,8 @@ const ScoreConfigSchema = new Schema(
     maxLevel: { type: Number, default: 200 },
     /** Pourcentage des jetons accumulés converti en score (0 = désactivé). */
     tokenScorePercent: { type: Number, default: 0 },
+    /** Bonus de score VIP (%) appliqué à tout gain d'un joueur VIP. */
+    vipRate: { type: Number, default: 3 },
     /** Coefficient par type de jeu `${category}:${kind}` (défaut 1). */
     gameTypeCoefficients: { type: Schema.Types.Mixed, default: {} },
     /** Surcharges manuelles de l'échelle de niveaux. */

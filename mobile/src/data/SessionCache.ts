@@ -23,7 +23,11 @@ import type { ApiClient, ServerRobot, ServerWallet } from './ApiClient';
 import type { EventBus } from '../core/EventBus';
 import { persistGet, persistSet, persistClearAll } from './persistentStorage';
 
-export interface SessionProfile { id: string; username: string; email?: string | null; activeSession?: string | null }
+export interface SessionProfile {
+  id: string; username: string; email?: string | null; activeSession?: string | null;
+  // v19 — profil enrichi (identité + logo choisi) et niveau réel (modèle Kýdos).
+  firstName?: string; lastName?: string; avatarId?: string | null; level?: number;
+}
 export interface SessionWallet { balance: number; canClaimToday: boolean }
 export interface SessionVip { isVip: boolean; expiresAt: string | null }
 
@@ -88,9 +92,19 @@ export class SessionCache {
   async refreshProfile(): Promise<void> {
     try {
       const { user } = await this.#api.me();
-      const u = user as unknown as { id: string; username: string; email?: string | null; activeSession?: string | null };
-      this.#setProfile({ id: u.id, username: u.username, email: u.email, activeSession: u.activeSession ?? null });
+      const u = user as unknown as SessionProfile;
+      this.#setProfile({
+        id: u.id, username: u.username, email: u.email, activeSession: u.activeSession ?? null,
+        firstName: u.firstName ?? '', lastName: u.lastName ?? '', avatarId: u.avatarId ?? null, level: u.level ?? 1,
+      });
     } catch { /* hors-ligne : on garde la valeur persistée */ }
+  }
+
+  /** Applique directement un profil (après une réponse serveur de mise à jour). */
+  applyProfile(p: Partial<SessionProfile>): void {
+    const base = this.#profile;
+    if (!base) return;
+    this.#setProfile({ ...base, ...p });
   }
 
   /** Recharge le porte-monnaie. Garde l'ancien en cas d'échec. */

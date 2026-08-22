@@ -15,6 +15,8 @@ export interface ScoreKydosConfig {
   levelUpPercent: number;
   maxLevel: number;
   tokenScorePercent: number;
+  /** Bonus de score VIP (%) appliqué à tout gain d'un joueur VIP. */
+  vipRate: number;
   gameTypeCoefficients: Record<string, number>;
   levelOverrides: LevelOverride[];
 }
@@ -26,6 +28,7 @@ export const DEFAULT_SCORE_KYDOS: ScoreKydosConfig = {
   levelUpPercent: 8,
   maxLevel: 200,
   tokenScorePercent: 0,
+  vipRate: 3,
   gameTypeCoefficients: {},
   levelOverrides: [],
 };
@@ -47,6 +50,7 @@ export function resolveScoreKydosConfig(partial?: Partial<ScoreKydosConfig> | nu
     levelUpPercent: numOr(p.levelUpPercent, DEFAULT_SCORE_KYDOS.levelUpPercent),
     maxLevel: numOr(p.maxLevel, DEFAULT_SCORE_KYDOS.maxLevel),
     tokenScorePercent: numOr(p.tokenScorePercent, DEFAULT_SCORE_KYDOS.tokenScorePercent),
+    vipRate: numOr(p.vipRate, DEFAULT_SCORE_KYDOS.vipRate),
     gameTypeCoefficients: { ...(p.gameTypeCoefficients ?? {}) },
     levelOverrides: Array.isArray(p.levelOverrides) ? p.levelOverrides.map((o) => ({ level: o.level, increment: o.increment })) : [],
   };
@@ -54,7 +58,7 @@ export function resolveScoreKydosConfig(partial?: Partial<ScoreKydosConfig> | nu
 
 /* ── Barème de gain ────────────────────────────────────────────────────────── */
 
-export interface ScoreGainBreakdown { base: number; partieCoefficient: number; gameTypeCoefficient: number; tokenBonus: number; total: number }
+export interface ScoreGainBreakdown { base: number; partieCoefficient: number; gameTypeCoefficient: number; tokenBonus: number; vipBonus: number; total: number }
 const safeCoef = (v: number | undefined): number => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 1);
 const safeNonNeg = (v: number | undefined): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
 
@@ -63,14 +67,16 @@ export function gameTypeCoefficient(config: ScoreKydosConfig, category: GameCate
   return typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : 1;
 }
 
-export function computeScoreGain(config: ScoreKydosConfig, input: { isRobot: boolean; partieCoefficient: number; gameTypeCoefficient: number; tokensAccumulated?: number }): ScoreGainBreakdown {
+export function computeScoreGain(config: ScoreKydosConfig, input: { isRobot: boolean; partieCoefficient: number; gameTypeCoefficient: number; tokensAccumulated?: number; isVip?: boolean }): ScoreGainBreakdown {
   const base = Math.max(0, input.isRobot ? config.baseWinnerRobot : config.baseWinnerPlayer);
   const partieCoefficient = safeCoef(input.partieCoefficient);
   const gameTypeCoef = safeCoef(input.gameTypeCoefficient);
   const tokenPct = Math.max(0, config.tokenScorePercent ?? 0);
   const tokenBonus = Math.round((tokenPct / 100) * safeNonNeg(input.tokensAccumulated));
-  const total = Math.max(0, Math.round(base * partieCoefficient * gameTypeCoef) + tokenBonus);
-  return { base, partieCoefficient, gameTypeCoefficient: gameTypeCoef, tokenBonus, total };
+  const subtotal = Math.max(0, Math.round(base * partieCoefficient * gameTypeCoef) + tokenBonus);
+  const vipRate = Math.max(0, config.vipRate ?? 0);
+  const vipBonus = input.isVip ? Math.round((vipRate / 100) * subtotal) : 0;
+  return { base, partieCoefficient, gameTypeCoefficient: gameTypeCoef, tokenBonus, vipBonus, total: subtotal + vipBonus };
 }
 
 /* ── Échelle de niveaux ────────────────────────────────────────────────────── */
@@ -120,7 +126,7 @@ export function levelForScore(config: ScoreKydosConfig, totalScore: number): Lev
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';
 export interface DiagnosticIssue { severity: DiagnosticSeverity; code: string; message: string }
 
-const REALISM = { maxLevelUpPercent: 100, maxTokenPercent: 200, maxLevels: 1000, maxCoefficient: 100 };
+const REALISM = { maxLevelUpPercent: 100, maxTokenPercent: 200, maxLevels: 1000, maxCoefficient: 100, maxVipRate: 100 };
 
 export function diagnoseScoreKydos(config: ScoreKydosConfig): DiagnosticIssue[] {
   const issues: DiagnosticIssue[] = [];
@@ -143,6 +149,9 @@ export function diagnoseScoreKydos(config: ScoreKydosConfig): DiagnosticIssue[] 
 
   if (!(config.tokenScorePercent >= 0)) err('token-percent-negative', `Pourcentage jetons négatif (${config.tokenScorePercent} %).`);
   else if (config.tokenScorePercent > REALISM.maxTokenPercent) warn('token-percent-unrealistic', `Pourcentage jetons très élevé (${config.tokenScorePercent} %) : peu réaliste.`);
+
+  if (!(config.vipRate >= 0)) err('vip-rate-negative', `Bonus VIP négatif (${config.vipRate} %) : le VIP pénaliserait le score.`);
+  else if (config.vipRate > REALISM.maxVipRate) warn('vip-rate-unrealistic', `Bonus VIP très élevé (${config.vipRate} %) : peu réaliste.`);
 
   const seenKeys = new Set<string>();
   for (const [key, value] of Object.entries(config.gameTypeCoefficients ?? {})) {

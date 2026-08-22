@@ -231,6 +231,20 @@ export class GamePersistenceService {
     const partieCoef = ctx.scoreCoefficient;
     const typeCoef = gameTypeCoefficient(config, category, kind);
 
+    // Statut VIP des joueurs humains gagnants (bonus vipRate appliqué au score).
+    const winnerUserIds = ctx.participants
+      .filter((p) => p.type === 'human' && p.userId && teamLetterOfSeat(p.seat) === ctx.winner)
+      .map((p) => p.userId!) as string[];
+    const vipUserIds = new Set<string>();
+    if (winnerUserIds.length) {
+      const now = Date.now();
+      const rows: any[] = await UserModel.find({ _id: { $in: winnerUserIds } }).select('vipExpiresAt').lean();
+      for (const r of rows) {
+        const exp = r.vipExpiresAt ? new Date(r.vipExpiresAt).getTime() : 0;
+        if (exp > now) vipUserIds.add(String(r._id));
+      }
+    }
+
     // Recalcule et fige le niveau à partir d'un score total (source unique).
     const levelFields = (total: number) => {
       const p = levelForScore(config, total);
@@ -244,6 +258,7 @@ export class GamePersistenceService {
           const gain = computeScoreGain(config, {
             isRobot: false, partieCoefficient: partieCoef, gameTypeCoefficient: typeCoef,
             tokensAccumulated: ctx.payouts.get(participant.userId) ?? 0,
+            isVip: vipUserIds.has(participant.userId),
           });
           if (gain.total <= 0) continue;
           const doc: any = await UserModel.findByIdAndUpdate(participant.userId, { $inc: { rewardPoints: gain.total } }, { new: true }).select('rewardPoints');

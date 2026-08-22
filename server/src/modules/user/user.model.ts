@@ -24,6 +24,11 @@ const UserSchema = new Schema(
     username: { type: String, required: true, unique: true, index: true },
     email: { type: String, default: null, index: true, sparse: true },
     passwordHash: { type: String, required: true },
+    /** v19 — Profil enrichi : identité + logo (avatar humain choisi au catalogue). */
+    firstName: { type: String, default: '' },
+    lastName: { type: String, default: '' },
+    /** Clé du logo (PlayerAvatar) choisi par le joueur ; null = logo par défaut. */
+    avatarId: { type: String, default: null },
     role: { type: String, enum: ['user', 'admin', 'banned'], default: 'user', index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
     settings: {

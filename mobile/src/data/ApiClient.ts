@@ -14,7 +14,7 @@ const TOKEN_KEY = 'kydos.mobile.token';
 /** URL de base de l'API (exposée pour diagnostic / écran de réglages). */
 export const API_BASE_URL = BASE;
 
-export interface AuthResult { token: string; user: { id: string; username: string; email?: string | null } }
+export interface AuthResult { token: string; user: { id: string; username: string; email?: string | null; firstName?: string; lastName?: string; avatarId?: string | null; level?: number; activeSession?: string | null } }
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message); this.name = 'ApiError'; }
@@ -84,6 +84,14 @@ export class ApiClient {
   login(username: string, password: string) { return this.call<AuthResult>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }); }
   register(username: string, password: string) { return this.call<AuthResult>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }); }
   me() { return this.call<{ user: AuthResult['user'] }>('/auth/me'); }
+  /** v19 — Met à jour le profil enrichi (prénom, nom, e-mail, logo). */
+  updateProfile(body: { firstName?: string; lastName?: string; email?: string; avatarId?: string | null }) {
+    return this.call<{ user: AuthResult['user'] }>('/users/me', { method: 'PATCH', body: JSON.stringify(body) });
+  }
+  /** v19 — Catalogue de logos joueurs (back-office), choix libre pour le profil. */
+  listPlayerAvatars() {
+    return this.call<{ avatars: Array<{ key: string; name: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null }> }>('/player-avatars');
+  }
 
   // --- Robots -------------------------------------------------------------
   listRobots() { return this.call<{ robots: ServerRobot[] }>('/robots'); }
