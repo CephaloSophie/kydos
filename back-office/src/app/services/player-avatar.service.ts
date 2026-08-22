@@ -8,6 +8,9 @@ export interface PlayerAvatar {
   accentColor: string;
   bodyColor?: string | null;
   outlineColor?: string | null;
+  antennas?: number;
+  eyes?: string;
+  mouth?: string;
   builtIn?: boolean;
   active: boolean;
   status?: 'draft' | 'pending' | 'active';

@@ -26,20 +26,19 @@ describe('BUILTIN_AVATARS', () => {
 });
 
 describe('mergeFaces', () => {
-  it('privilégie les couleurs d’un avatar personnalisé (base)', () => {
-    const faces = mergeFaces(['neon'], [{ key: 'neon', accentColor: '#00ffcc', bodyColor: '#112233', outlineColor: '#001122' }]);
-    expect(faces.get('neon')).toEqual({ accentColor: '#00ffcc', bodyColor: '#112233', outlineColor: '#001122' });
+  it('privilégie les couleurs et traits d’un avatar personnalisé (base)', () => {
+    const faces = mergeFaces(['neon'], [{ key: 'neon', accentColor: '#00ffcc', bodyColor: '#112233', outlineColor: '#001122', antennas: 3, eyes: 'wink-left', mouth: 'grin' }]);
+    expect(faces.get('neon')).toEqual({ accentColor: '#00ffcc', bodyColor: '#112233', outlineColor: '#001122', antennas: 3, eyes: 'wink-left', mouth: 'grin' });
   });
 
-  it('normalise bodyColor/outlineColor manquants en null', () => {
+  it('normalise les traits manquants (couleurs null, 1 antenne, yeux ouverts, sourire)', () => {
     const faces = mergeFaces(['bare'], [{ key: 'bare', accentColor: '#abcabc' }]);
-    expect(faces.get('bare')).toEqual({ accentColor: '#abcabc', bodyColor: null, outlineColor: null });
+    expect(faces.get('bare')).toEqual({ accentColor: '#abcabc', bodyColor: null, outlineColor: null, antennas: 1, eyes: 'open', mouth: 'smile' });
   });
 
   it('retombe sur le preset intégré quand la clé est absente de la base', () => {
-    // 'atne' est un preset intégré ; corps/contour dérivés (null) côté mascotte.
     const faces = mergeFaces(['atne'], []);
-    expect(faces.get('atne')).toEqual({ accentColor: '#7ecb98', bodyColor: null, outlineColor: null });
+    expect(faces.get('atne')).toEqual({ accentColor: '#7ecb98', bodyColor: null, outlineColor: null, antennas: 1, eyes: 'open', mouth: 'smile' });
   });
 
   it('ignore les clés vides/inconnues et dédoublonne', () => {

@@ -32,6 +32,10 @@ async function ensureSeeded(Model: any) {
 const num = (v: any, min: number, max: number, cur: number) => {
   const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
 };
+const EYE_STATES = ['open', 'wide', 'closed', 'wink-left', 'wink-right', 'closed-left', 'closed-right', 'wide-left', 'wide-right'];
+const MOUTH_STATES = ['smile', 'grin', 'neutral', 'sad', 'angry', 'surprised'];
+const eyesOf = (v: any, cur = 'open') => (EYE_STATES.includes(String(v)) ? String(v) : cur);
+const mouthOf = (v: any, cur = 'smile') => (MOUTH_STATES.includes(String(v)) ? String(v) : cur);
 const slugify = (s: string) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'logo';
 
 router.get('/', async (_req, res) => {
@@ -66,6 +70,9 @@ router.post('/', async (req: AdminRequest, res) => {
       accentColor: normalizeHex(b.accentColor, '#4f8ce0'),
       bodyColor: b.bodyColor ? normalizeHex(b.bodyColor, '#cfe0f5') : null,
       outlineColor: b.outlineColor ? normalizeHex(b.outlineColor, '#14283a') : null,
+      antennas: num(b.antennas, 1, 5, 1),
+      eyes: eyesOf(b.eyes),
+      mouth: mouthOf(b.mouth),
       builtIn: false,
       ...resolveStatus({ status: b.status, active: b.active }, { status: 'draft', active: false }),
       order: num(b.order, 0, 999, count),
@@ -85,6 +92,9 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (b.accentColor !== undefined) doc.accentColor = normalizeHex(b.accentColor, doc.accentColor);
     if (b.bodyColor !== undefined) doc.bodyColor = b.bodyColor ? normalizeHex(b.bodyColor, doc.bodyColor || '#cfe0f5') : null;
     if (b.outlineColor !== undefined) doc.outlineColor = b.outlineColor ? normalizeHex(b.outlineColor, doc.outlineColor || '#14283a') : null;
+    if (b.antennas !== undefined) doc.antennas = num(b.antennas, 1, 5, doc.antennas ?? 1);
+    if (b.eyes !== undefined) doc.eyes = eyesOf(b.eyes, doc.eyes ?? 'open');
+    if (b.mouth !== undefined) doc.mouth = mouthOf(b.mouth, doc.mouth ?? 'smile');
     if ((b.status !== undefined) || (b.active !== undefined)) {
       const s = resolveStatus({ status: b.status, active: b.active }, { status: doc.status, active: doc.active });
       doc.status = s.status; doc.active = s.active;
@@ -107,6 +117,7 @@ router.post('/:id/clone', async (req: AdminRequest, res) => {
     const doc = await Model.create({
       key, name: `${src.name} (copie)`, accentColor: src.accentColor,
       bodyColor: src.bodyColor ?? null, outlineColor: src.outlineColor ?? null,
+      antennas: src.antennas ?? 1, eyes: src.eyes ?? 'open', mouth: src.mouth ?? 'smile',
       builtIn: false, status: 'draft', active: false, order: count,
     });
     await logAudit(req.adminId!, 'playerAvatar.clone', String(doc._id), { before: { source: String(src._id) } });

@@ -10,7 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { PlayerAvatarService, type PlayerAvatar } from '../../services/player-avatar.service';
-import { robotMascotSvg } from '../../shared/robot-mascot';
+import { mascotSvg } from '../../shared/robot-mascot';
 
 type Row = PlayerAvatar & { _busy?: boolean };
 
@@ -19,8 +19,8 @@ type Row = PlayerAvatar & { _busy?: boolean };
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="page-header">
-      <h1>🧑‍🎨 Logos joueurs</h1>
-      <a routerLink="/player-avatars/new" class="btn btn-primary">+ Nouveau logo</a>
+      <h1>🧑‍🎨 Avatars joueurs</h1>
+      <a routerLink="/player-avatars/new" class="btn btn-primary">+ Nouvel avatar</a>
     </div>
 
     <p class="intro">
@@ -92,7 +92,7 @@ export class PlayerAvatarsComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   mascot(a: PlayerAvatar): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(robotMascotSvg({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 34));
+    return this.sanitizer.bypassSecurityTrustHtml(mascotSvg({ kind: 'human', accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor, antennas: a.antennas, eyes: a.eyes as any, mouth: a.mouth as any }, 34));
   }
   load() { this.svc.list().subscribe((res) => { this.rows = res.avatars; }); }
 

@@ -8,6 +8,9 @@ export interface RobotAvatar {
   accentColor: string;
   bodyColor?: string | null;
   outlineColor?: string | null;
+  antennas?: number;
+  eyes?: string;
+  mouth?: string;
   minLevel: number;
   maxLevel: number | null;
   builtIn?: boolean;

@@ -19,7 +19,7 @@ import {
   GameEngine,
   type Bid, type Card, type Seat,
 } from 'belote-core';
-import { PixiTable } from '@kydos/table-pixi';
+import { PixiTable, type MascotFace } from '@kydos/table-pixi';
 import { h, clear } from '../../core/dom';
 import { Button, Dialog, Slider } from '../components/ui';
 import { soundService } from '../../services/sound/SoundService';
@@ -396,10 +396,12 @@ export function TableScreen(ctx: AppContext): HTMLElement {
       emoteSignal = { seat: seat as Seat, emoji, nonce: ++emoteNonce };
       renderOnline(state);
     } : null;
-    // v18 — chaque robot expose sa face d'avatar (accent/corps/contour) dans la
-    // liste des joueurs ; on la place au bon siège pour servir de logo Pixi.
-    const players = (v as unknown as { players?: { seat: number; avatar?: { accentColor: string; bodyColor?: string | null; outlineColor?: string | null } | null }[] }).players ?? [];
-    const avatars: ({ accentColor: string; bodyColor?: string | null; outlineColor?: string | null } | null)[] = [null, null, null, null];
+    // v18/v19 — chaque robot expose sa face d'avatar (couleurs + traits : antennes,
+    // yeux, bouche) dans la liste des joueurs ; on la place au bon siège pour le
+    // logo Pixi (famille robot).
+    type SeatAvatar = MascotFace;
+    const players = (v as unknown as { players?: { seat: number; avatar?: SeatAvatar | null }[] }).players ?? [];
+    const avatars: (SeatAvatar | null)[] = [null, null, null, null];
     for (const p of players) if (p && p.avatar && p.seat >= 0 && p.seat < 4) avatars[p.seat] = p.avatar;
 
     reactRoot.render(createElement(PixiTable, {

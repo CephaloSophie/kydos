@@ -15,6 +15,8 @@ export interface CatalogAvatar {
   /** v18 — paramètres de design (dérivés de l'accent si absents). */
   bodyColor?: string | null;
   outlineColor?: string | null;
+  /** v19 — traits paramétriques (antennes 1..5, état yeux/bouche). */
+  antennas?: number; eyes?: string; mouth?: string;
   minLevel: number; maxLevel: number | null;
 }
 
@@ -57,8 +59,8 @@ export function avatarAccent(key: string | null | undefined): string {
   return avatarByKey(key).accentColor;
 }
 
-/** Face (couleurs de design) d'un avatar, pour la mascotte SVG paramétrique. */
-export function avatarFace(key: string | null | undefined): { accentColor: string; bodyColor?: string | null; outlineColor?: string | null } {
+/** Face (couleurs + traits) d'un avatar robot, pour la mascotte SVG paramétrique. */
+export function avatarFace(key: string | null | undefined): { kind: 'robot'; accentColor: string; bodyColor?: string | null; outlineColor?: string | null; antennas?: number; eyes?: any; mouth?: any } {
   const a = avatarByKey(key);
-  return { accentColor: a.accentColor, bodyColor: a.bodyColor ?? null, outlineColor: a.outlineColor ?? null };
+  return { kind: 'robot', accentColor: a.accentColor, bodyColor: a.bodyColor ?? null, outlineColor: a.outlineColor ?? null, antennas: a.antennas, eyes: a.eyes, mouth: a.mouth };
 }

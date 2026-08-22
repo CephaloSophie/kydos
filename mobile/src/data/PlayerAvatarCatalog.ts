@@ -8,7 +8,7 @@
  * ========================================================================== */
 import type { ApiClient } from './ApiClient';
 
-export interface PlayerLogo { key: string; name: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null }
+export interface PlayerLogo { key: string; name: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null; antennas?: number; eyes?: string; mouth?: string }
 
 /** Repli minimal (mêmes logos intégrés que le serveur). */
 const FALLBACK: PlayerLogo[] = [
@@ -41,8 +41,8 @@ export function playerLogoByKey(key: string | null | undefined): PlayerLogo {
   return list.find((a) => a.key === key) ?? list[0];
 }
 
-/** Face (couleurs) d'un logo joueur pour la mascotte SVG paramétrique. */
-export function playerFace(key: string | null | undefined): { accentColor: string; bodyColor?: string | null; outlineColor?: string | null } {
+/** Face (couleurs + traits) d'un avatar joueur pour la mascotte SVG (famille humaine). */
+export function playerFace(key: string | null | undefined): { kind: 'human'; accentColor: string; bodyColor?: string | null; outlineColor?: string | null; antennas?: number; eyes?: any; mouth?: any } {
   const a = playerLogoByKey(key);
-  return { accentColor: a.accentColor, bodyColor: a.bodyColor ?? null, outlineColor: a.outlineColor ?? null };
+  return { kind: 'human', accentColor: a.accentColor, bodyColor: a.bodyColor ?? null, outlineColor: a.outlineColor ?? null, antennas: a.antennas, eyes: a.eyes, mouth: a.mouth };
 }

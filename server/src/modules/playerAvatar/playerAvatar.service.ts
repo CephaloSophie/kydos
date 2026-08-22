@@ -26,12 +26,13 @@ export class PlayerAvatarService {
   }
 
   /** Logos ACTIFS proposés à l'app (triés par `order`). */
-  async listActive(): Promise<Array<{ key: string; name: string; accentColor: string; bodyColor: string | null; outlineColor: string | null }>> {
+  async listActive(): Promise<Array<{ key: string; name: string; accentColor: string; bodyColor: string | null; outlineColor: string | null; antennas: number; eyes: string; mouth: string }>> {
     await this.ensureSeeded();
     const docs: any[] = await PlayerAvatarModel.find({ active: true }).sort({ order: 1 }).lean();
     return docs.map((d) => ({
       key: d.key, name: d.name,
       accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null,
+      antennas: d.antennas ?? 1, eyes: d.eyes ?? 'open', mouth: d.mouth ?? 'smile',
     }));
   }
 
