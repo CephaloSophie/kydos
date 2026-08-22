@@ -5,6 +5,10 @@ export function serializePublicUser(userDocument: any) {
     id: String(userDocument._id),
     username: userDocument.username,
     email: userDocument.email ?? null,
+    // v19 — profil enrichi (identité + logo choisi au catalogue back-office).
+    firstName: userDocument.firstName ?? '',
+    lastName: userDocument.lastName ?? '',
+    avatarId: userDocument.avatarId ?? null,
     team: userDocument.team ? String(userDocument.team) : null,
     settings: userDocument.settings,
     rewardPoints: userDocument.rewardPoints,

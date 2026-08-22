@@ -16,6 +16,9 @@ const UserSchema = new Schema(
     username: { type: String, required: true, unique: true, index: true },
     email: { type: String, default: null, index: true, sparse: true },
     passwordHash: { type: String, required: true },
+    firstName: { type: String, default: '' },
+    lastName: { type: String, default: '' },
+    avatarId: { type: String, default: null },
     role: { type: String, enum: ['user', 'admin', 'banned'], default: 'user', index: true },
     team: { type: Schema.Types.ObjectId, ref: 'Team', default: null, index: true },
     settings: {
@@ -410,6 +413,23 @@ const RobotAvatarSchema = new Schema(
   { timestamps: true },
 );
 mongoose.models.RobotAvatar ?? model('RobotAvatar', RobotAvatarSchema);
+
+/** PlayerAvatar — logos joueurs (même rendu que les mascottes, choix libre). */
+const PlayerAvatarSchema = new Schema(
+  {
+    key: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, trim: true, maxlength: 40 },
+    accentColor: { type: String, required: true },
+    bodyColor: { type: String, default: null },
+    outlineColor: { type: String, default: null },
+    builtIn: { type: Boolean, default: false, index: true },
+    active: { type: Boolean, default: true, index: true },
+    status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+mongoose.models.PlayerAvatar ?? model('PlayerAvatar', PlayerAvatarSchema);
 
 const PromoCodeSchema = new Schema(
   {

@@ -10,6 +10,10 @@ export class UserController {
   async search(request: AuthenticatedRequest, response: Response) {
     response.json({ users: await userService.search(String(request.query.q ?? ''), request.userId!) });
   }
+
+  async updateMe(request: AuthenticatedRequest, response: Response) {
+    response.json({ user: await userService.updateMyProfile(request.userId!, request.body ?? {}) });
+  }
 }
 
 export const userController = new UserController();

@@ -45,6 +45,7 @@ import { PublicGamesScreen } from './presentation/screens/PublicGamesScreen';
 import { WalletScreen } from './presentation/screens/WalletScreen';
 import { TeamsScreen, MyTeamScreen } from './presentation/screens/TeamsScreens';
 import { OnlineScreen } from './presentation/screens/OnlineScreen';
+import { ProfileSettingsScreen } from './presentation/screens/ProfileSettingsScreen';
 import { StyleguideScreen } from './presentation/screens/StyleguideScreen';
 
 // --- 1. Infrastructure transverse ------------------------------------------
@@ -120,6 +121,7 @@ router
   .register('team',    MyTeamScreen,        { title: 'Mon équipe',     fanLabel: 'MON ÉQUIPE', glyph: '♣', grad: 'var(--g-club)' })
   .register('invitations', InvitationsScreen, { title: 'Invitations', fanLabel: 'INVITATIONS', glyph: '✉', grad: 'var(--g-gold)' })
   .register('online',  OnlineScreen,        { title: 'Jouer en ligne', fanLabel: 'EN LIGNE', glyph: '♠', grad: 'var(--g-spade)' })
+  .register('profile-settings', ProfileSettingsScreen, { title: 'Mon profil', fanLabel: 'PROFIL', glyph: '✦', grad: 'var(--g-gold)' })
   .register('styleguide', StyleguideScreen, { title: 'Design system' });
 
 if (!location.hash) location.hash = api.isAuthenticated() ? '#/home' : '#/login';
@@ -142,6 +144,9 @@ async function boot(): Promise<void> {
   // (création de robot, listes) le liront ensuite de façon synchrone.
   if (api.isAuthenticated()) {
     try { const { loadAvatarCatalog } = await import('./data/AvatarCatalog'); await loadAvatarCatalog(api); }
+    catch { /* repli hors-ligne */ }
+    // v19 — catalogue de logos JOUEURS (profil + badge TopBar).
+    try { const { loadPlayerAvatarCatalog } = await import('./data/PlayerAvatarCatalog'); await loadPlayerAvatarCatalog(api); }
     catch { /* repli hors-ligne */ }
   }
 

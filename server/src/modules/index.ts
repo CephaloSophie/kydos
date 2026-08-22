@@ -5,6 +5,7 @@ import { teamModule } from './team/index.js';
 import { invitationModule } from './invitation/index.js';
 import { robotModule } from './robot/index.js';
 import { robotAvatarModule } from './robotAvatar/index.js';
+import { playerAvatarModule } from './playerAvatar/index.js';
 import { tableModule } from './table/index.js';
 import { gameModule } from './game/index.js';
 import { analyticsModule } from './analytics/index.js';
@@ -26,6 +27,7 @@ export const applicationModules: AppModule[] = [
   invitationModule,
   robotModule,
   robotAvatarModule,
+  playerAvatarModule,
   tableModule,
   gameModule,
   analyticsModule,
