@@ -68,7 +68,7 @@ export class SidebarComponent {
     { path: '/match-formats', label: 'Match rapide', icon: '⚡', exact: false },
     { path: '/table-themes', label: 'Thèmes de table', icon: '🎨', exact: false },
     { path: '/robot-avatars', label: 'Avatars robots', icon: '🤖', exact: false },
-    { path: '/player-avatars', label: 'Logos joueurs', icon: '🧑‍🎨', exact: false },
+    { path: '/player-avatars', label: 'Avatars joueurs', icon: '🧑‍🎨', exact: false },
     { path: '/score-config', label: 'Score & niveaux', icon: '🎯', exact: false },
     { path: '/users', label: 'Utilisateurs', icon: '👤', exact: false },
     { path: '/promos', label: 'Codes Promo', icon: '🎟️', exact: false },

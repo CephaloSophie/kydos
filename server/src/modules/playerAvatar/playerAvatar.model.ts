@@ -13,6 +13,10 @@ const PlayerAvatarSchema = new Schema(
     accentColor: { type: String, required: true },
     bodyColor: { type: String, default: null },
     outlineColor: { type: String, default: null },
+    /** v19 — traits paramétriques : nombre de mèches (1..5), état des yeux/bouche. */
+    antennas: { type: Number, default: 1, min: 1, max: 5 },
+    eyes: { type: String, default: 'open' },
+    mouth: { type: String, default: 'smile' },
     builtIn: { type: Boolean, default: false, index: true },
     active: { type: Boolean, default: true, index: true },
     status: { type: String, enum: ['draft', 'pending', 'active'], default: 'active', index: true },

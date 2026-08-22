@@ -11,7 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { RobotAvatarService, type RobotAvatar } from '../../services/robot-avatar.service';
-import { robotMascotSvg } from '../../shared/robot-mascot';
+import { mascotSvg } from '../../shared/robot-mascot';
 
 type Row = RobotAvatar & { _busy?: boolean };
 
@@ -95,7 +95,7 @@ export class RobotAvatarsComponent implements OnInit {
   ngOnInit() { this.load(); }
 
   mascot(a: RobotAvatar): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(robotMascotSvg({ accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor }, 34));
+    return this.sanitizer.bypassSecurityTrustHtml(mascotSvg({ kind: 'robot', accentColor: a.accentColor, bodyColor: a.bodyColor, outlineColor: a.outlineColor, antennas: a.antennas, eyes: a.eyes as any, mouth: a.mouth as any }, 34));
   }
   load() { this.svc.list().subscribe((res) => { this.rows = res.avatars; }); }
 

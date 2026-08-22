@@ -6,4 +6,8 @@ export { getTheme, registerTheme, listThemes, themeWith, themeCssVars, localThem
 export * from './layout';
 export * from './handSort';
 export * from './fullscreen';
-export { robotMascotSvg, mascotTexture, faceKey, shade, type RobotFace } from './robotMascot';
+export {
+  mascotSvg, robotMascotSvg, mascotTexture, faceKey, shade,
+  MASCOT_EYE_STATES, MASCOT_MOUTH_STATES,
+  type RobotFace, type MascotFace, type MascotKind, type EyeState, type MouthState,
+} from './robotMascot';

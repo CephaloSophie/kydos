@@ -20,6 +20,11 @@ const RobotAvatarSchema = new Schema(
      *  null = dérivé automatiquement de accentColor (clair / foncé). */
     bodyColor: { type: String, default: null },
     outlineColor: { type: String, default: null },
+    /** v19 — traits paramétriques : nombre d'antennes (1..5), état des yeux et
+     *  de la bouche (voir table-pixi `robotMascot`). */
+    antennas: { type: Number, default: 1, min: 1, max: 5 },
+    eyes: { type: String, default: 'open' },
+    mouth: { type: String, default: 'smile' },
     /** Plage de niveau joueur où l'avatar est proposé (maxLevel null = ∞). */
     minLevel: { type: Number, default: 0, min: 0 },
     maxLevel: { type: Number, default: null },

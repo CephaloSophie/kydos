@@ -30,6 +30,10 @@ async function ensureSeeded(Model: any) {
 const num = (v: any, min: number, max: number, cur: number) => {
   const n = Number(v); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : cur;
 };
+const EYE_STATES = ['open', 'wide', 'closed', 'wink-left', 'wink-right', 'closed-left', 'closed-right', 'wide-left', 'wide-right'];
+const MOUTH_STATES = ['smile', 'grin', 'neutral', 'sad', 'angry', 'surprised'];
+const eyesOf = (v: any, cur = 'open') => (EYE_STATES.includes(String(v)) ? String(v) : cur);
+const mouthOf = (v: any, cur = 'smile') => (MOUTH_STATES.includes(String(v)) ? String(v) : cur);
 const slugify = (s: string) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'avatar';
 
 router.get('/', async (_req, res) => {
@@ -65,6 +69,9 @@ router.post('/', async (req: AdminRequest, res) => {
       accentColor: normalizeHex(b.accentColor, '#7ecb98'),
       bodyColor: b.bodyColor ? normalizeHex(b.bodyColor, '#cfe9d8') : null,
       outlineColor: b.outlineColor ? normalizeHex(b.outlineColor, '#14342a') : null,
+      antennas: num(b.antennas, 1, 5, 1),
+      eyes: eyesOf(b.eyes),
+      mouth: mouthOf(b.mouth),
       minLevel: num(b.minLevel, 0, 9999, 0),
       maxLevel: (b.maxLevel === null || b.maxLevel === '' || b.maxLevel === undefined) ? null : num(b.maxLevel, 0, 9999, 0),
       builtIn: false,
@@ -86,6 +93,9 @@ router.put('/:id', async (req: AdminRequest, res) => {
     if (b.accentColor !== undefined) doc.accentColor = normalizeHex(b.accentColor, doc.accentColor);
     if (b.bodyColor !== undefined) doc.bodyColor = b.bodyColor ? normalizeHex(b.bodyColor, doc.bodyColor || '#cfe9d8') : null;
     if (b.outlineColor !== undefined) doc.outlineColor = b.outlineColor ? normalizeHex(b.outlineColor, doc.outlineColor || '#14342a') : null;
+    if (b.antennas !== undefined) doc.antennas = num(b.antennas, 1, 5, doc.antennas ?? 1);
+    if (b.eyes !== undefined) doc.eyes = eyesOf(b.eyes, doc.eyes ?? 'open');
+    if (b.mouth !== undefined) doc.mouth = mouthOf(b.mouth, doc.mouth ?? 'smile');
     if (b.minLevel !== undefined) doc.minLevel = num(b.minLevel, 0, 9999, doc.minLevel);
     if (b.maxLevel !== undefined) doc.maxLevel = (b.maxLevel === null || b.maxLevel === '') ? null : num(b.maxLevel, 0, 9999, doc.maxLevel ?? 0);
     if ((b.status !== undefined) || (b.active !== undefined)) {
@@ -110,6 +120,7 @@ router.post('/:id/clone', async (req: AdminRequest, res) => {
     const doc = await Model.create({
       key, name: `${src.name} (copie)`, accentColor: src.accentColor,
       bodyColor: src.bodyColor ?? null, outlineColor: src.outlineColor ?? null,
+      antennas: src.antennas ?? 1, eyes: src.eyes ?? 'open', mouth: src.mouth ?? 'smile',
       minLevel: src.minLevel ?? 0, maxLevel: src.maxLevel ?? null,
       builtIn: false, status: 'draft', active: false, order: count,
     });

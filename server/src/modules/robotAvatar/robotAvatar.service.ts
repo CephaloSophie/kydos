@@ -31,7 +31,7 @@ export class RobotAvatarService {
    * Catalogue servi au mobile : avatars ACTIFS, filtrés par le niveau joueur
    * (si fourni). Trié par `order`.
    */
-  async listForPlayer(userLevel?: number): Promise<Array<{ key: string; name: string; accentColor: string; bodyColor: string | null; outlineColor: string | null; minLevel: number; maxLevel: number | null }>> {
+  async listForPlayer(userLevel?: number): Promise<Array<{ key: string; name: string; accentColor: string; bodyColor: string | null; outlineColor: string | null; antennas: number; eyes: string; mouth: string; minLevel: number; maxLevel: number | null }>> {
     await this.ensureSeeded();
     const docs: any[] = await RobotAvatarModel.find({ active: true }).sort({ order: 1 }).lean();
     const filtered = typeof userLevel === 'number'
@@ -40,6 +40,7 @@ export class RobotAvatarService {
     return filtered.map((d) => ({
       key: d.key, name: d.name,
       accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null,
+      antennas: d.antennas ?? 1, eyes: d.eyes ?? 'open', mouth: d.mouth ?? 'smile',
       minLevel: d.minLevel ?? 0, maxLevel: d.maxLevel ?? null,
     }));
   }
@@ -58,22 +59,26 @@ export class RobotAvatarService {
   }
 }
 
-export interface RobotFace { accentColor: string; bodyColor: string | null; outlineColor: string | null }
+export interface RobotFace { accentColor: string; bodyColor: string | null; outlineColor: string | null; antennas: number; eyes: string; mouth: string }
 
 /**
- * PUR (testable) : associe chaque clé demandée à une face, en priorité depuis
- * les documents en base, sinon depuis les presets intégrés. Les clés vides sont
- * ignorées, les doublons dédoublonnés, les clés totalement inconnues absentes.
+ * PUR (testable) : associe chaque clé demandée à une face (couleurs + traits
+ * paramétriques), en priorité depuis les documents en base, sinon depuis les
+ * presets intégrés. Clés vides ignorées, doublons dédoublonnés, clés inconnues
+ * absentes.
  */
-export function mergeFaces(keys: string[], docs: Array<{ key: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null }>): Map<string, RobotFace> {
+export function mergeFaces(keys: string[], docs: Array<{ key: string; accentColor: string; bodyColor?: string | null; outlineColor?: string | null; antennas?: number; eyes?: string; mouth?: string }>): Map<string, RobotFace> {
   const wanted = [...new Set(keys.filter(Boolean))];
   const byKey = new Map(docs.map((d) => [d.key, d]));
   const out = new Map<string, RobotFace>();
   for (const key of wanted) {
     const d = byKey.get(key);
-    if (d) { out.set(key, { accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null }); continue; }
+    if (d) {
+      out.set(key, { accentColor: d.accentColor, bodyColor: d.bodyColor ?? null, outlineColor: d.outlineColor ?? null, antennas: d.antennas ?? 1, eyes: d.eyes ?? 'open', mouth: d.mouth ?? 'smile' });
+      continue;
+    }
     const preset = BUILTIN_AVATARS.find((a) => a.key === key);
-    if (preset) out.set(key, { accentColor: preset.accentColor, bodyColor: null, outlineColor: null });
+    if (preset) out.set(key, { accentColor: preset.accentColor, bodyColor: null, outlineColor: null, antennas: 1, eyes: 'open', mouth: 'smile' });
   }
   return out;
 }

@@ -7,14 +7,14 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser';
 import { PlayerAvatarService } from '../../services/player-avatar.service';
-import { robotMascotSvg } from '../../shared/robot-mascot';
+import { mascotSvg, MASCOT_EYE_STATES, MASCOT_MOUTH_STATES, EYE_LABELS, MOUTH_LABELS } from '../../shared/robot-mascot';
 
 @Component({
   selector: 'app-player-avatar-form',
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="page-header">
-      <h1>{{ editId ? 'Modifier le logo' : 'Nouveau logo joueur' }}</h1>
+      <h1>{{ editId ? 'Modifier l\\'avatar joueur' : 'Nouvel avatar joueur' }}</h1>
       <a routerLink="/player-avatars" class="btn btn-secondary">Retour</a>
     </div>
 
@@ -41,6 +41,20 @@ import { robotMascotSvg } from '../../shared/robot-mascot';
           <input type="color" [ngModel]="a.outlineColor || autoOutline()" (ngModelChange)="a.outlineColor = $event" />
           <code>{{ a.outlineColor || '(auto)' }}</code>
           @if (a.outlineColor) { <button class="link" (click)="a.outlineColor = null">auto</button> }
+        </div>
+        <div class="form-group">
+          <label>Mèches de cheveux : {{ a.antennas }}</label>
+          <input type="range" min="1" max="5" step="1" [(ngModel)]="a.antennas" />
+        </div>
+        <div class="color-row" style="gap:16px">
+          <div class="col2">
+            <span>Yeux</span>
+            <select [(ngModel)]="a.eyes">@for (e of eyeStates; track e) { <option [value]="e">{{ eyeLabel(e) }}</option> }</select>
+          </div>
+          <div class="col2">
+            <span>Bouche</span>
+            <select [(ngModel)]="a.mouth">@for (m of mouthStates; track m) { <option [value]="m">{{ mouthLabel(m) }}</option> }</select>
+          </div>
         </div>
         <div class="actions-bar">
           <button class="btn btn-primary" (click)="save()" [disabled]="saving">{{ editId ? 'Enregistrer' : 'Créer le logo' }}</button>
@@ -69,13 +83,19 @@ import { robotMascotSvg } from '../../shared/robot-mascot';
     .mascot ::ng-deep svg { filter: drop-shadow(0 6px 14px rgba(0,0,0,0.4)); }
     .hint { color: var(--text-muted); font-size: 12px; margin-top: 12px; text-align: center; }
     .link { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 11px; text-decoration: underline; padding: 0; }
+    .col2 { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); flex: 1; }
+    input[type=range] { width: 100%; }
   `],
 })
 export class PlayerAvatarFormComponent implements OnInit {
   editId: string | null = null;
   saving = false;
   error = '';
-  a: any = { name: '', status: 'draft', accentColor: '#4f8ce0', bodyColor: null, outlineColor: null };
+  a: any = { name: '', status: 'draft', accentColor: '#4f8ce0', bodyColor: null, outlineColor: null, antennas: 1, eyes: 'open', mouth: 'smile' };
+  readonly eyeStates = MASCOT_EYE_STATES;
+  readonly mouthStates = MASCOT_MOUTH_STATES;
+  eyeLabel(e: string) { return (EYE_LABELS as any)[e] ?? e; }
+  mouthLabel(m: string) { return (MOUTH_LABELS as any)[m] ?? m; }
 
   constructor(private svc: PlayerAvatarService, private router: Router, private route: ActivatedRoute, private sanitizer: DomSanitizer) {}
 
@@ -84,7 +104,7 @@ export class PlayerAvatarFormComponent implements OnInit {
     if (this.editId) {
       this.svc.get(this.editId).subscribe((res) => {
         const v = res.avatar as any;
-        this.a = { name: v.name, status: v.status ?? (v.active ? 'active' : 'draft'), accentColor: v.accentColor, bodyColor: v.bodyColor ?? null, outlineColor: v.outlineColor ?? null };
+        this.a = { name: v.name, status: v.status ?? (v.active ? 'active' : 'draft'), accentColor: v.accentColor, bodyColor: v.bodyColor ?? null, outlineColor: v.outlineColor ?? null, antennas: v.antennas ?? 1, eyes: v.eyes ?? 'open', mouth: v.mouth ?? 'smile' };
       });
     }
   }
@@ -100,7 +120,7 @@ export class PlayerAvatarFormComponent implements OnInit {
   autoOutline(): string { return this.shade(this.a.accentColor, -0.62); }
 
   mascot(): SafeHtml {
-    return this.sanitizer.bypassSecurityTrustHtml(robotMascotSvg({ accentColor: this.a.accentColor, bodyColor: this.a.bodyColor, outlineColor: this.a.outlineColor }, 150));
+    return this.sanitizer.bypassSecurityTrustHtml(mascotSvg({ kind: 'human', accentColor: this.a.accentColor, bodyColor: this.a.bodyColor, outlineColor: this.a.outlineColor, antennas: this.a.antennas, eyes: this.a.eyes, mouth: this.a.mouth }, 150));
   }
 
   save() {
